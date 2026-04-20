@@ -11,6 +11,10 @@ extends Control
 @onready var selected_meta_label: Label = %SelectedUnitMeta
 @onready var veterancy_selector: OptionButton = %VeterancySelector
 @onready var historical_description: RichTextLabel = %HistoricalDescription
+@onready var template_name_input: LineEdit = %TemplateNameInput
+@onready var template_selector: OptionButton = %TemplateSelector
+@onready var save_template_button: Button = %SaveTemplateButton
+@onready var load_template_button: Button = %LoadTemplateButton
 
 var _root_unit: UnitModel
 var _selected_unit: UnitModel
@@ -28,7 +32,10 @@ func _ready() -> void:
 	veterancy_selector.item_selected.connect(_on_veterancy_selected)
 	org_chart_view.unit_selected.connect(_on_org_chart_selected)
 	org_chart_view.delete_requested.connect(_on_org_chart_delete_requested)
+	save_template_button.pressed.connect(_on_save_template_pressed)
+	load_template_button.pressed.connect(_on_load_template_pressed)
 
+	_refresh_template_selector()
 	_refresh_all()
 
 func _build_nation_selector() -> void:
@@ -251,6 +258,103 @@ func _historical_text_for(unit: UnitModel) -> String:
 		unit.nation.to_upper(),
 		UnitType.display_name(unit.type).to_lower()
 	]
+
+func _on_save_template_pressed() -> void:
+	var template_name := template_name_input.text.strip_edges()
+	if template_name.is_empty():
+		pending_unit_label.text = "Template name required."
+		return
+	var payload := {
+		"root_unit": _unit_to_dict(_root_unit),
+		"id_counter": _id_counter
+	}
+	if not SaveManager.save_division_template(template_name, payload):
+		pending_unit_label.text = "Failed to save template."
+		return
+	_refresh_template_selector()
+	_select_template(template_name.replace(" ", "_"))
+	pending_unit_label.text = "Template saved: %s" % template_name
+
+func _on_load_template_pressed() -> void:
+	if template_selector.item_count == 0:
+		pending_unit_label.text = "No template selected."
+		return
+	var template_name := String(template_selector.get_item_text(template_selector.selected))
+	var payload := SaveManager.load_division_template(template_name)
+	if payload.is_empty():
+		pending_unit_label.text = "Failed to load template."
+		return
+	var loaded_root := _dict_to_unit(payload.get("root_unit", {}))
+	if loaded_root == null:
+		pending_unit_label.text = "Template data invalid."
+		return
+	_root_unit = loaded_root
+	_selected_unit = _root_unit
+	_id_counter = int(payload.get("id_counter", _next_id_from_tree(_root_unit)))
+	_pending_unit_data.clear()
+	_refresh_all()
+	pending_unit_label.text = "Template loaded: %s" % template_name
+
+func _refresh_template_selector() -> void:
+	template_selector.clear()
+	var templates := SaveManager.list_division_templates()
+	for template_name in templates:
+		template_selector.add_item(template_name)
+	if template_selector.item_count > 0:
+		template_selector.select(0)
+
+func _select_template(template_name: String) -> void:
+	for i in range(template_selector.item_count):
+		if template_selector.get_item_text(i) == template_name:
+			template_selector.select(i)
+			return
+
+func _unit_to_dict(unit: UnitModel) -> Dictionary:
+	if unit == null:
+		return {}
+	var serialized_children: Array[Dictionary] = []
+	for child in unit.children:
+		serialized_children.append(_unit_to_dict(child))
+	return {
+		"id": unit.id,
+		"template_id": unit.template_id,
+		"nation": unit.nation,
+		"type": int(unit.type),
+		"size": int(unit.size),
+		"veterancy": int(unit.veterancy),
+		"children": serialized_children
+	}
+
+func _dict_to_unit(data: Variant) -> UnitModel:
+	if typeof(data) != TYPE_DICTIONARY:
+		return null
+	var raw := data as Dictionary
+	var unit := UnitModel.new()
+	unit.id = String(raw.get("id", ""))
+	unit.template_id = String(raw.get("template_id", ""))
+	unit.nation = String(raw.get("nation", ""))
+	unit.type = int(raw.get("type", UnitType.Value.INFANTRY))
+	unit.size = int(raw.get("size", UnitSize.Value.PLATOON))
+	unit.veterancy = int(raw.get("veterancy", Veterancy.Value.REGULAR))
+	unit.children = []
+	for child_data in raw.get("children", []):
+		var child := _dict_to_unit(child_data)
+		if child != null:
+			unit.children.append(child)
+	return unit
+
+func _next_id_from_tree(root: UnitModel) -> int:
+	return _collect_highest_id(root, 0) + 1
+
+func _collect_highest_id(unit: UnitModel, current_highest: int) -> int:
+	if unit == null:
+		return current_highest
+	var pieces := unit.id.split("_")
+	if pieces.size() > 1:
+		current_highest = maxi(current_highest, int(pieces[pieces.size() - 1]))
+	for child in unit.children:
+		current_highest = _collect_highest_id(child, current_highest)
+	return current_highest
 
 func _type_from_template(data: Dictionary) -> UnitType.Value:
 	var tags: Array = data.get("tags", [])
