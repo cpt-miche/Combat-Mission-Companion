@@ -22,6 +22,10 @@ var current_phase: Phase = Phase.DIVISION_BUILDER
 var players: Array[Dictionary] = []
 var current_turn: int = 1
 var territory_map: Dictionary = {}
+var terrain_map: Dictionary = {}
+var gameplay_units: Dictionary = {}
+var combat_log_entries: Array[Dictionary] = []
+var pending_casualties: Dictionary = {}
 
 func set_phase(phase: Phase) -> void:
 	if current_phase == phase:
@@ -34,4 +38,8 @@ func reset() -> void:
 	players.clear()
 	current_turn = 1
 	territory_map.clear()
+	terrain_map.clear()
+	gameplay_units.clear()
+	combat_log_entries.clear()
+	pending_casualties.clear()
 	emit_signal("phase_changed", current_phase)
