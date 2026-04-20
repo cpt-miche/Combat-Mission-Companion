@@ -1,0 +1,105 @@
+[gd_scene load_steps=3 format=3 uid="uid://dgk2v6h00m3h3"]
+
+[ext_resource type="Script" path="res://scripts/ui/map_setup/MapSetupScreen.gd" id="1_5hfrc"]
+[ext_resource type="Script" path="res://scripts/ui/map_setup/HexMapView.gd" id="2_fjgke"]
+
+[node name="MapSetupScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_5hfrc")
+
+[node name="RootMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RootVBox" type="VBoxContainer" parent="RootMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="MainSplit" type="HSplitContainer" parent="RootMargin/RootVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+split_offset = 220
+
+[node name="PalettePanel" type="PanelContainer" parent="RootMargin/RootVBox/MainSplit"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+
+[node name="PaletteMargin" type="MarginContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="PaletteVBox" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PaletteHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+layout_mode = 2
+text = "Terrain Palette"
+
+[node name="LoadPngButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Load Map PNG"
+
+[node name="PaletteHint" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+layout_mode = 2
+text = "LMB drag paint\nRMB drag reset\nMMB pan / wheel zoom"
+autowrap_mode = 2
+
+[node name="TerrainList" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CanvasPanel" type="PanelContainer" parent="RootMargin/RootVBox/MainSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="CanvasMargin" type="MarginContainer" parent="RootMargin/RootVBox/MainSplit/CanvasPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="HexMapView" type="Control" parent="RootMargin/RootVBox/MainSplit/CanvasPanel/CanvasMargin"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(640, 480)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+script = ExtResource("2_fjgke")
+
+[node name="BottomControls" type="HBoxContainer" parent="RootMargin/RootVBox"]
+layout_mode = 2
+alignment = 2
+
+[node name="ClearAllButton" type="Button" parent="RootMargin/RootVBox/BottomControls"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Clear All"
+
+[node name="ConfirmButton" type="Button" parent="RootMargin/RootVBox/BottomControls"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Confirm"
