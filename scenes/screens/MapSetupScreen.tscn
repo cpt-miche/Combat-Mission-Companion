@@ -1,4 +1,6 @@
-[gd_scene format=3 uid="uid://mapsetupscreen"]
+[gd_scene load_steps=2 format=3 uid="uid://mapsetupscreen"]
+
+[ext_resource type="Script" path="res://scripts/ui/map_setup/MapSetupScreen.gd" id="1_k6mc4"]
 
 [node name="MapSetupScreen" type="Control"]
 layout_mode = 3
@@ -7,11 +9,38 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_k6mc4")
 
-[node name="Label" type="Label" parent="."]
+[node name="TopBar" type="VBoxContainer" parent="."]
 layout_mode = 0
 offset_left = 32.0
-offset_top = 32.0
-offset_right = 432.0
-offset_bottom = 64.0
-text = "MapSetup Screen"
+offset_top = 24.0
+offset_right = 520.0
+offset_bottom = 196.0
+theme_override_constants/separation = 12
+
+[node name="ModePromptLabel" type="Label" parent="TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Mode: Terrain Edit"
+
+[node name="ButtonRow" type="HBoxContainer" parent="TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SelectP1TerritoryButton" type="Button" parent="TopBar/ButtonRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Select Player 1 Territory"
+
+[node name="SwitchToP2Button" type="Button" parent="TopBar/ButtonRow"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "Switch to Player 2"
+
+[node name="ConfirmTerritoriesButton" type="Button" parent="TopBar/ButtonRow"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "Confirm Territories"
