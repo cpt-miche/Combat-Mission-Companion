@@ -55,17 +55,22 @@ func _gui_input(event: InputEvent) -> void:
 				info_label.text = "Select a friendly unit first."
 				return
 			var start_hex := _units[_selected_unit_id].get("hex", Vector2i.ZERO) as Vector2i
+			var is_attack := Input.is_key_pressed(KEY_CTRL)
+			var target_id := ""
+			if is_attack:
+				target_id = _unit_at_hex(hex, 1 - _active_player)
+				if target_id.is_empty():
+					info_label.text = "Attack orders require an enemy target hex."
+					return
 			var blocked := _blocked_cells(_selected_unit_id)
+			if is_attack:
+				blocked.erase("%d,%d" % [hex.x, hex.y])
 			var path := Pathfinding.find_path(start_hex, hex, GameState.terrain_map, blocked)
 			if path.is_empty():
 				info_label.text = "No path found."
 				return
 
-			if Input.is_key_pressed(KEY_CTRL):
-				var target_id := _unit_at_hex(hex, 1 - _active_player)
-				if target_id.is_empty():
-					info_label.text = "Attack orders require an enemy target hex."
-					return
+			if is_attack:
 				_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
 				info_label.text = "Attack order created for %s." % _selected_unit_id
 			else:
@@ -114,6 +119,7 @@ func _draw_order(order: Dictionary) -> void:
 func _on_end_turn_pressed() -> void:
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log)
 	_units = result.get("units", {})
+	_persist_units_to_state()
 	_execution_queue = result.get("execution_queue", [])
 	GameState.combat_log_entries = _combat_log.entries.duplicate(true)
 	GameState.pending_casualties = {
@@ -147,12 +153,16 @@ func _on_animation_step() -> void:
 	var unit := _units[unit_id] as Dictionary
 	unit["hex"] = step.get("to", unit.get("hex", Vector2i.ZERO))
 	_units[unit_id] = unit
+	_persist_units_to_state()
 	queue_redraw()
 
 func _refresh_log() -> void:
 	log_label.clear()
 	for line in _combat_log.to_feed_lines():
 		log_label.append_text("%s\n" % line)
+
+func _persist_units_to_state() -> void:
+	GameState.gameplay_units = _units.duplicate(true)
 
 func _load_or_initialize_units() -> void:
 	if not GameState.gameplay_units.is_empty():
