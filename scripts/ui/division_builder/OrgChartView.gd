@@ -1,0 +1,201 @@
+extends Control
+class_name OrgChartView
+
+signal unit_selected(unit: UnitModel)
+signal delete_requested(unit: UnitModel)
+
+const NODE_SIZE := Vector2(160.0, 72.0)
+const LEVEL_SPACING := 180.0
+const SIBLING_SPACING := 36.0
+const MIN_ZOOM := 0.5
+const MAX_ZOOM := 2.0
+
+var root_unit: UnitModel
+var selected_unit: UnitModel
+var _node_rects: Dictionary = {}
+var _pan_offset := Vector2(80.0, 60.0)
+var _zoom := 1.0
+var _is_panning := false
+
+func set_organization(root: UnitModel, selected: UnitModel) -> void:
+	root_unit = root
+	selected_unit = selected
+	queue_redraw()
+
+func set_selected_unit(unit: UnitModel) -> void:
+	selected_unit = unit
+	queue_redraw()
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mouse_event := event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_MIDDLE:
+			_is_panning = mouse_event.pressed
+			accept_event()
+			return
+
+		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP and mouse_event.pressed:
+			_zoom = clamp(_zoom + 0.1, MIN_ZOOM, MAX_ZOOM)
+			queue_redraw()
+			accept_event()
+			return
+
+		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN and mouse_event.pressed:
+			_zoom = clamp(_zoom - 0.1, MIN_ZOOM, MAX_ZOOM)
+			queue_redraw()
+			accept_event()
+			return
+
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+			var clicked := _pick_unit(mouse_event.position)
+			if clicked != null:
+				selected_unit = clicked
+				emit_signal("unit_selected", clicked)
+				queue_redraw()
+				accept_event()
+			return
+
+		if mouse_event.button_index == MOUSE_BUTTON_RIGHT and mouse_event.pressed:
+			var clicked_delete := _pick_unit(mouse_event.position)
+			if clicked_delete != null:
+				emit_signal("delete_requested", clicked_delete)
+				accept_event()
+			return
+
+	if event is InputEventMouseMotion and _is_panning:
+		var motion := event as InputEventMouseMotion
+		_pan_offset += motion.relative
+		queue_redraw()
+		accept_event()
+
+func _draw() -> void:
+	_node_rects.clear()
+	if root_unit == null:
+		return
+
+	var next_y := 0.0
+	_draw_subtree(root_unit, 0, next_y)
+
+func _draw_subtree(unit: UnitModel, depth: int, next_y: float) -> float:
+	var child_centers: Array[float] = []
+	var working_y := next_y
+
+	for child in unit.children:
+		if child == null:
+			continue
+		working_y = _draw_subtree(child, depth + 1, working_y)
+		var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
+		child_centers.append(child_rect.get_center().y)
+
+	var center_y := 0.0
+	if child_centers.is_empty():
+		center_y = next_y + NODE_SIZE.y * 0.5
+		working_y = next_y + NODE_SIZE.y + SIBLING_SPACING
+	else:
+		center_y = (child_centers.front() + child_centers.back()) * 0.5
+
+	var origin := Vector2(float(depth) * LEVEL_SPACING, center_y - NODE_SIZE.y * 0.5)
+	origin = origin * _zoom + _pan_offset
+	var rect := Rect2(origin, NODE_SIZE * _zoom)
+	_node_rects[unit.id] = rect
+	_draw_unit_node(unit, rect)
+
+	for child in unit.children:
+		if child == null:
+			continue
+		var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
+		if child_rect.size == Vector2.ZERO:
+			continue
+		var from := Vector2(rect.end.x, rect.get_center().y)
+		var to := Vector2(child_rect.position.x, child_rect.get_center().y)
+		draw_line(from, to, Color(0.65, 0.72, 0.8), 2.0)
+
+	return working_y
+
+func _draw_unit_node(unit: UnitModel, rect: Rect2) -> void:
+	var is_selected := unit == selected_unit
+	var border := Color(0.85, 0.89, 0.95)
+	var fill := Color(0.14, 0.16, 0.21)
+	if is_selected:
+		border = Color(0.27, 0.76, 1.0)
+		fill = Color(0.12, 0.23, 0.33)
+
+	draw_rect(rect, fill, true)
+	draw_rect(rect, border, false, 2.0)
+	_draw_nato_symbol(unit, rect)
+
+	var label := "%s\n%s" % [UnitSize.display_name(unit.size), UnitType.display_name(unit.type)]
+	draw_multiline_string(
+		get_theme_default_font(),
+		rect.position + Vector2(8.0, rect.size.y - 30.0),
+		label,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		rect.size.x - 12.0,
+		14,
+		2,
+		Color.WHITE
+	)
+
+func _draw_nato_symbol(unit: UnitModel, rect: Rect2) -> void:
+	var inner := rect.grow(-12.0)
+	var symbol_rect := Rect2(inner.position + Vector2(0.0, 6.0), Vector2(inner.size.x, 24.0))
+	draw_rect(symbol_rect, Color(0.02, 0.03, 0.04), false, 2.0)
+
+	match unit.type:
+		UnitType.Value.INFANTRY:
+			draw_line(symbol_rect.position, symbol_rect.end, Color.WHITE, 1.8)
+			draw_line(Vector2(symbol_rect.end.x, symbol_rect.position.y), Vector2(symbol_rect.position.x, symbol_rect.end.y), Color.WHITE, 1.8)
+		UnitType.Value.TANK:
+			draw_circle(symbol_rect.get_center(), 8.0, Color.WHITE)
+		UnitType.Value.ARTILLERY:
+			draw_circle(symbol_rect.get_center(), 4.0, Color.WHITE)
+			draw_arc(symbol_rect.get_center(), 9.0, 0.0, TAU, 24, Color.WHITE, 1.5)
+		UnitType.Value.RECON:
+			draw_polyline([
+				symbol_rect.position + Vector2(5.0, symbol_rect.size.y * 0.5),
+				symbol_rect.position + Vector2(symbol_rect.size.x - 5.0, symbol_rect.size.y * 0.5)
+			], Color.WHITE, 2.0)
+		UnitType.Value.HEADQUARTERS:
+			draw_line(symbol_rect.get_center(), symbol_rect.get_center() + Vector2(0.0, 16.0), Color.WHITE, 2.0)
+		_:
+			draw_line(symbol_rect.position + Vector2(6.0, symbol_rect.size.y * 0.5), symbol_rect.end - Vector2(6.0, symbol_rect.size.y * 0.5), Color.WHITE, 2.0)
+
+	var echelon_y := symbol_rect.position.y - 5.0
+	var echelon_center := symbol_rect.get_center().x
+	match unit.size:
+		UnitSize.Value.PLATOON:
+			draw_circle(Vector2(echelon_center, echelon_y), 2.2, Color.WHITE)
+		UnitSize.Value.COMPANY:
+			draw_line(Vector2(echelon_center - 10.0, echelon_y), Vector2(echelon_center + 10.0, echelon_y), Color.WHITE, 2.0)
+		UnitSize.Value.BATTALION:
+			draw_line(Vector2(echelon_center - 10.0, echelon_y), Vector2(echelon_center + 10.0, echelon_y), Color.WHITE, 2.0)
+			draw_line(Vector2(echelon_center, echelon_y - 4.0), Vector2(echelon_center, echelon_y + 4.0), Color.WHITE, 2.0)
+		UnitSize.Value.REGIMENT:
+			draw_circle(Vector2(echelon_center - 6.0, echelon_y), 2.0, Color.WHITE)
+			draw_circle(Vector2(echelon_center + 6.0, echelon_y), 2.0, Color.WHITE)
+		UnitSize.Value.DIVISION:
+			draw_circle(Vector2(echelon_center - 8.0, echelon_y), 2.0, Color.WHITE)
+			draw_circle(Vector2(echelon_center, echelon_y), 2.0, Color.WHITE)
+			draw_circle(Vector2(echelon_center + 8.0, echelon_y), 2.0, Color.WHITE)
+		UnitSize.Value.ARMY:
+			draw_line(Vector2(echelon_center - 12.0, echelon_y), Vector2(echelon_center + 12.0, echelon_y), Color.WHITE, 2.0)
+			draw_line(Vector2(echelon_center - 8.0, echelon_y - 4.0), Vector2(echelon_center - 8.0, echelon_y + 4.0), Color.WHITE, 2.0)
+			draw_line(Vector2(echelon_center + 8.0, echelon_y - 4.0), Vector2(echelon_center + 8.0, echelon_y + 4.0), Color.WHITE, 2.0)
+
+func _pick_unit(position: Vector2) -> UnitModel:
+	for unit_id in _node_rects.keys():
+		var rect: Rect2 = _node_rects[unit_id]
+		if rect.has_point(position):
+			return _find_by_id(root_unit, unit_id)
+	return null
+
+func _find_by_id(node: UnitModel, node_id: String) -> UnitModel:
+	if node == null:
+		return null
+	if node.id == node_id:
+		return node
+	for child in node.children:
+		var found := _find_by_id(child, node_id)
+		if found != null:
+			return found
+	return null
