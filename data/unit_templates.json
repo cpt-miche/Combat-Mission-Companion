@@ -1,0 +1,14 @@
+{
+  "rifle_squad": {
+    "name": "Rifle Squad",
+    "nation": "usa",
+    "points": 100,
+    "tags": ["infantry", "line"]
+  },
+  "motor_rifle_squad": {
+    "name": "Motor Rifle Squad",
+    "nation": "ussr",
+    "points": 95,
+    "tags": ["infantry", "line"]
+  }
+}

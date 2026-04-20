@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://dkgjlwm7rluwq"]
+
+[node name="PhaseHeader" type="HBoxContainer"]
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 2
+text = "Combat Mission Companion"

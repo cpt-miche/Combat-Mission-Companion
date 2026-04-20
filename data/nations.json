@@ -1,0 +1,10 @@
+{
+  "usa": {
+    "name": "United States",
+    "faction": "NATO"
+  },
+  "ussr": {
+    "name": "Soviet Union",
+    "faction": "Warsaw Pact"
+  }
+}
