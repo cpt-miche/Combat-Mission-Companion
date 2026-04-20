@@ -1,5 +1,7 @@
 [gd_scene format=3 uid="uid://gameplayscreen"]
 
+[ext_resource type="Script" path="res://scripts/ui/gameplay/GameplayScreen.gd" id="1_game"]
+
 [node name="GameplayScreen" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -7,11 +9,36 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_game")
 
-[node name="Label" type="Label" parent="."]
+[node name="InfoLabel" type="Label" parent="."]
+unique_name_in_owner = true
 layout_mode = 0
-offset_left = 32.0
-offset_top = 32.0
-offset_right = 432.0
-offset_bottom = 64.0
-text = "Gameplay Screen"
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 860.0
+offset_bottom = 44.0
+text = "Gameplay"
+
+[node name="EndTurnButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 24.0
+offset_top = 58.0
+offset_right = 148.0
+offset_bottom = 94.0
+text = "End Turn"
+
+[node name="AnimationTimer" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 0.35
+
+[node name="CombatLogLabel" type="RichTextLabel" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 640.0
+offset_top = 58.0
+offset_right = 1008.0
+offset_bottom = 568.0
+scroll_active = false
+bbcode_enabled = false
