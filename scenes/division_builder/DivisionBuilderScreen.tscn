@@ -1,0 +1,159 @@
+[gd_scene load_steps=3 format=3 uid="uid://bfmy7q0f4jhy8"]
+
+[ext_resource type="Script" path="res://scripts/ui/division_builder/DivisionBuilderScreen.gd" id="1_qr4o8"]
+[ext_resource type="Script" path="res://scripts/ui/division_builder/OrgChartView.gd" id="2_hm8ic"]
+
+[node name="DivisionBuilderScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_qr4o8")
+
+[node name="RootMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HSplitContainer" type="HSplitContainer" parent="RootMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+split_offset = 280
+
+[node name="LeftPanel" type="PanelContainer" parent="RootMargin/HSplitContainer"]
+custom_minimum_size = Vector2(270, 0)
+layout_mode = 2
+
+[node name="LeftMargin" type="MarginContainer" parent="RootMargin/HSplitContainer/LeftPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="LeftVBox" type="VBoxContainer" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin"]
+layout_mode = 2
+
+[node name="NationLabel" type="Label" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+layout_mode = 2
+text = "Nation"
+
+[node name="NationSelector" type="OptionButton" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CatalogLabel" type="Label" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+layout_mode = 2
+text = "Unit Catalog"
+
+[node name="UnitTree" type="Tree" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PendingUnitLabel" type="Label" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Pending Unit: None"
+autowrap_mode = 2
+
+[node name="AddUnitButton" type="Button" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Add Unit"
+
+[node name="CenterPanel" type="PanelContainer" parent="RootMargin/HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CenterMargin" type="MarginContainer" parent="RootMargin/HSplitContainer/CenterPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="CenterVBox" type="VBoxContainer" parent="RootMargin/HSplitContainer/CenterPanel/CenterMargin"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ChartHeader" type="Label" parent="RootMargin/HSplitContainer/CenterPanel/CenterMargin/CenterVBox"]
+layout_mode = 2
+text = "Organization Chart (LMB select, RMB remove, MMB pan, wheel zoom)"
+
+[node name="OrgChartView" type="Control" parent="RootMargin/HSplitContainer/CenterPanel/CenterMargin/CenterVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(500, 400)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+script = ExtResource("2_hm8ic")
+
+[node name="RightPanel" type="PanelContainer" parent="RootMargin/HSplitContainer"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+
+[node name="RightMargin" type="MarginContainer" parent="RootMargin/HSplitContainer/RightPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="RightVBox" type="VBoxContainer" parent="RootMargin/HSplitContainer/RightPanel/RightMargin"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailsHeader" type="Label" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+layout_mode = 2
+text = "Selected Unit"
+
+[node name="SelectedUnitName" type="Label" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Army"
+autowrap_mode = 2
+
+[node name="SelectedUnitMeta" type="Label" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Type: HQ"
+autowrap_mode = 2
+
+[node name="VeterancyLabel" type="Label" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+layout_mode = 2
+text = "Veterancy"
+
+[node name="VeterancySelector" type="OptionButton" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HistoricalHeader" type="Label" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+layout_mode = 2
+text = "Historical Description"
+
+[node name="HistoricalDescription" type="RichTextLabel" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+
+[node name="DeleteButton" type="Button" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Delete Selected Unit"
