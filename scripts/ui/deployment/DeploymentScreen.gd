@@ -29,8 +29,58 @@ func _ensure_players_initialized() -> void:
 		})
 
 	for i in range(2):
+		var player := GameState.players[i]
+		if not player.has("division_tree") or (player.get("division_tree", {}) as Dictionary).is_empty():
+			player["division_tree"] = _default_division_tree(i)
 		if not GameState.players[i].has("deployments"):
 			GameState.players[i]["deployments"] = {}
+		GameState.players[i] = player
+
+func _default_division_tree(player_index: int) -> Dictionary:
+	var side_label := "P%d" % (player_index + 1)
+	return {
+		"id": "%s_hq" % side_label,
+		"name": "%s HQ" % side_label,
+		"type": "headquarters",
+		"size": "army",
+		"children": [
+			{
+				"id": "%s_infantry_bn" % side_label,
+				"name": "%s Infantry Battalion" % side_label,
+				"type": "infantry",
+				"size": "battalion",
+				"children": []
+			},
+			{
+				"id": "%s_tank_bn" % side_label,
+				"name": "%s Tank Battalion" % side_label,
+				"type": "tank",
+				"size": "battalion",
+				"children": []
+			},
+			{
+				"id": "%s_support_co" % side_label,
+				"name": "%s Support Company" % side_label,
+				"type": "engineer",
+				"size": "company",
+				"children": []
+			},
+			{
+				"id": "%s_infantry_co_1" % side_label,
+				"name": "%s Infantry Company A" % side_label,
+				"type": "infantry",
+				"size": "company",
+				"children": []
+			},
+			{
+				"id": "%s_infantry_co_2" % side_label,
+				"name": "%s Infantry Company B" % side_label,
+				"type": "infantry",
+				"size": "company",
+				"children": []
+			}
+		]
+	}
 
 func _build_deployable_unit_list() -> void:
 	unit_list.clear()
@@ -98,18 +148,18 @@ func _on_hex_selected(column: int, row: int) -> void:
 	var target_key := "%d,%d" % [column, row]
 	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
 
-	if existing_key != "" and existing_key != target_key:
-		deployments.erase(existing_key)
+	var next_deployments := deployments.duplicate(true)
+	if existing_key != "":
+		next_deployments.erase(existing_key)
+	next_deployments.erase(target_key)
 
-	var snapshot := _deployed_unit_snapshots(deployments)
+	var snapshot := _deployed_unit_snapshots(next_deployments)
 	if not DeploymentValidator.can_place_unit(unit_snapshot, snapshot):
-		if existing_key != "" and existing_key != target_key:
-			deployments[existing_key] = unit_snapshot
 		_refresh_phase_ui("Cap exceeded: max 1 non-tank battalion OR 3 non-tank companies, plus 1 tank battalion.")
 		return
 
-	deployments[target_key] = unit_snapshot
-	GameState.players[_player_index]["deployments"] = deployments
+	next_deployments[target_key] = unit_snapshot
+	GameState.players[_player_index]["deployments"] = next_deployments
 	_refresh_phase_ui("Placed %s at %d,%d." % [_unit_label(unit_data), column, row])
 
 func _deployed_unit_snapshots(deployments: Dictionary) -> Array[Dictionary]:
