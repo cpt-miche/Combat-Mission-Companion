@@ -87,18 +87,28 @@ func _on_hex_selected(column: int, row: int) -> void:
 		return
 
 	var unit_data := unit_list.get_item_metadata(selected[0]) as Dictionary
+	var unit_snapshot := _unit_snapshot(unit_data)
+	var unit_id := String(unit_snapshot.get("id", ""))
 	var territory_owner := int(GameState.territory_map.get("%d,%d" % [column, row], GameState.TerritoryOwnership.NEUTRAL))
 	if not DeploymentValidator.can_deploy_in_territory(territory_owner, _player_index):
 		_refresh_phase_ui("Deployment must be inside your territory.")
 		return
 
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var target_key := "%d,%d" % [column, row]
+	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
+
+	if existing_key != "" and existing_key != target_key:
+		deployments.erase(existing_key)
+
 	var snapshot := _deployed_unit_snapshots(deployments)
-	if not DeploymentValidator.can_place_unit(_unit_snapshot(unit_data), snapshot):
+	if not DeploymentValidator.can_place_unit(unit_snapshot, snapshot):
+		if existing_key != "" and existing_key != target_key:
+			deployments[existing_key] = unit_snapshot
 		_refresh_phase_ui("Cap exceeded: max 1 non-tank battalion OR 3 non-tank companies, plus 1 tank battalion.")
 		return
 
-	deployments["%d,%d" % [column, row]] = _unit_snapshot(unit_data)
+	deployments[target_key] = unit_snapshot
 	GameState.players[_player_index]["deployments"] = deployments
 	_refresh_phase_ui("Placed %s at %d,%d." % [_unit_label(unit_data), column, row])
 
@@ -109,6 +119,17 @@ func _deployed_unit_snapshots(deployments: Dictionary) -> Array[Dictionary]:
 		if typeof(unit_data) == TYPE_DICTIONARY:
 			units.append(unit_data)
 	return units
+
+func _deployment_key_for_unit_id(deployments: Dictionary, unit_id: String) -> String:
+	if unit_id.is_empty():
+		return ""
+	for key in deployments.keys():
+		var unit_data = deployments[key]
+		if typeof(unit_data) != TYPE_DICTIONARY:
+			continue
+		if String(unit_data.get("id", "")) == unit_id:
+			return String(key)
+	return ""
 
 func _unit_snapshot(unit: Dictionary) -> Dictionary:
 	var unit_type := _string_for_type(unit.get("type", ""))
