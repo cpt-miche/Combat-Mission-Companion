@@ -1,0 +1,33 @@
+{
+  "nation": "germany",
+  "templates": [
+    {
+      "id": "ger_pionier_platoon",
+      "display_name": "Pionier Platoon",
+      "type": "ENGINEER",
+      "size": "PLATOON",
+      "default_veterancy": "REGULAR"
+    },
+    {
+      "id": "ger_panzer_company",
+      "display_name": "Panzer Company",
+      "type": "TANK",
+      "size": "COMPANY",
+      "default_veterancy": "VETERAN"
+    },
+    {
+      "id": "ger_infantry_battalion",
+      "display_name": "Infantry Battalion",
+      "type": "INFANTRY",
+      "size": "BATTALION",
+      "default_veterancy": "GREEN"
+    },
+    {
+      "id": "ger_artillery_regiment",
+      "display_name": "Artillery Regiment",
+      "type": "ARTILLERY",
+      "size": "REGIMENT",
+      "default_veterancy": "HARDENED"
+    }
+  ]
+}

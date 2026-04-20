@@ -1,0 +1,33 @@
+{
+  "nation": "usa",
+  "templates": [
+    {
+      "id": "usa_infantry_platoon",
+      "display_name": "Infantry Platoon",
+      "type": "INFANTRY",
+      "size": "PLATOON",
+      "default_veterancy": "REGULAR"
+    },
+    {
+      "id": "usa_engineer_platoon",
+      "display_name": "Engineer Platoon",
+      "type": "ENGINEER",
+      "size": "PLATOON",
+      "default_veterancy": "GREEN"
+    },
+    {
+      "id": "usa_tank_company",
+      "display_name": "Tank Company",
+      "type": "TANK",
+      "size": "COMPANY",
+      "default_veterancy": "REGULAR"
+    },
+    {
+      "id": "usa_mechanized_battalion",
+      "display_name": "Mechanized Battalion",
+      "type": "MECHANIZED",
+      "size": "BATTALION",
+      "default_veterancy": "VETERAN"
+    }
+  ]
+}
