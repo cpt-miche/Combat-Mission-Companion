@@ -73,6 +73,30 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Add Unit"
 
+[node name="TemplateNameInput" type="LineEdit" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Template name"
+
+[node name="TemplateSelector" type="OptionButton" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="TemplateButtons" type="HBoxContainer" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
+layout_mode = 2
+
+[node name="SaveTemplateButton" type="Button" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox/TemplateButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Save Template"
+
+[node name="LoadTemplateButton" type="Button" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox/TemplateButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Load Template"
+
 [node name="CenterPanel" type="PanelContainer" parent="RootMargin/HSplitContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
