@@ -105,7 +105,7 @@ func _apply_zoom(scale_multiplier: float, pivot: Vector2) -> void:
 
 func _draw() -> void:
 	var xform := _view_transform()
-	draw_set_transform(xform.origin, 0.0, xform.scale)
+	draw_set_transform(xform.origin, 0.0, xform.get_scale())
 
 	if map_texture != null:
 		draw_texture(map_texture, map_offset)
