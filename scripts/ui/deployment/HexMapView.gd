@@ -1,5 +1,5 @@
 extends Control
-class_name HexMapView
+class_name DeploymentHexMapView
 
 signal hex_selected(column: int, row: int)
 

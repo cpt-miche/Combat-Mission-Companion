@@ -5,7 +5,7 @@ const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValida
 @onready var phase_label: Label = %PhaseLabel
 @onready var unit_list: ItemList = %UnitList
 @onready var status_label: Label = %StatusLabel
-@onready var hex_map_view: HexMapView = %HexMapView
+@onready var hex_map_view: DeploymentHexMapView = %HexMapView
 @onready var finish_button: Button = %FinishDeploymentButton
 
 var _player_index := 0
