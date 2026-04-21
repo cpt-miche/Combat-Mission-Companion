@@ -15,6 +15,11 @@ func _ready() -> void:
 	clear_all_button.pressed.connect(_on_clear_all_pressed)
 	confirm_button.pressed.connect(_on_confirm_pressed)
 	load_png_button.pressed.connect(hex_map_view.open_map_dialog)
+	select_p1_button.pressed.connect(_on_select_p1_territory_pressed)
+	switch_to_p2_button.pressed.connect(_on_switch_to_p2_pressed)
+	confirm_territories_button.pressed.connect(_on_confirm_territories_pressed)
+	_load_existing_territory_map()
+	_refresh_ui()
 
 func _build_palette() -> void:
 	for terrain in TERRAIN_TYPES:
@@ -62,12 +67,6 @@ const HEX_ORIGIN := Vector2(120.0, 170.0)
 var _mode: Mode = Mode.TERRAIN_EDIT
 var _territory_map: Dictionary = {}
 
-func _ready() -> void:
-	select_p1_button.pressed.connect(_on_select_p1_territory_pressed)
-	switch_to_p2_button.pressed.connect(_on_switch_to_p2_pressed)
-	confirm_territories_button.pressed.connect(_on_confirm_territories_pressed)
-	_load_existing_territory_map()
-	_refresh_ui()
 
 func _draw() -> void:
 	for row in range(GRID_ROWS):
