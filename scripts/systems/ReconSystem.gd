@@ -7,7 +7,7 @@ static func resolve_recon(attacker: Dictionary, defender: Dictionary, modifier: 
 	var base_roll := rng.randi_range(0, 100)
 	var attacker_bonus := int(attacker.get("recon_bonus", 0))
 	var defender_penalty := int(defender.get("concealment", 0))
-	var total := clamp(base_roll + attacker_bonus + modifier - defender_penalty, 0, 100)
+	var total: int = int(clamp(base_roll + attacker_bonus + modifier - defender_penalty, 0, 100))
 	return {
 		"roll": base_roll,
 		"total": total,

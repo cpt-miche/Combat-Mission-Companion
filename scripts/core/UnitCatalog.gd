@@ -29,9 +29,9 @@ func _read_json_file(path: String) -> Dictionary:
 		push_warning("Unable to open data file: %s" % path)
 		return {}
 
-	var parsed := JSON.parse_string(file.get_as_text())
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		push_warning("Expected dictionary JSON in file: %s" % path)
 		return {}
 
-	return parsed
+	return parsed as Dictionary

@@ -58,12 +58,12 @@ static func _heuristic(a: Vector2i, b: Vector2i) -> int:
 	return int(max(dq, dr))
 
 static func _neighbors(hex: Vector2i) -> Array[Vector2i]:
-	var offsets_even := [
+	var offsets_even: Array[Vector2i] = [
 		Vector2i(1, 0), Vector2i(-1, 0),
 		Vector2i(0, -1), Vector2i(-1, -1),
 		Vector2i(0, 1), Vector2i(-1, 1)
 	]
-	var offsets_odd := [
+	var offsets_odd: Array[Vector2i] = [
 		Vector2i(1, 0), Vector2i(-1, 0),
 		Vector2i(1, -1), Vector2i(0, -1),
 		Vector2i(1, 1), Vector2i(0, 1)
