@@ -1,6 +1,4 @@
 extends Node
-class_name GameState
-
 enum Phase {
 	DIVISION_BUILDER,
 	MAP_SETUP,
