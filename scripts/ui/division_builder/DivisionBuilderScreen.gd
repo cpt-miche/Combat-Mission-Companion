@@ -40,7 +40,7 @@ func _ready() -> void:
 
 func _build_nation_selector() -> void:
 	nation_selector.clear()
-	var nation_ids := UnitCatalog.nations.keys()
+	var nation_ids: Array = UnitCatalog.nations.keys()
 	nation_ids.sort()
 	for nation_id in nation_ids:
 		var nation_data: Dictionary = UnitCatalog.nations[nation_id]
@@ -87,7 +87,7 @@ func _rebuild_unit_tree() -> void:
 
 	var root := unit_tree.create_item()
 	var categories := _collect_templates_by_category()
-	var category_names := categories.keys()
+	var category_names: Array = categories.keys()
 	category_names.sort()
 
 	for category_name in category_names:
@@ -280,7 +280,7 @@ func _on_load_template_pressed() -> void:
 		pending_unit_label.text = "No template selected."
 		return
 	var template_name := String(template_selector.get_item_text(template_selector.selected))
-	var payload := SaveManager.load_division_template(template_name)
+	var payload: Dictionary = SaveManager.load_division_template(template_name)
 	if payload.is_empty():
 		pending_unit_label.text = "Failed to load template."
 		return
@@ -297,7 +297,7 @@ func _on_load_template_pressed() -> void:
 
 func _refresh_template_selector() -> void:
 	template_selector.clear()
-	var templates := SaveManager.list_division_templates()
+	var templates: PackedStringArray = SaveManager.list_division_templates()
 	for template_name in templates:
 		template_selector.add_item(template_name)
 	if template_selector.item_count > 0:
