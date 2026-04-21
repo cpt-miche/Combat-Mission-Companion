@@ -1,5 +1,4 @@
 extends Node
-class_name Rules
 
 const MAX_PLAYERS := 2
 const MIN_POINT_LIMIT := 100
