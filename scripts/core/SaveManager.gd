@@ -26,12 +26,12 @@ func _read_json(path: String) -> Dictionary:
 		push_warning("Could not open save file for reading: %s" % path)
 		return {}
 
-	var parsed := JSON.parse_string(file.get_as_text())
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		push_warning("Save file content is invalid: %s" % path)
 		return {}
 
-	return parsed
+	return parsed as Dictionary
 
 func autosave(payload: Dictionary) -> bool:
 	return save_current_game(payload)

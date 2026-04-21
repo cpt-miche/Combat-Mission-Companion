@@ -43,7 +43,7 @@ func _gui_input(event: InputEvent) -> void:
 		emit_signal("hex_selected", int(coordinate["q"]), int(coordinate["r"]))
 
 func _draw_visible_placements() -> void:
-	var placements := placements_by_player.get(visible_player_index, {})
+	var placements: Dictionary = placements_by_player.get(visible_player_index, {}) as Dictionary
 	for key in placements.keys():
 		var parts := key.split(",")
 		if parts.size() != 2:

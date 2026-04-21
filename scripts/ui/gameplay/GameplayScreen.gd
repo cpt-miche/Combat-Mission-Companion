@@ -122,7 +122,7 @@ func _draw() -> void:
 			var center := _hex_center(column, row)
 			if not visible_rect.has_point(center):
 				continue
-			var points := _hex_polygon_cache.get(axial, _hex_points(center))
+			var points: PackedVector2Array = _hex_polygon_cache.get(axial, _hex_points(center)) as PackedVector2Array
 			draw_colored_polygon(points, Color(0.15, 0.18, 0.2, 0.9))
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.35, 0.4, 0.45, 1.0), 1.5)
 
@@ -234,7 +234,7 @@ func _on_animation_step() -> void:
 		_refresh_log()
 		GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
 		return
-	var step := _execution_queue.pop_front()
+	var step: Dictionary = _execution_queue.pop_front() as Dictionary
 	if String(step.get("type", "")) != "move":
 		return
 	var unit_id := String(step.get("unit_id", ""))

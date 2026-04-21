@@ -192,14 +192,14 @@ func _world_to_axial(world: Vector2) -> Vector2i:
 	return _hex_round(q, r)
 
 func _hex_round(q: float, r: float) -> Vector2i:
-	var s := -q - r
-	var rq := round(q)
-	var rr := round(r)
-	var rs := round(s)
+	var s: float = -q - r
+	var rq: float = round(q)
+	var rr: float = round(r)
+	var rs: float = round(s)
 
-	var q_diff := abs(rq - q)
-	var r_diff := abs(rr - r)
-	var s_diff := abs(rs - s)
+	var q_diff: float = absf(rq - q)
+	var r_diff: float = absf(rr - r)
+	var s_diff: float = absf(rs - s)
 
 	if q_diff > r_diff and q_diff > s_diff:
 		rq = -rr - rs
