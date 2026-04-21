@@ -1,5 +1,4 @@
 extends Node
-class_name SaveManager
 
 const CURRENT_GAME_SAVE_PATH := "user://current_game.save"
 const DIVISION_TEMPLATES_DIR := "user://division_templates"

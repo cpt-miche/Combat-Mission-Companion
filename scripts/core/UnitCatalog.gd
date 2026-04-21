@@ -1,5 +1,4 @@
 extends Node
-class_name UnitCatalog
 
 const NATIONS_PATH := "res://data/nations.json"
 const UNIT_TEMPLATES_PATH := "res://data/unit_templates.json"
