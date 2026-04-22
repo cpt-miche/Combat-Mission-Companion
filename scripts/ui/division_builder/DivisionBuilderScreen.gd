@@ -147,7 +147,7 @@ func _collect_template_and_children(template_data: Dictionary, nation_id: String
 		"nation": nation_id,
 		"type": unit_type,
 		"size": _size_from_template(template_data),
-		"count": maxi(int(template_data.get("count", 1)), 1),
+		"count": 1,
 		"children": template_data.get("children", []).duplicate(true)
 	}
 	grouped[category].append(template)
