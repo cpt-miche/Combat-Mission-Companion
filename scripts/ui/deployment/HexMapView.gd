@@ -45,7 +45,8 @@ func _gui_input(event: InputEvent) -> void:
 func _draw_visible_placements() -> void:
 	var placements: Dictionary = placements_by_player.get(visible_player_index, {}) as Dictionary
 	for key in placements.keys():
-		var parts := key.split(",")
+		var key_string: String = String(key)
+		var parts: PackedStringArray = key_string.split(",")
 		if parts.size() != 2:
 			continue
 		var center := _hex_center(int(parts[0]), int(parts[1]))
