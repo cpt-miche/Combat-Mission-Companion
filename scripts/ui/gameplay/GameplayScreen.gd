@@ -12,6 +12,8 @@ const HEX_HORIZONTAL_SPACING := HEX_RADIUS * 1.7320508
 const HEX_VERTICAL_SPACING := HEX_RADIUS * 1.5
 const HEX_ORIGIN := Vector2(120.0, 220.0)
 const PATH_PREVIEW_THROTTLE_MS := 75
+const UNIT_MARKER_RADIUS := 16.0
+const DRAG_START_THRESHOLD := 6.0
 
 @onready var info_label: Label = %InfoLabel
 @onready var log_label: RichTextLabel = %CombatLogLabel
@@ -33,6 +35,12 @@ var _preview_target_hex := Vector2i(-9999, -9999)
 var _preview_path: Array[Vector2i] = []
 var _pending_preview_target_hex := Vector2i(-9999, -9999)
 var _preview_recalc_due_at_msec := 0
+var _camera_offset := Vector2.ZERO
+var _is_panning := false
+var _drag_candidate_unit_id := ""
+var _dragging_unit_id := ""
+var _drag_start_mouse_pos := Vector2.ZERO
+var _drag_mouse_pos := Vector2.ZERO
 
 func _ready() -> void:
 	_load_or_initialize_units()
@@ -41,7 +49,7 @@ func _ready() -> void:
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	animation_timer.timeout.connect(_on_animation_step)
 	_refresh_log()
-	info_label.text = "Right-click to issue move. Ctrl+Right-click to issue attack."
+	info_label.text = "Drag friendly units to create move orders. Click+drag empty space to pan. Ctrl+Right-click to issue attack."
 
 func _process(_delta: float) -> void:
 	if _preview_recalc_due_at_msec <= 0:
@@ -58,17 +66,72 @@ func _notification(what: int) -> void:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var motion := event as InputEventMouseMotion
-		_handle_path_preview_motion(motion.position)
+		_handle_mouse_motion(motion)
 		return
 
-	if event is InputEventMouseButton and event.pressed:
+	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT:
+			if mouse_event.pressed:
+				_handle_left_press(mouse_event.position)
+			else:
+				_handle_left_release(mouse_event.position)
+			return
+
+		if not mouse_event.pressed:
+			return
+
 		var clicked_hex := _find_hex(mouse_event.position)
 		if clicked_hex.is_empty():
 			return
 		var hex := Vector2i(clicked_hex["q"], clicked_hex["r"])
 
-		if mouse_event.button_index == MOUSE_BUTTON_LEFT:
+		if mouse_event.button_index == MOUSE_BUTTON_RIGHT:
+			if _selected_unit_id.is_empty():
+				info_label.text = "Select a friendly unit first."
+				return
+			var is_attack := Input.is_key_pressed(KEY_CTRL)
+			if not is_attack:
+				if _issue_move_order(_selected_unit_id, hex):
+					info_label.text = "Move order created for %s." % _selected_unit_id
+					queue_redraw()
+				return
+			var target_id := ""
+			target_id = _unit_at_hex(hex, 1 - _active_player)
+			if target_id.is_empty():
+				info_label.text = "Attack orders require an enemy target hex."
+				return
+			var start_hex := _units[_selected_unit_id].get("hex", Vector2i.ZERO) as Vector2i
+			var blocked := _blocked_cells(_selected_unit_id)
+			blocked.erase("%d,%d" % [hex.x, hex.y])
+			var path := Pathfinding.find_path(start_hex, hex, GameState.terrain_map, blocked)
+			if path.is_empty():
+				info_label.text = "No path found."
+				return
+
+			_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
+			info_label.text = "Attack order created for %s." % _selected_unit_id
+			_preview_path.clear()
+			_preview_target_hex = Vector2i(-9999, -9999)
+			queue_redraw()
+
+func _handle_left_press(position: Vector2) -> void:
+	_drag_start_mouse_pos = position
+	_drag_mouse_pos = position
+	_drag_candidate_unit_id = _pick_friendly_unit_at(position)
+	_dragging_unit_id = ""
+	if _drag_candidate_unit_id.is_empty():
+		_is_panning = true
+
+func _handle_left_release(position: Vector2) -> void:
+	var total_drag := position.distance_to(_drag_start_mouse_pos)
+	if _is_panning:
+		_is_panning = false
+		if total_drag <= DRAG_START_THRESHOLD:
+			var clicked_hex := _find_hex(position)
+			if clicked_hex.is_empty():
+				return
+			var hex := Vector2i(clicked_hex["q"], clicked_hex["r"])
 			if _delete_path_at(hex):
 				queue_redraw()
 				info_label.text = "Order deleted."
@@ -79,37 +142,43 @@ func _gui_input(event: InputEvent) -> void:
 			if not _selected_unit_id.is_empty():
 				info_label.text = "Selected %s" % _selected_unit_id
 			queue_redraw()
-			return
+		return
 
-		if mouse_event.button_index == MOUSE_BUTTON_RIGHT:
-			if _selected_unit_id.is_empty():
-				info_label.text = "Select a friendly unit first."
-				return
-			var start_hex := _units[_selected_unit_id].get("hex", Vector2i.ZERO) as Vector2i
-			var is_attack := Input.is_key_pressed(KEY_CTRL)
-			var target_id := ""
-			if is_attack:
-				target_id = _unit_at_hex(hex, 1 - _active_player)
-				if target_id.is_empty():
-					info_label.text = "Attack orders require an enemy target hex."
-					return
-			var blocked := _blocked_cells(_selected_unit_id)
-			if is_attack:
-				blocked.erase("%d,%d" % [hex.x, hex.y])
-			var path := Pathfinding.find_path(start_hex, hex, GameState.terrain_map, blocked)
-			if path.is_empty():
-				info_label.text = "No path found."
-				return
+	if not _dragging_unit_id.is_empty():
+		var dropped_hex_dict := _find_hex(position)
+		if dropped_hex_dict.is_empty():
+			info_label.text = "Drop on a hex to create a move order."
+		else:
+			var dropped_hex := Vector2i(dropped_hex_dict["q"], dropped_hex_dict["r"])
+			if _issue_move_order(_dragging_unit_id, dropped_hex):
+				info_label.text = "Move order created for %s." % _dragging_unit_id
+		_preview_path.clear()
+		_preview_target_hex = Vector2i(-9999, -9999)
+		_pending_preview_target_hex = Vector2i(-9999, -9999)
+	elif not _drag_candidate_unit_id.is_empty() and total_drag <= DRAG_START_THRESHOLD:
+		_selected_unit_id = _drag_candidate_unit_id
+		info_label.text = "Selected %s" % _selected_unit_id
+	_drag_candidate_unit_id = ""
+	_dragging_unit_id = ""
+	queue_redraw()
 
-			if is_attack:
-				_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
-				info_label.text = "Attack order created for %s." % _selected_unit_id
-			else:
-				_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_move_order(_selected_unit_id, path))
-				info_label.text = "Move order created for %s." % _selected_unit_id
+func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
+	if _is_panning:
+		_camera_offset += motion.relative
+		queue_redraw()
+		return
+	_drag_mouse_pos = motion.position
+	if _dragging_unit_id.is_empty() and not _drag_candidate_unit_id.is_empty():
+		if _drag_start_mouse_pos.distance_to(motion.position) >= DRAG_START_THRESHOLD:
+			_dragging_unit_id = _drag_candidate_unit_id
+			_selected_unit_id = _dragging_unit_id
 			_preview_path.clear()
 			_preview_target_hex = Vector2i(-9999, -9999)
-			queue_redraw()
+	if not _dragging_unit_id.is_empty():
+		_handle_path_preview_motion(motion.position)
+		queue_redraw()
+		return
+	_handle_path_preview_motion(motion.position)
 
 func _draw() -> void:
 	var visible_rect := Rect2(Vector2.ZERO, size).grow(HEX_RADIUS * 2.0)
@@ -119,10 +188,14 @@ func _draw() -> void:
 	for row in range(GRID_ROWS):
 		for column in range(GRID_COLUMNS):
 			var axial := Vector2i(column, row)
-			var center := _hex_center(column, row)
+			var world_center := _hex_center(column, row)
+			var center := _world_to_screen(world_center)
 			if not visible_rect.has_point(center):
 				continue
-			var points: PackedVector2Array = _hex_polygon_cache.get(axial, _hex_points(center)) as PackedVector2Array
+			var world_points: PackedVector2Array = _hex_polygon_cache.get(axial, _hex_points(world_center)) as PackedVector2Array
+			var points := PackedVector2Array()
+			for point in world_points:
+				points.append(_world_to_screen(point))
 			draw_colored_polygon(points, Color(0.15, 0.18, 0.2, 0.9))
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.35, 0.4, 0.45, 1.0), 1.5)
 
@@ -143,7 +216,7 @@ func _draw() -> void:
 	for unit_id in _units.keys():
 		var unit := _units[unit_id] as Dictionary
 		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
-		var center := _hex_center(hex.x, hex.y)
+		var center := _world_to_screen(_hex_center(hex.x, hex.y))
 		if not visible_rect.has_point(center):
 			continue
 		var color := Color(0.24, 0.43, 0.92, 1.0) if int(unit.get("owner", 0)) == 0 else Color(0.89, 0.29, 0.27, 1.0)
@@ -153,6 +226,11 @@ func _draw() -> void:
 
 	for i in range(_active_unit_marker_count):
 		_draw_unit_marker(_unit_marker_pool[i])
+
+	if not _dragging_unit_id.is_empty():
+		var drag_color := Color(0.95, 0.95, 0.55, 0.9)
+		draw_circle(_drag_mouse_pos, UNIT_MARKER_RADIUS, drag_color)
+		draw_string(get_theme_default_font(), _drag_mouse_pos + Vector2(-12, 4), _dragging_unit_id, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
 
 func _collect_order_arrow(order: Dictionary, is_preview: bool) -> void:
 	var path := order.get("path", []) as Array
@@ -180,10 +258,10 @@ func _draw_order_arrow(entry: Dictionary) -> void:
 	for i in range(path.size() - 1):
 		var from_hex: Vector2i = path[i]
 		var to_hex: Vector2i = path[i + 1]
-		draw_line(_hex_center(from_hex.x, from_hex.y), _hex_center(to_hex.x, to_hex.y), color, width)
+		draw_line(_world_to_screen(_hex_center(from_hex.x, from_hex.y)), _world_to_screen(_hex_center(to_hex.x, to_hex.y)), color, width)
 	if order_type == OrderSystem.OrderType.ATTACK and not is_preview:
 		var end_hex: Vector2i = path[path.size() - 1]
-		var center := _hex_center(end_hex.x, end_hex.y)
+		var center := _world_to_screen(_hex_center(end_hex.x, end_hex.y))
 		draw_line(center + Vector2(-8, -8), center + Vector2(8, 8), color, 2.0)
 		draw_line(center + Vector2(8, -8), center + Vector2(-8, 8), color, 2.0)
 
@@ -200,8 +278,33 @@ func _collect_unit_marker(center: Vector2, color: Color, unit_id: String) -> voi
 
 func _draw_unit_marker(marker: Dictionary) -> void:
 	var center := marker.get("center", Vector2.ZERO) as Vector2
-	draw_circle(center, 16.0, marker.get("color", Color.WHITE))
+	draw_circle(center, UNIT_MARKER_RADIUS, marker.get("color", Color.WHITE))
 	draw_string(get_theme_default_font(), center + Vector2(-12, 4), String(marker.get("id", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+
+func _pick_friendly_unit_at(screen_position: Vector2) -> String:
+	for unit_id in _units.keys():
+		var unit := _units[unit_id] as Dictionary
+		if int(unit.get("owner", -1)) != _active_player:
+			continue
+		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
+		var marker_center := _world_to_screen(_hex_center(hex.x, hex.y))
+		if marker_center.distance_to(screen_position) <= UNIT_MARKER_RADIUS:
+			return String(unit_id)
+	return ""
+
+func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
+	if unit_id.is_empty() or not _units.has(unit_id):
+		return false
+	var start_hex := (_units[unit_id] as Dictionary).get("hex", Vector2i.ZERO) as Vector2i
+	var blocked := _blocked_cells(unit_id)
+	var path := Pathfinding.find_path(start_hex, target_hex, GameState.terrain_map, blocked)
+	if path.is_empty():
+		info_label.text = "No path found."
+		return false
+	_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_move_order(unit_id, path))
+	_preview_path.clear()
+	_preview_target_hex = Vector2i(-9999, -9999)
+	return true
 
 func _on_end_turn_pressed() -> void:
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log)
@@ -398,8 +501,15 @@ func _hex_points(center: Vector2) -> PackedVector2Array:
 	return points
 
 func _find_hex(position: Vector2) -> Dictionary:
+	var world_position := _screen_to_world(position)
 	for row in range(GRID_ROWS):
 		for column in range(GRID_COLUMNS):
-			if Geometry2D.is_point_in_polygon(position, _hex_points(_hex_center(column, row))):
+			if Geometry2D.is_point_in_polygon(world_position, _hex_points(_hex_center(column, row))):
 				return {"q": column, "r": row}
 	return {}
+
+func _world_to_screen(world_position: Vector2) -> Vector2:
+	return world_position + _camera_offset
+
+func _screen_to_world(screen_position: Vector2) -> Vector2:
+	return screen_position - _camera_offset
