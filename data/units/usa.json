@@ -9,6 +9,14 @@
       "default_veterancy": "REGULAR",
       "children": [
         {
+          "id": "usa_battalion_headquarters",
+          "display_name": "Battalion Headquarters",
+          "type": "HEADQUARTERS",
+          "size": "SECTION",
+          "count": 1,
+          "children": []
+        },
+        {
           "id": "usa_hq_company",
           "display_name": "Headquarters Company",
           "type": "HEADQUARTERS",
@@ -16,18 +24,44 @@
           "count": 1,
           "children": [
             {
-              "id": "usa_command_platoon",
-              "display_name": "Command Platoon",
+              "id": "usa_hq_company_hq",
+              "display_name": "Company HQ",
               "type": "HEADQUARTERS",
-              "size": "PLATOON",
-              "count": 1
+              "size": "SECTION",
+              "count": 1,
+              "children": []
             },
             {
-              "id": "usa_signal_platoon",
-              "display_name": "Signal Platoon",
+              "id": "usa_battalion_hq_section",
+              "display_name": "Battalion HQ Section",
               "type": "HEADQUARTERS",
+              "size": "SECTION",
+              "count": 1,
+              "children": []
+            },
+            {
+              "id": "usa_antitank_platoon",
+              "display_name": "Antitank Platoon",
+              "type": "ANTI_TANK",
               "size": "PLATOON",
-              "count": 1
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_antitank_platoon_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_antitank_squad",
+                  "display_name": "Antitank Squad",
+                  "type": "ANTI_TANK",
+                  "size": "SQUAD",
+                  "count": 3
+                }
+              ]
             }
           ]
         },
@@ -39,41 +73,320 @@
           "count": 3,
           "children": [
             {
-              "id": "usa_rifle_platoon",
-              "display_name": "Rifle Platoon",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "count": 3
+              "id": "usa_rifle_company_hq",
+              "display_name": "Company HQ",
+              "type": "HEADQUARTERS",
+              "size": "SECTION",
+              "count": 1,
+              "children": []
             },
             {
-              "id": "usa_weapons_platoon",
+              "id": "usa_rifle_platoon_1",
+              "display_name": "Rifle Platoon 1",
+              "type": "INFANTRY",
+              "size": "PLATOON",
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_rifle_platoon_1_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_rifle_platoon_1_rifle_squad",
+                  "display_name": "Rifle Squad",
+                  "type": "INFANTRY",
+                  "size": "SQUAD",
+                  "count": 3
+                }
+              ]
+            },
+            {
+              "id": "usa_rifle_platoon_2",
+              "display_name": "Rifle Platoon 2",
+              "type": "INFANTRY",
+              "size": "PLATOON",
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_rifle_platoon_2_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_rifle_platoon_2_rifle_squad",
+                  "display_name": "Rifle Squad",
+                  "type": "INFANTRY",
+                  "size": "SQUAD",
+                  "count": 3
+                }
+              ]
+            },
+            {
+              "id": "usa_rifle_platoon_3",
+              "display_name": "Rifle Platoon 3",
+              "type": "INFANTRY",
+              "size": "PLATOON",
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_rifle_platoon_3_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_rifle_platoon_3_rifle_squad",
+                  "display_name": "Rifle Squad",
+                  "type": "INFANTRY",
+                  "size": "SQUAD",
+                  "count": 3
+                }
+              ]
+            },
+            {
+              "id": "usa_rifle_company_weapons_platoon",
               "display_name": "Weapons Platoon",
               "type": "INFANTRY",
               "size": "PLATOON",
-              "count": 1
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_rifle_company_weapons_platoon_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_rifle_company_60mm_mortar_section",
+                  "display_name": "60mm Mortar Section",
+                  "type": "ARTILLERY",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_rifle_company_60mm_mortar_section_hq",
+                      "display_name": "Section HQ",
+                      "type": "HEADQUARTERS",
+                      "size": "SQUAD",
+                      "count": 1,
+                      "children": []
+                    },
+                    {
+                      "id": "usa_rifle_company_60mm_mortar_squad",
+                      "display_name": "Mortar Squad",
+                      "type": "ARTILLERY",
+                      "size": "SQUAD",
+                      "count": 3
+                    }
+                  ]
+                },
+                {
+                  "id": "usa_rifle_company_lmg_section",
+                  "display_name": "Light Machine-Gun Section",
+                  "type": "INFANTRY",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_rifle_company_lmg_section_hq",
+                      "display_name": "Section HQ",
+                      "type": "HEADQUARTERS",
+                      "size": "SQUAD",
+                      "count": 1,
+                      "children": []
+                    },
+                    {
+                      "id": "usa_rifle_company_lmg_squad",
+                      "display_name": "Light MG Squad",
+                      "type": "INFANTRY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
         {
-          "id": "usa_weapons_company",
-          "display_name": "Weapons Company",
+          "id": "usa_heavy_weapons_company",
+          "display_name": "Heavy Weapons Company",
           "type": "INFANTRY",
           "size": "COMPANY",
           "count": 1,
           "children": [
             {
-              "id": "usa_mortar_platoon",
-              "display_name": "Mortar Platoon",
-              "type": "ARTILLERY",
-              "size": "PLATOON",
-              "count": 1
+              "id": "usa_heavy_weapons_company_hq",
+              "display_name": "Company HQ",
+              "type": "HEADQUARTERS",
+              "size": "SECTION",
+              "count": 1,
+              "children": []
             },
             {
-              "id": "usa_anti_tank_platoon",
-              "display_name": "Anti-Tank Platoon",
-              "type": "ANTI_TANK",
+              "id": "usa_heavy_machine_gun_platoon",
+              "display_name": "Heavy Machine-Gun Platoon",
+              "type": "INFANTRY",
               "size": "PLATOON",
-              "count": 1
+              "count": 2,
+              "children": [
+                {
+                  "id": "usa_heavy_machine_gun_platoon_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_heavy_machine_gun_section_1",
+                  "display_name": "Machine-Gun Section 1",
+                  "type": "INFANTRY",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_heavy_machine_gun_section_1_hq",
+                      "display_name": "Section HQ",
+                      "type": "HEADQUARTERS",
+                      "size": "SQUAD",
+                      "count": 1,
+                      "children": []
+                    },
+                    {
+                      "id": "usa_heavy_machine_gun_squad",
+                      "display_name": "Heavy MG Squad",
+                      "type": "INFANTRY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
+                },
+                {
+                  "id": "usa_heavy_machine_gun_section_2",
+                  "display_name": "Machine-Gun Section 2",
+                  "type": "INFANTRY",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_heavy_machine_gun_section_2_hq",
+                      "display_name": "Section HQ",
+                      "type": "HEADQUARTERS",
+                      "size": "SQUAD",
+                      "count": 1,
+                      "children": []
+                    },
+                    {
+                      "id": "usa_heavy_machine_gun_squad",
+                      "display_name": "Heavy MG Squad",
+                      "type": "INFANTRY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "usa_81mm_mortar_platoon",
+              "display_name": "81mm Mortar Platoon",
+              "type": "ARTILLERY",
+              "size": "PLATOON",
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_81mm_mortar_platoon_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_81mm_mortar_section_1",
+                  "display_name": "Mortar Section 1",
+                  "type": "ARTILLERY",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_81mm_mortar_section_1_hq",
+                      "display_name": "Section HQ",
+                      "type": "HEADQUARTERS",
+                      "size": "SQUAD",
+                      "count": 1,
+                      "children": []
+                    },
+                    {
+                      "id": "usa_81mm_mortar_squad",
+                      "display_name": "Mortar Squad",
+                      "type": "ARTILLERY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
+                },
+                {
+                  "id": "usa_81mm_mortar_section_2",
+                  "display_name": "Mortar Section 2",
+                  "type": "ARTILLERY",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_81mm_mortar_section_2_hq",
+                      "display_name": "Section HQ",
+                      "type": "HEADQUARTERS",
+                      "size": "SQUAD",
+                      "count": 1,
+                      "children": []
+                    },
+                    {
+                      "id": "usa_81mm_mortar_squad",
+                      "display_name": "Mortar Squad",
+                      "type": "ARTILLERY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
+                },
+                {
+                  "id": "usa_81mm_mortar_section_3",
+                  "display_name": "Mortar Section 3",
+                  "type": "ARTILLERY",
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_81mm_mortar_section_3_hq",
+                      "display_name": "Section HQ",
+                      "type": "HEADQUARTERS",
+                      "size": "SQUAD",
+                      "count": 1,
+                      "children": []
+                    },
+                    {
+                      "id": "usa_81mm_mortar_squad",
+                      "display_name": "Mortar Squad",
+                      "type": "ARTILLERY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }
