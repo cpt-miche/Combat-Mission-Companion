@@ -490,20 +490,20 @@ func _size_from_template(data: Dictionary) -> UnitSize.Value:
 	if data.has("size"):
 		return _parse_unit_size(data.get("size", ""), {})
 
-	var inferred_size := _infer_size_from_children(data)
-	if inferred_size != null:
+	var inferred_size: int = _infer_size_from_children(data)
+	if inferred_size >= 0:
 		return inferred_size
 
 	return _parse_unit_size("", data)
 
-func _infer_size_from_children(data: Dictionary) -> Variant:
+func _infer_size_from_children(data: Dictionary) -> int:
 	var children_variant: Variant = data.get("children", [])
 	if typeof(children_variant) != TYPE_ARRAY:
-		return null
+		return -1
 
 	var children := children_variant as Array
 	if children.is_empty():
-		return null
+		return -1
 
 	var largest_child_rank := -1
 	for child_variant in children:
@@ -514,14 +514,14 @@ func _infer_size_from_children(data: Dictionary) -> Variant:
 		largest_child_rank = maxi(largest_child_rank, UnitSize.rank(child_size))
 
 	if largest_child_rank < 0:
-		return null
+		return -1
 
 	var inferred_rank := largest_child_rank + 1
 	for size_value in UnitSize.Value.values():
 		if UnitSize.rank(size_value) == inferred_rank:
 			return size_value
 
-	return null
+	return -1
 
 func _parse_unit_type(raw_type: Variant, fallback_data: Dictionary) -> UnitType.Value:
 	if typeof(raw_type) == TYPE_INT:
