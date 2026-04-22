@@ -151,7 +151,7 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 	queue_redraw()
 
 func _on_file_selected(path: String) -> void:
-	var loaded := load(path)
+	var loaded: Resource = load(path)
 	if loaded is Texture2D:
 		map_texture = loaded
 		map_offset = Vector2.ZERO
