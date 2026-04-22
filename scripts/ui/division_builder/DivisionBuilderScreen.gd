@@ -135,15 +135,23 @@ func _legacy_templates_for_nation(nation_id: String) -> Array:
 
 func _collect_template_and_children(template_data: Dictionary, nation_id: String, grouped: Dictionary) -> void:
 	var unit_type := _type_from_template(template_data)
+	if unit_type == UnitType.Value.HEADQUARTERS:
+		return
+
 	var category := UnitType.display_name(unit_type)
 	if not grouped.has(category):
 		grouped[category] = []
 
 	var template_id := String(template_data.get("id", template_data.get("display_name", "template")))
+	var base_name := _normalize_template_name(String(template_data.get("display_name", template_id)))
+	var base_template_id := _normalize_template_id(template_id)
+	if _has_grouped_template(grouped[category], nation_id, unit_type, _size_from_template(template_data), base_name):
+		return
+
 	var template := {
-		"id": template_id,
-		"name": template_data.get("display_name", template_id),
-		"display_name": template_data.get("display_name", template_id),
+		"id": base_template_id,
+		"name": base_name,
+		"display_name": base_name,
 		"nation": nation_id,
 		"type": unit_type,
 		"size": _size_from_template(template_data),
@@ -207,6 +215,7 @@ func _on_add_unit_pressed() -> void:
 
 	for i in range(top_level_count):
 		var candidate := _create_unit_from_template_tree(_pending_unit_data, nation, i + 1, top_level_count)
+		_apply_auto_variant_to_candidate(selected_parent, candidate)
 		var insertion_result := _insert_subtree_with_validation(selected_parent, candidate)
 		if not bool(insertion_result.get("ok", false)):
 			for added_root in added_roots:
@@ -222,6 +231,67 @@ func _on_add_unit_pressed() -> void:
 
 	_selected_unit = added_roots[0]
 	_refresh_all()
+
+func _has_grouped_template(grouped_templates: Array, nation_id: String, unit_type: UnitType.Value, unit_size: UnitSize.Value, template_name: String) -> bool:
+	for grouped_template_variant in grouped_templates:
+		if typeof(grouped_template_variant) != TYPE_DICTIONARY:
+			continue
+		var grouped_template := grouped_template_variant as Dictionary
+		if String(grouped_template.get("nation", "")) != nation_id:
+			continue
+		if int(grouped_template.get("type", UnitType.Value.INFANTRY)) != int(unit_type):
+			continue
+		if int(grouped_template.get("size", UnitSize.Value.COMPANY)) != int(unit_size):
+			continue
+		if _normalize_template_name(String(grouped_template.get("name", ""))) == template_name:
+			return true
+	return false
+
+func _normalize_template_name(raw_name: String) -> String:
+	var words := raw_name.strip_edges().split(" ")
+	if words.is_empty():
+		return raw_name
+	var last_word := String(words[words.size() - 1])
+	if last_word.is_valid_int():
+		words.remove_at(words.size() - 1)
+	return " ".join(words).strip_edges()
+
+func _normalize_template_id(raw_template_id: String) -> String:
+	var parts := raw_template_id.split("_")
+	if parts.size() <= 1:
+		return raw_template_id
+	var last_part := String(parts[parts.size() - 1])
+	if last_part.is_valid_int():
+		parts.remove_at(parts.size() - 1)
+	return "_".join(parts)
+
+func _apply_auto_variant_to_candidate(parent: UnitModel, candidate: UnitModel) -> void:
+	if parent == null or candidate == null:
+		return
+
+	var base_template_id := _normalize_template_id(candidate.template_id)
+	var next_variant := _next_variant_index_for_parent(parent, base_template_id)
+	candidate.template_id = base_template_id if next_variant <= 1 else "%s_%d" % [base_template_id, next_variant]
+
+func _next_variant_index_for_parent(parent: UnitModel, base_template_id: String) -> int:
+	var next_variant := 1
+	for child in parent.children:
+		if child == null:
+			continue
+		if _normalize_template_id(child.template_id) != base_template_id:
+			continue
+		var suffix := _numeric_suffix(child.template_id)
+		next_variant = maxi(next_variant, suffix + 1)
+	return next_variant
+
+func _numeric_suffix(template_id: String) -> int:
+	var parts := template_id.split("_")
+	if parts.is_empty():
+		return 1
+	var last_part := String(parts[parts.size() - 1])
+	if last_part.is_valid_int():
+		return maxi(int(last_part), 1)
+	return 1
 
 func _create_unit_from_template_tree(template_node: Dictionary, nation: String, instance_number: int = 1, instance_total: int = 1) -> UnitModel:
 	var raw_template_id := String(template_node.get("id", "template"))
