@@ -2,18 +2,22 @@ class_name UnitSize
 extends RefCounted
 
 enum Value {
-	PLATOON,
-	COMPANY,
-	BATTALION,
-	REGIMENT,
-	DIVISION,
-	ARMY,
+	SQUAD = 0,
+	SECTION = 1,
+	PLATOON = 2,
+	COMPANY = 3,
+	BATTALION = 4,
+	REGIMENT = 5,
+	DIVISION = 6,
+	ARMY = 7,
 }
 
 const _DISPLAY_NAMES := {
-	Value.PLATOON: "Platoon",
-	Value.COMPANY: "Company",
 	Value.BATTALION: "Battalion",
+	Value.COMPANY: "Company",
+	Value.PLATOON: "Platoon",
+	Value.SECTION: "Section",
+	Value.SQUAD: "Squad",
 	Value.REGIMENT: "Regiment",
 	Value.DIVISION: "Division",
 	Value.ARMY: "Army",

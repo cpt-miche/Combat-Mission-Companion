@@ -422,10 +422,31 @@ func _unit_to_dict(unit: UnitModel) -> Dictionary:
 		"template_id": unit.template_id,
 		"nation": unit.nation,
 		"type": int(unit.type),
-		"size": int(unit.size),
+		"size": _serialize_unit_size(unit.size),
 		"veterancy": int(unit.veterancy),
 		"children": serialized_children
 	}
+
+func _serialize_unit_size(size: UnitSize.Value) -> String:
+	match size:
+		UnitSize.Value.SQUAD:
+			return "SQUAD"
+		UnitSize.Value.SECTION:
+			return "SECTION"
+		UnitSize.Value.PLATOON:
+			return "PLATOON"
+		UnitSize.Value.COMPANY:
+			return "COMPANY"
+		UnitSize.Value.BATTALION:
+			return "BATTALION"
+		UnitSize.Value.REGIMENT:
+			return "REGIMENT"
+		UnitSize.Value.DIVISION:
+			return "DIVISION"
+		UnitSize.Value.ARMY:
+			return "ARMY"
+		_:
+			return "PLATOON"
 
 func _dict_to_unit(data: Variant) -> UnitModel:
 	if typeof(data) != TYPE_DICTIONARY:
@@ -435,8 +456,12 @@ func _dict_to_unit(data: Variant) -> UnitModel:
 	unit.id = String(raw.get("id", ""))
 	unit.template_id = String(raw.get("template_id", ""))
 	unit.nation = String(raw.get("nation", ""))
-	unit.type = int(raw.get("type", UnitType.Value.INFANTRY))
-	unit.size = int(raw.get("size", UnitSize.Value.PLATOON))
+	unit.type = _parse_unit_type(raw.get("type", UnitType.Value.INFANTRY), raw)
+	var raw_size: Variant = raw.get("size", UnitSize.Value.PLATOON)
+	var size_context := raw.duplicate(true)
+	if typeof(raw_size) == TYPE_INT:
+		size_context["_legacy_size_index"] = true
+	unit.size = _parse_unit_size(raw_size, size_context)
 	unit.veterancy = int(raw.get("veterancy", Veterancy.Value.REGULAR))
 	unit.children = []
 	for child_data in raw.get("children", []):
@@ -462,7 +487,41 @@ func _type_from_template(data: Dictionary) -> UnitType.Value:
 	return _parse_unit_type(data.get("type", ""), data)
 
 func _size_from_template(data: Dictionary) -> UnitSize.Value:
-	return _parse_unit_size(data.get("size", ""), data)
+	if data.has("size"):
+		return _parse_unit_size(data.get("size", ""), {})
+
+	var inferred_size := _infer_size_from_children(data)
+	if inferred_size != null:
+		return inferred_size
+
+	return _parse_unit_size("", data)
+
+func _infer_size_from_children(data: Dictionary) -> Variant:
+	var children_variant: Variant = data.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return null
+
+	var children := children_variant as Array
+	if children.is_empty():
+		return null
+
+	var largest_child_rank := -1
+	for child_variant in children:
+		if typeof(child_variant) != TYPE_DICTIONARY:
+			continue
+		var child_data := child_variant as Dictionary
+		var child_size := _size_from_template(child_data)
+		largest_child_rank = maxi(largest_child_rank, UnitSize.rank(child_size))
+
+	if largest_child_rank < 0:
+		return null
+
+	var inferred_rank := largest_child_rank + 1
+	for size_value in UnitSize.Value.values():
+		if UnitSize.rank(size_value) == inferred_rank:
+			return size_value
+
+	return null
 
 func _parse_unit_type(raw_type: Variant, fallback_data: Dictionary) -> UnitType.Value:
 	if typeof(raw_type) == TYPE_INT:
@@ -495,14 +554,31 @@ func _parse_unit_type(raw_type: Variant, fallback_data: Dictionary) -> UnitType.
 	return UnitType.Value.RECON
 
 func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.Value:
+	var legacy_size_map := {
+		0: UnitSize.Value.PLATOON,
+		1: UnitSize.Value.COMPANY,
+		2: UnitSize.Value.BATTALION,
+		3: UnitSize.Value.REGIMENT,
+		4: UnitSize.Value.DIVISION,
+		5: UnitSize.Value.ARMY,
+		6: UnitSize.Value.SECTION,
+		7: UnitSize.Value.SQUAD
+	}
+
 	if typeof(raw_size) == TYPE_INT:
 		var size_value := int(raw_size)
+		if bool(fallback_data.get("_legacy_size_index", false)) and legacy_size_map.has(size_value):
+			return legacy_size_map[size_value]
 		if UnitSize.Value.values().has(size_value):
 			return size_value
+		if legacy_size_map.has(size_value):
+			return legacy_size_map[size_value]
 	elif typeof(raw_size) == TYPE_STRING:
 		var normalized_size := String(raw_size).to_upper()
 		var size_map := {
 			"PLATOON": UnitSize.Value.PLATOON,
+			"SECTION": UnitSize.Value.SECTION,
+			"SQUAD": UnitSize.Value.SQUAD,
 			"COMPANY": UnitSize.Value.COMPANY,
 			"BATTALION": UnitSize.Value.BATTALION,
 			"REGIMENT": UnitSize.Value.REGIMENT,
@@ -513,12 +589,16 @@ func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.
 			return size_map[normalized_size]
 
 	var points := int(fallback_data.get("points", 100))
+	if points < 80:
+		return UnitSize.Value.SQUAD
 	if points < 120:
-		return UnitSize.Value.PLATOON
+		return UnitSize.Value.SECTION
 	if points < 180:
-		return UnitSize.Value.COMPANY
+		return UnitSize.Value.PLATOON
 	if points < 260:
-		return UnitSize.Value.BATTALION
+		return UnitSize.Value.COMPANY
 	if points < 360:
+		return UnitSize.Value.BATTALION
+	if points < 460:
 		return UnitSize.Value.REGIMENT
 	return UnitSize.Value.DIVISION
