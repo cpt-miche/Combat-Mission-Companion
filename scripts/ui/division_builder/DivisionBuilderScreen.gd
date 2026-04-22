@@ -108,28 +108,38 @@ func _rebuild_unit_tree() -> void:
 func _collect_templates_by_category() -> Dictionary:
 	var grouped := {}
 	var selected_nation := _selected_nation()
+	var nation_templates: Array = UnitCatalog.get_nation_templates(selected_nation)
 
-	for template_id in UnitCatalog.unit_templates.keys():
-		var data: Dictionary = UnitCatalog.unit_templates[template_id]
-		var template_nation := String(data.get("nation", ""))
-		if template_nation != "" and template_nation != selected_nation:
+	for template_variant in nation_templates:
+		if typeof(template_variant) != TYPE_DICTIONARY:
 			continue
-
-		var unit_type := _type_from_template(data)
-		var category := UnitType.display_name(unit_type)
-		if not grouped.has(category):
-			grouped[category] = []
-
-		var template := {
-			"id": template_id,
-			"name": data.get("name", template_id),
-			"nation": selected_nation,
-			"type": unit_type,
-			"size": _size_from_template(data)
-		}
-		grouped[category].append(template)
+		_collect_template_and_children(template_variant as Dictionary, selected_nation, grouped)
 
 	return grouped
+
+func _collect_template_and_children(template_data: Dictionary, nation_id: String, grouped: Dictionary) -> void:
+	var unit_type := _type_from_template(template_data)
+	var category := UnitType.display_name(unit_type)
+	if not grouped.has(category):
+		grouped[category] = []
+
+	var template_id := String(template_data.get("id", template_data.get("display_name", "template")))
+	var template := {
+		"id": template_id,
+		"name": template_data.get("display_name", template_id),
+		"nation": nation_id,
+		"type": unit_type,
+		"size": _size_from_template(template_data)
+	}
+	grouped[category].append(template)
+
+	var children_variant: Variant = template_data.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return
+	for child_variant in children_variant:
+		if typeof(child_variant) != TYPE_DICTIONARY:
+			continue
+		_collect_template_and_children(child_variant as Dictionary, nation_id, grouped)
 
 func _can_add_template(template_data: Dictionary) -> bool:
 	if _selected_unit == null:
@@ -357,6 +367,23 @@ func _collect_highest_id(unit: UnitModel, current_highest: int) -> int:
 	return current_highest
 
 func _type_from_template(data: Dictionary) -> UnitType.Value:
+	var raw_type := String(data.get("type", "")).to_upper()
+	var type_map := {
+		"INFANTRY": UnitType.Value.INFANTRY,
+		"TANK": UnitType.Value.TANK,
+		"ENGINEER": UnitType.Value.ENGINEER,
+		"ARTILLERY": UnitType.Value.ARTILLERY,
+		"RECON": UnitType.Value.RECON,
+		"AIRBORNE": UnitType.Value.AIRBORNE,
+		"MECHANIZED": UnitType.Value.MECHANIZED,
+		"MOTORIZED": UnitType.Value.MOTORIZED,
+		"ANTI_TANK": UnitType.Value.ANTI_TANK,
+		"AIR_DEFENSE": UnitType.Value.AIR_DEFENSE,
+		"HEADQUARTERS": UnitType.Value.HEADQUARTERS
+	}
+	if type_map.has(raw_type):
+		return type_map[raw_type]
+
 	var tags: Array = data.get("tags", [])
 	if tags.has("infantry"):
 		return UnitType.Value.INFANTRY
@@ -365,6 +392,18 @@ func _type_from_template(data: Dictionary) -> UnitType.Value:
 	return UnitType.Value.RECON
 
 func _size_from_template(data: Dictionary) -> UnitSize.Value:
+	var raw_size := String(data.get("size", "")).to_upper()
+	var size_map := {
+		"PLATOON": UnitSize.Value.PLATOON,
+		"COMPANY": UnitSize.Value.COMPANY,
+		"BATTALION": UnitSize.Value.BATTALION,
+		"REGIMENT": UnitSize.Value.REGIMENT,
+		"DIVISION": UnitSize.Value.DIVISION,
+		"ARMY": UnitSize.Value.ARMY
+	}
+	if size_map.has(raw_size):
+		return size_map[raw_size]
+
 	var points := int(data.get("points", 100))
 	if points < 120:
 		return UnitSize.Value.PLATOON
