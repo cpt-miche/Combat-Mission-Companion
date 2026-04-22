@@ -53,8 +53,8 @@ static func _move_cost(hex: Vector2i, terrain_map: Dictionary) -> int:
 	return int(TERRAIN_COSTS.get(terrain, 2))
 
 static func _heuristic(a: Vector2i, b: Vector2i) -> int:
-	var dq := abs(a.x - b.x)
-	var dr := abs(a.y - b.y)
+	var dq: int = abs(a.x - b.x)
+	var dr: int = abs(a.y - b.y)
 	return int(max(dq, dr))
 
 static func _neighbors(hex: Vector2i) -> Array[Vector2i]:
