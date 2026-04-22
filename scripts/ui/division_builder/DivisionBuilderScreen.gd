@@ -229,11 +229,13 @@ func _create_unit_from_template_tree(template_node: Dictionary, nation: String, 
 	if instance_total > 1:
 		instance_template_id = "%s_%d" % [raw_template_id, instance_number]
 
+	var parsed_type := _parse_unit_type(template_node.get("type", UnitType.Value.INFANTRY), template_node)
+	var parsed_size := _parse_unit_size(template_node.get("size", UnitSize.Value.COMPANY), template_node)
 	var unit := _create_unit(
 		instance_template_id,
 		nation,
-		template_node.get("type", UnitType.Value.INFANTRY),
-		template_node.get("size", UnitSize.Value.COMPANY)
+		parsed_type,
+		parsed_size
 	)
 
 	var children_variant: Variant = template_node.get("children", [])
@@ -457,44 +459,60 @@ func _collect_highest_id(unit: UnitModel, current_highest: int) -> int:
 	return current_highest
 
 func _type_from_template(data: Dictionary) -> UnitType.Value:
-	var raw_type := String(data.get("type", "")).to_upper()
-	var type_map := {
-		"INFANTRY": UnitType.Value.INFANTRY,
-		"TANK": UnitType.Value.TANK,
-		"ENGINEER": UnitType.Value.ENGINEER,
-		"ARTILLERY": UnitType.Value.ARTILLERY,
-		"RECON": UnitType.Value.RECON,
-		"AIRBORNE": UnitType.Value.AIRBORNE,
-		"MECHANIZED": UnitType.Value.MECHANIZED,
-		"MOTORIZED": UnitType.Value.MOTORIZED,
-		"ANTI_TANK": UnitType.Value.ANTI_TANK,
-		"AIR_DEFENSE": UnitType.Value.AIR_DEFENSE,
-		"HEADQUARTERS": UnitType.Value.HEADQUARTERS
-	}
-	if type_map.has(raw_type):
-		return type_map[raw_type]
+	return _parse_unit_type(data.get("type", ""), data)
 
-	var tags: Array = data.get("tags", [])
+func _size_from_template(data: Dictionary) -> UnitSize.Value:
+	return _parse_unit_size(data.get("size", ""), data)
+
+func _parse_unit_type(raw_type: Variant, fallback_data: Dictionary) -> UnitType.Value:
+	if typeof(raw_type) == TYPE_INT:
+		var type_value := int(raw_type)
+		if UnitType.Value.values().has(type_value):
+			return type_value
+	elif typeof(raw_type) == TYPE_STRING:
+		var normalized_type := String(raw_type).to_upper()
+		var type_map := {
+			"INFANTRY": UnitType.Value.INFANTRY,
+			"TANK": UnitType.Value.TANK,
+			"ENGINEER": UnitType.Value.ENGINEER,
+			"ARTILLERY": UnitType.Value.ARTILLERY,
+			"RECON": UnitType.Value.RECON,
+			"AIRBORNE": UnitType.Value.AIRBORNE,
+			"MECHANIZED": UnitType.Value.MECHANIZED,
+			"MOTORIZED": UnitType.Value.MOTORIZED,
+			"ANTI_TANK": UnitType.Value.ANTI_TANK,
+			"AIR_DEFENSE": UnitType.Value.AIR_DEFENSE,
+			"HEADQUARTERS": UnitType.Value.HEADQUARTERS
+		}
+		if type_map.has(normalized_type):
+			return type_map[normalized_type]
+
+	var tags: Array = fallback_data.get("tags", [])
 	if tags.has("infantry"):
 		return UnitType.Value.INFANTRY
 	if tags.has("line"):
 		return UnitType.Value.MOTORIZED
 	return UnitType.Value.RECON
 
-func _size_from_template(data: Dictionary) -> UnitSize.Value:
-	var raw_size := String(data.get("size", "")).to_upper()
-	var size_map := {
-		"PLATOON": UnitSize.Value.PLATOON,
-		"COMPANY": UnitSize.Value.COMPANY,
-		"BATTALION": UnitSize.Value.BATTALION,
-		"REGIMENT": UnitSize.Value.REGIMENT,
-		"DIVISION": UnitSize.Value.DIVISION,
-		"ARMY": UnitSize.Value.ARMY
-	}
-	if size_map.has(raw_size):
-		return size_map[raw_size]
+func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.Value:
+	if typeof(raw_size) == TYPE_INT:
+		var size_value := int(raw_size)
+		if UnitSize.Value.values().has(size_value):
+			return size_value
+	elif typeof(raw_size) == TYPE_STRING:
+		var normalized_size := String(raw_size).to_upper()
+		var size_map := {
+			"PLATOON": UnitSize.Value.PLATOON,
+			"COMPANY": UnitSize.Value.COMPANY,
+			"BATTALION": UnitSize.Value.BATTALION,
+			"REGIMENT": UnitSize.Value.REGIMENT,
+			"DIVISION": UnitSize.Value.DIVISION,
+			"ARMY": UnitSize.Value.ARMY
+		}
+		if size_map.has(normalized_size):
+			return size_map[normalized_size]
 
-	var points := int(data.get("points", 100))
+	var points := int(fallback_data.get("points", 100))
 	if points < 120:
 		return UnitSize.Value.PLATOON
 	if points < 180:
