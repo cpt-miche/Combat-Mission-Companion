@@ -284,7 +284,7 @@ func _begin_player_turn() -> void:
 	_autosave_current_game()
 
 func _autosave_current_game() -> void:
-	var autosave_payload := {
+	var autosave_payload: Dictionary = {
 		"turn_number": GameState.current_turn,
 		"active_player": _active_player,
 		"map": {
