@@ -109,6 +109,8 @@ func _collect_templates_by_category() -> Dictionary:
 	var grouped := {}
 	var selected_nation := _selected_nation()
 	var nation_templates: Array = UnitCatalog.get_nation_templates(selected_nation)
+	if nation_templates.is_empty():
+		nation_templates = _legacy_templates_for_nation(selected_nation)
 
 	for template_variant in nation_templates:
 		if typeof(template_variant) != TYPE_DICTIONARY:
@@ -116,6 +118,20 @@ func _collect_templates_by_category() -> Dictionary:
 		_collect_template_and_children(template_variant as Dictionary, selected_nation, grouped)
 
 	return grouped
+
+func _legacy_templates_for_nation(nation_id: String) -> Array:
+	var legacy_templates: Array = []
+	for template_id in UnitCatalog.unit_templates.keys():
+		var template_variant: Variant = UnitCatalog.unit_templates.get(template_id, {})
+		if typeof(template_variant) != TYPE_DICTIONARY:
+			continue
+		var template_data := (template_variant as Dictionary).duplicate(true)
+		if String(template_data.get("nation", "")) != nation_id:
+			continue
+		template_data["id"] = String(template_data.get("id", template_id))
+		template_data["display_name"] = String(template_data.get("display_name", template_data.get("name", template_id)))
+		legacy_templates.append(template_data)
+	return legacy_templates
 
 func _collect_template_and_children(template_data: Dictionary, nation_id: String, grouped: Dictionary) -> void:
 	var unit_type := _type_from_template(template_data)
