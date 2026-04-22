@@ -3,6 +3,7 @@ extends Node
 @onready var screen_container: Control = $ScreenContainer
 
 const PHASE_SCENES := {
+	GameState.Phase.MAIN_MENU: preload("res://scenes/main_menu/MainMenuScreen.tscn"),
 	GameState.Phase.DIVISION_BUILDER: preload("res://scenes/division_builder/DivisionBuilderScreen.tscn"),
 	GameState.Phase.MAP_SETUP: preload("res://scenes/map_setup/MapSetupScreen.tscn"),
 	GameState.Phase.DEPLOYMENT_P1: preload("res://scenes/screens/DeploymentP1Screen.tscn"),

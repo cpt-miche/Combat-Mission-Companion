@@ -56,9 +56,17 @@ func _build_veterancy_selector() -> void:
 		veterancy_selector.set_item_metadata(veterancy_selector.item_count - 1, level)
 
 func _initialize_organization() -> void:
-	var default_nation := "usa"
+	var default_nation := GameState.selected_nation_id
+	if default_nation.is_empty():
+		default_nation = "usa"
 	if nation_selector.item_count > 0:
-		default_nation = String(nation_selector.get_item_metadata(0))
+		var matching_index := 0
+		for i in range(nation_selector.item_count):
+			if String(nation_selector.get_item_metadata(i)) == default_nation:
+				matching_index = i
+				break
+		nation_selector.select(matching_index)
+		default_nation = String(nation_selector.get_item_metadata(matching_index))
 
 	_root_unit = _create_unit("army_root", default_nation, UnitType.Value.HEADQUARTERS, UnitSize.Value.ARMY)
 	_selected_unit = _root_unit
