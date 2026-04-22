@@ -14,6 +14,10 @@ var territory_map: Dictionary = {}
 var placements_by_player: Dictionary = {}
 var visible_player_index := 0
 var deploy_mode := true
+var pan_offset := Vector2.ZERO
+var _is_panning := false
+var _drag_distance := 0.0
+const PAN_DRAG_THRESHOLD := 8.0
 
 func configure(new_territory_map: Dictionary, new_placements: Dictionary, player_index: int, is_deploy_mode: bool = true) -> void:
 	territory_map = new_territory_map.duplicate(true)
@@ -23,6 +27,8 @@ func configure(new_territory_map: Dictionary, new_placements: Dictionary, player
 	queue_redraw()
 
 func _draw() -> void:
+	draw_set_transform(pan_offset, 0.0, Vector2.ONE)
+
 	for row in range(GRID_ROWS):
 		for column in range(GRID_COLUMNS):
 			var center := _hex_center(column, row)
@@ -32,15 +38,35 @@ func _draw() -> void:
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.12, 0.12, 0.12, 0.95), 2.0)
 
 	_draw_visible_placements()
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _gui_input(event: InputEvent) -> void:
 	if not deploy_mode:
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var coordinate := _find_hex(event.position)
-		if coordinate.is_empty():
+	if event is InputEventMouseButton:
+		var mouse_button := event as InputEventMouseButton
+		if mouse_button.button_index == MOUSE_BUTTON_LEFT and mouse_button.pressed:
+			_is_panning = true
+			_drag_distance = 0.0
+			accept_event()
 			return
-		emit_signal("hex_selected", int(coordinate["q"]), int(coordinate["r"]))
+		if mouse_button.button_index == MOUSE_BUTTON_LEFT and not mouse_button.pressed:
+			if _is_panning and _drag_distance < PAN_DRAG_THRESHOLD:
+				var coordinate := _find_hex(_to_world(mouse_button.position))
+				if coordinate.is_empty():
+					_is_panning = false
+					accept_event()
+					return
+				emit_signal("hex_selected", int(coordinate["q"]), int(coordinate["r"]))
+			_is_panning = false
+			accept_event()
+			return
+	if event is InputEventMouseMotion and _is_panning:
+		var mouse_motion := event as InputEventMouseMotion
+		_drag_distance += mouse_motion.relative.length()
+		pan_offset += mouse_motion.relative
+		queue_redraw()
+		accept_event()
 
 func _draw_visible_placements() -> void:
 	var placements: Dictionary = placements_by_player.get(visible_player_index, {}) as Dictionary
@@ -86,3 +112,6 @@ func _find_hex(position: Vector2) -> Dictionary:
 			if Geometry2D.is_point_in_polygon(position, _hex_points(_hex_center(column, row))):
 				return {"q": column, "r": row}
 	return {}
+
+func _to_world(screen_position: Vector2) -> Vector2:
+	return screen_position - pan_offset
