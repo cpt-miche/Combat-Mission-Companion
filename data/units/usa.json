@@ -2,32 +2,106 @@
   "nation": "usa",
   "templates": [
     {
-      "id": "usa_infantry_platoon",
-      "display_name": "Infantry Platoon",
+      "id": "usa_infantry_battalion",
+      "display_name": "Infantry Battalion",
       "type": "INFANTRY",
-      "size": "PLATOON",
-      "default_veterancy": "REGULAR"
+      "size": "BATTALION",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {
+          "id": "usa_hq_company",
+          "display_name": "Headquarters Company",
+          "type": "HEADQUARTERS",
+          "size": "COMPANY",
+          "count": 1,
+          "children": [
+            {
+              "id": "usa_command_platoon",
+              "display_name": "Command Platoon",
+              "type": "HEADQUARTERS",
+              "size": "PLATOON",
+              "count": 1
+            },
+            {
+              "id": "usa_signal_platoon",
+              "display_name": "Signal Platoon",
+              "type": "HEADQUARTERS",
+              "size": "PLATOON",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "usa_rifle_company",
+          "display_name": "Rifle Company",
+          "type": "INFANTRY",
+          "size": "COMPANY",
+          "count": 3,
+          "children": [
+            {
+              "id": "usa_rifle_platoon",
+              "display_name": "Rifle Platoon",
+              "type": "INFANTRY",
+              "size": "PLATOON",
+              "count": 3
+            },
+            {
+              "id": "usa_weapons_platoon",
+              "display_name": "Weapons Platoon",
+              "type": "INFANTRY",
+              "size": "PLATOON",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "usa_weapons_company",
+          "display_name": "Weapons Company",
+          "type": "INFANTRY",
+          "size": "COMPANY",
+          "count": 1,
+          "children": [
+            {
+              "id": "usa_mortar_platoon",
+              "display_name": "Mortar Platoon",
+              "type": "ARTILLERY",
+              "size": "PLATOON",
+              "count": 1
+            },
+            {
+              "id": "usa_anti_tank_platoon",
+              "display_name": "Anti-Tank Platoon",
+              "type": "ANTI_TANK",
+              "size": "PLATOON",
+              "count": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "usa_engineer_platoon",
       "display_name": "Engineer Platoon",
       "type": "ENGINEER",
       "size": "PLATOON",
-      "default_veterancy": "GREEN"
+      "default_veterancy": "GREEN",
+      "children": []
     },
     {
       "id": "usa_tank_company",
       "display_name": "Tank Company",
       "type": "TANK",
       "size": "COMPANY",
-      "default_veterancy": "REGULAR"
+      "default_veterancy": "REGULAR",
+      "children": []
     },
     {
       "id": "usa_mechanized_battalion",
       "display_name": "Mechanized Battalion",
       "type": "MECHANIZED",
       "size": "BATTALION",
-      "default_veterancy": "VETERAN"
+      "default_veterancy": "VETERAN",
+      "children": []
     }
   ]
 }
