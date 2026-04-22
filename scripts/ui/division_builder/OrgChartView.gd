@@ -163,6 +163,13 @@ func _draw_nato_symbol(unit: UnitModel, rect: Rect2) -> void:
 	var echelon_y := symbol_rect.position.y - 5.0
 	var echelon_center := symbol_rect.get_center().x
 	match unit.size:
+		UnitSize.Value.SQUAD:
+			draw_circle(Vector2(echelon_center - 4.0, echelon_y), 2.0, Color.WHITE)
+			draw_circle(Vector2(echelon_center + 4.0, echelon_y), 2.0, Color.WHITE)
+		UnitSize.Value.SECTION:
+			draw_circle(Vector2(echelon_center - 8.0, echelon_y), 2.0, Color.WHITE)
+			draw_circle(Vector2(echelon_center, echelon_y), 2.0, Color.WHITE)
+			draw_circle(Vector2(echelon_center + 8.0, echelon_y), 2.0, Color.WHITE)
 		UnitSize.Value.PLATOON:
 			draw_circle(Vector2(echelon_center, echelon_y), 2.2, Color.WHITE)
 		UnitSize.Value.COMPANY:
