@@ -17,6 +17,7 @@ var _node_rects: Dictionary = {}
 var _pan_offset := Vector2(80.0, 60.0)
 var _zoom := 1.0
 var _is_panning := false
+var _active_pan_button := -1
 var _drag_candidate: UnitModel
 var _dragging_unit: UnitModel
 var _is_dragging := false
@@ -36,7 +37,12 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mouse_event := event as InputEventMouseButton
 		if mouse_event.button_index == MOUSE_BUTTON_MIDDLE:
-			_is_panning = mouse_event.pressed
+			if mouse_event.pressed:
+				_is_panning = true
+				_active_pan_button = MOUSE_BUTTON_MIDDLE
+			else:
+				_is_panning = false
+				_active_pan_button = -1
 			accept_event()
 			return
 
@@ -68,7 +74,8 @@ func _gui_input(event: InputEvent) -> void:
 				emit_signal("unit_selected", clicked)
 				queue_redraw()
 				accept_event()
-			return
+				return
+
 
 		if mouse_event.button_index == MOUSE_BUTTON_LEFT and not mouse_event.pressed:
 			if _is_dragging and _dragging_unit != null:
@@ -92,6 +99,12 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var motion := event as InputEventMouseMotion
 		if _is_panning:
+			_pan_offset += motion.relative
+			queue_redraw()
+			accept_event()
+			return
+
+		if motion.button_mask & MOUSE_BUTTON_MASK_LEFT and _drag_candidate == null and not _is_dragging:
 			_pan_offset += motion.relative
 			queue_redraw()
 			accept_event()
