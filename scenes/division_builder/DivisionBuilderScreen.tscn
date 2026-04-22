@@ -114,7 +114,7 @@ size_flags_vertical = 3
 
 [node name="ChartHeader" type="Label" parent="RootMargin/HSplitContainer/CenterPanel/CenterMargin/CenterVBox"]
 layout_mode = 2
-text = "Organization Chart (LMB select, RMB remove, MMB pan, wheel zoom)"
+text = "Organization Chart (LMB select + drag to pan, RMB remove, wheel zoom)"
 
 [node name="OrgChartView" type="Control" parent="RootMargin/HSplitContainer/CenterPanel/CenterMargin/CenterVBox"]
 unique_name_in_owner = true
