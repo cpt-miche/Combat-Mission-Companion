@@ -143,9 +143,12 @@ func _collect_template_and_children(template_data: Dictionary, nation_id: String
 	var template := {
 		"id": template_id,
 		"name": template_data.get("display_name", template_id),
+		"display_name": template_data.get("display_name", template_id),
 		"nation": nation_id,
 		"type": unit_type,
-		"size": _size_from_template(template_data)
+		"size": _size_from_template(template_data),
+		"count": maxi(int(template_data.get("count", 1)), 1),
+		"children": template_data.get("children", []).duplicate(true)
 	}
 	grouped[category].append(template)
 
@@ -165,7 +168,10 @@ func _can_add_template(template_data: Dictionary) -> bool:
 	return OrganizationValidator.can_add_child(_selected_unit, candidate)
 
 func _template_display_name(template_data: Dictionary) -> String:
-	return "%s (%s)" % [
+	var count := maxi(int(template_data.get("count", 1)), 1)
+	var count_prefix := "%dx " % count if count > 1 else ""
+	return "%s%s (%s)" % [
+		count_prefix,
 		String(template_data.get("name", "Unknown")),
 		UnitSize.display_name(template_data.get("size", UnitSize.Value.COMPANY))
 	]
@@ -194,20 +200,90 @@ func _on_add_unit_pressed() -> void:
 	if _pending_unit_data.is_empty() or _selected_unit == null:
 		return
 
-	var candidate := _create_unit(
-		String(_pending_unit_data.get("id", "template")),
-		String(_pending_unit_data.get("nation", _selected_nation())),
-		_pending_unit_data.get("type", UnitType.Value.INFANTRY),
-		_pending_unit_data.get("size", UnitSize.Value.COMPANY)
-	)
+	var selected_parent := _selected_unit
+	var nation := String(_pending_unit_data.get("nation", _selected_nation()))
+	var top_level_count := maxi(int(_pending_unit_data.get("count", 1)), 1)
+	var added_roots: Array[UnitModel] = []
 
-	if not OrganizationValidator.can_add_child(_selected_unit, candidate):
-		_rebuild_unit_tree()
+	for i in range(top_level_count):
+		var candidate := _create_unit_from_template_tree(_pending_unit_data, nation, i + 1, top_level_count)
+		var insertion_result := _insert_subtree_with_validation(selected_parent, candidate)
+		if not bool(insertion_result.get("ok", false)):
+			for added_root in added_roots:
+				selected_parent.children.erase(added_root)
+			pending_unit_label.text = "Cannot add template subtree: %s" % String(insertion_result.get("error", "Unknown validation failure"))
+			_selected_unit = selected_parent
+			_refresh_all()
+			return
+		added_roots.append(candidate)
+
+	if added_roots.is_empty():
 		return
 
-	_selected_unit.children.append(candidate)
-	_selected_unit = candidate
+	_selected_unit = added_roots[0]
 	_refresh_all()
+
+func _create_unit_from_template_tree(template_node: Dictionary, nation: String, instance_number: int = 1, instance_total: int = 1) -> UnitModel:
+	var raw_template_id := String(template_node.get("id", "template"))
+	var instance_template_id := raw_template_id
+	if instance_total > 1:
+		instance_template_id = "%s_%d" % [raw_template_id, instance_number]
+
+	var parsed_type := _parse_unit_type(template_node.get("type", UnitType.Value.INFANTRY), template_node)
+	var parsed_size := _parse_unit_size(template_node.get("size", UnitSize.Value.COMPANY), template_node)
+	var unit := _create_unit(
+		instance_template_id,
+		nation,
+		parsed_type,
+		parsed_size
+	)
+
+	var children_variant: Variant = template_node.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return unit
+
+	for child_variant in children_variant:
+		if typeof(child_variant) != TYPE_DICTIONARY:
+			continue
+		var child_template := child_variant as Dictionary
+		var child_count := maxi(int(child_template.get("count", 1)), 1)
+		for i in range(child_count):
+			var child_unit := _create_unit_from_template_tree(child_template, nation, i + 1, child_count)
+			unit.children.append(child_unit)
+
+	return unit
+
+func _insert_subtree_with_validation(parent: UnitModel, candidate: UnitModel) -> Dictionary:
+	if parent == null or candidate == null:
+		return {
+			"ok": false,
+			"error": "Invalid parent or candidate."
+		}
+
+	if not OrganizationValidator.can_add_child(parent, candidate):
+		return {
+			"ok": false,
+			"error": "%s cannot contain %s" % [_unit_label(parent), _unit_label(candidate)]
+		}
+
+	parent.children.append(candidate)
+
+	var planned_children: Array[UnitModel] = candidate.children.duplicate()
+	candidate.children.clear()
+	for child in planned_children:
+		var child_result := _insert_subtree_with_validation(candidate, child)
+		if not bool(child_result.get("ok", false)):
+			parent.children.erase(candidate)
+			return child_result
+
+	return {
+		"ok": true
+	}
+
+func _unit_label(unit: UnitModel) -> String:
+	if unit == null:
+		return "Unknown unit"
+	return "%s [%s]" % [UnitSize.display_name(unit.size), unit.template_id]
 
 func _on_delete_button_pressed() -> void:
 	_delete_unit(_selected_unit)
@@ -383,44 +459,60 @@ func _collect_highest_id(unit: UnitModel, current_highest: int) -> int:
 	return current_highest
 
 func _type_from_template(data: Dictionary) -> UnitType.Value:
-	var raw_type := String(data.get("type", "")).to_upper()
-	var type_map := {
-		"INFANTRY": UnitType.Value.INFANTRY,
-		"TANK": UnitType.Value.TANK,
-		"ENGINEER": UnitType.Value.ENGINEER,
-		"ARTILLERY": UnitType.Value.ARTILLERY,
-		"RECON": UnitType.Value.RECON,
-		"AIRBORNE": UnitType.Value.AIRBORNE,
-		"MECHANIZED": UnitType.Value.MECHANIZED,
-		"MOTORIZED": UnitType.Value.MOTORIZED,
-		"ANTI_TANK": UnitType.Value.ANTI_TANK,
-		"AIR_DEFENSE": UnitType.Value.AIR_DEFENSE,
-		"HEADQUARTERS": UnitType.Value.HEADQUARTERS
-	}
-	if type_map.has(raw_type):
-		return type_map[raw_type]
+	return _parse_unit_type(data.get("type", ""), data)
 
-	var tags: Array = data.get("tags", [])
+func _size_from_template(data: Dictionary) -> UnitSize.Value:
+	return _parse_unit_size(data.get("size", ""), data)
+
+func _parse_unit_type(raw_type: Variant, fallback_data: Dictionary) -> UnitType.Value:
+	if typeof(raw_type) == TYPE_INT:
+		var type_value := int(raw_type)
+		if UnitType.Value.values().has(type_value):
+			return type_value
+	elif typeof(raw_type) == TYPE_STRING:
+		var normalized_type := String(raw_type).to_upper()
+		var type_map := {
+			"INFANTRY": UnitType.Value.INFANTRY,
+			"TANK": UnitType.Value.TANK,
+			"ENGINEER": UnitType.Value.ENGINEER,
+			"ARTILLERY": UnitType.Value.ARTILLERY,
+			"RECON": UnitType.Value.RECON,
+			"AIRBORNE": UnitType.Value.AIRBORNE,
+			"MECHANIZED": UnitType.Value.MECHANIZED,
+			"MOTORIZED": UnitType.Value.MOTORIZED,
+			"ANTI_TANK": UnitType.Value.ANTI_TANK,
+			"AIR_DEFENSE": UnitType.Value.AIR_DEFENSE,
+			"HEADQUARTERS": UnitType.Value.HEADQUARTERS
+		}
+		if type_map.has(normalized_type):
+			return type_map[normalized_type]
+
+	var tags: Array = fallback_data.get("tags", [])
 	if tags.has("infantry"):
 		return UnitType.Value.INFANTRY
 	if tags.has("line"):
 		return UnitType.Value.MOTORIZED
 	return UnitType.Value.RECON
 
-func _size_from_template(data: Dictionary) -> UnitSize.Value:
-	var raw_size := String(data.get("size", "")).to_upper()
-	var size_map := {
-		"PLATOON": UnitSize.Value.PLATOON,
-		"COMPANY": UnitSize.Value.COMPANY,
-		"BATTALION": UnitSize.Value.BATTALION,
-		"REGIMENT": UnitSize.Value.REGIMENT,
-		"DIVISION": UnitSize.Value.DIVISION,
-		"ARMY": UnitSize.Value.ARMY
-	}
-	if size_map.has(raw_size):
-		return size_map[raw_size]
+func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.Value:
+	if typeof(raw_size) == TYPE_INT:
+		var size_value := int(raw_size)
+		if UnitSize.Value.values().has(size_value):
+			return size_value
+	elif typeof(raw_size) == TYPE_STRING:
+		var normalized_size := String(raw_size).to_upper()
+		var size_map := {
+			"PLATOON": UnitSize.Value.PLATOON,
+			"COMPANY": UnitSize.Value.COMPANY,
+			"BATTALION": UnitSize.Value.BATTALION,
+			"REGIMENT": UnitSize.Value.REGIMENT,
+			"DIVISION": UnitSize.Value.DIVISION,
+			"ARMY": UnitSize.Value.ARMY
+		}
+		if size_map.has(normalized_size):
+			return size_map[normalized_size]
 
-	var points := int(data.get("points", 100))
+	var points := int(fallback_data.get("points", 100))
 	if points < 120:
 		return UnitSize.Value.PLATOON
 	if points < 180:
