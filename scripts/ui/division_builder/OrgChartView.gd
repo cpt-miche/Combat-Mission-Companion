@@ -146,11 +146,13 @@ func _draw_subtree(unit: UnitModel, depth: int, next_y: float) -> float:
 	else:
 		center_y = (child_centers.front() + child_centers.back()) * 0.5
 
-	var origin := Vector2(float(depth) * LEVEL_SPACING, center_y - NODE_SIZE.y * 0.5)
-	origin = origin * _zoom + _pan_offset
-	var rect := Rect2(origin, NODE_SIZE * _zoom)
+	var rect := Rect2(
+		Vector2(float(depth) * LEVEL_SPACING, center_y - NODE_SIZE.y * 0.5),
+		NODE_SIZE
+	)
 	_node_rects[unit.id] = rect
-	_draw_unit_node(unit, rect)
+	var screen_rect := _to_screen_rect(rect)
+	_draw_unit_node(unit, screen_rect)
 
 	for child in unit.children:
 		if child == null:
@@ -158,12 +160,12 @@ func _draw_subtree(unit: UnitModel, depth: int, next_y: float) -> float:
 		var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
 		if child_rect.size == Vector2.ZERO:
 			continue
-		var from := Vector2(rect.end.x, rect.get_center().y)
-		var to := Vector2(child_rect.position.x, child_rect.get_center().y)
+		var from := _to_screen_point(Vector2(rect.end.x, rect.get_center().y))
+		var to := _to_screen_point(Vector2(child_rect.position.x, child_rect.get_center().y))
 		draw_line(from, to, Color(0.65, 0.72, 0.8), 2.0)
 
 	if _is_dragging and _dragging_unit != null and unit == _dragging_unit:
-		draw_line(rect.get_center(), _drag_mouse_position, Color(0.27, 0.76, 1.0, 0.8), 2.0)
+		draw_line(screen_rect.get_center(), _drag_mouse_position, Color(0.27, 0.76, 1.0, 0.8), 2.0)
 
 	return working_y
 
@@ -247,10 +249,16 @@ func _draw_nato_symbol(unit: UnitModel, rect: Rect2) -> void:
 
 func _pick_unit(position: Vector2) -> UnitModel:
 	for unit_id in _node_rects.keys():
-		var rect: Rect2 = _node_rects[unit_id]
+		var rect: Rect2 = _to_screen_rect(_node_rects[unit_id])
 		if rect.has_point(position):
 			return _find_by_id(root_unit, unit_id)
 	return null
+
+func _to_screen_rect(rect: Rect2) -> Rect2:
+	return Rect2(rect.position * _zoom + _pan_offset, rect.size * _zoom)
+
+func _to_screen_point(point: Vector2) -> Vector2:
+	return point * _zoom + _pan_offset
 
 func _find_by_id(node: UnitModel, node_id: String) -> UnitModel:
 	if node == null:
