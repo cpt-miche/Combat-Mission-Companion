@@ -16,11 +16,167 @@
       "default_veterancy": "VETERAN"
     },
     {
-      "id": "ger_infantry_battalion",
-      "display_name": "Infantry Battalion",
+      "id": "ger_grenadier_bn",
+      "display_name": "Grenadier Battalion",
       "type": "INFANTRY",
       "size": "BATTALION",
-      "default_veterancy": "GREEN"
+      "default_veterancy": "GREEN",
+      "children": [
+        {
+          "id": "ger_grenadier_bn_hq",
+          "display_name": "Battalion Headquarters",
+          "type": "HEADQUARTERS",
+          "size": "COMPANY"
+        },
+        {
+          "id": "ger_grenadier_rifle_co",
+          "display_name": "Rifle Company",
+          "type": "INFANTRY",
+          "size": "COMPANY",
+          "count": 3,
+          "children": [
+            {
+              "id": "ger_grenadier_rifle_co_hq",
+              "display_name": "Company HQ",
+              "type": "HEADQUARTERS",
+              "size": "PLATOON"
+            },
+            {
+              "id": "ger_grenadier_rifle_co_mg_group",
+              "display_name": "MG Group",
+              "type": "INFANTRY",
+              "size": "SECTION",
+              "count": 1,
+              "children": [
+                {
+                  "id": "ger_grenadier_rifle_co_hmg_team",
+                  "display_name": "Heavy MG detachment / gun team",
+                  "type": "INFANTRY",
+                  "size": "SQUAD",
+                  "count": 2
+                }
+              ]
+            },
+            {
+              "id": "ger_grenadier_rifle_platoon",
+              "display_name": "Rifle Platoon",
+              "type": "INFANTRY",
+              "size": "PLATOON",
+              "count": 3,
+              "children": [
+                {
+                  "id": "ger_grenadier_rifle_platoon_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION"
+                },
+                {
+                  "id": "ger_grenadier_rifle_squad",
+                  "display_name": "Rifle Squad",
+                  "type": "INFANTRY",
+                  "size": "SQUAD",
+                  "count": 3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ger_grenadier_heavy_co",
+          "display_name": "Heavy Company",
+          "type": "INFANTRY",
+          "size": "COMPANY",
+          "children": [
+            {
+              "id": "ger_grenadier_heavy_co_hq",
+              "display_name": "Company HQ",
+              "type": "HEADQUARTERS",
+              "size": "PLATOON"
+            },
+            {
+              "id": "ger_grenadier_hmg_platoon",
+              "display_name": "Heavy MG Platoon",
+              "type": "INFANTRY",
+              "size": "PLATOON",
+              "children": [
+                {
+                  "id": "ger_grenadier_hmg_platoon_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION"
+                },
+                {
+                  "id": "ger_grenadier_hmg_platoon_mg_group",
+                  "display_name": "MG Group",
+                  "type": "INFANTRY",
+                  "size": "SECTION",
+                  "count": 3,
+                  "children": [
+                    {
+                      "id": "ger_grenadier_hmg_platoon_hmg_team",
+                      "display_name": "Heavy MG detachment / gun team",
+                      "type": "INFANTRY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "ger_grenadier_mortar_8cm_platoon",
+              "display_name": "8-cm Mortar Platoon",
+              "type": "ARTILLERY",
+              "size": "PLATOON",
+              "children": [
+                {
+                  "id": "ger_grenadier_mortar_8cm_platoon_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION"
+                },
+                {
+                  "id": "ger_grenadier_mortar_8cm_group",
+                  "display_name": "Mortar Group",
+                  "type": "ARTILLERY",
+                  "size": "SECTION",
+                  "count": 3,
+                  "children": [
+                    {
+                      "id": "ger_grenadier_mortar_8cm_detachment",
+                      "display_name": "Mortar detachment",
+                      "type": "ARTILLERY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "ger_grenadier_mortar_12cm_platoon",
+              "display_name": "12-cm Mortar Platoon",
+              "type": "ARTILLERY",
+              "size": "PLATOON",
+              "children": [
+                {
+                  "id": "ger_grenadier_mortar_12cm_platoon_hq",
+                  "display_name": "Platoon HQ",
+                  "type": "HEADQUARTERS",
+                  "size": "SECTION"
+                },
+                {
+                  "id": "ger_grenadier_mortar_12cm_detachment",
+                  "display_name": "Mortar detachment",
+                  "type": "ARTILLERY",
+                  "size": "SQUAD",
+                  "count": 4
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "ger_artillery_regiment",
