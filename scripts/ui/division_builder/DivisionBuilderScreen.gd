@@ -457,7 +457,11 @@ func _dict_to_unit(data: Variant) -> UnitModel:
 	unit.template_id = String(raw.get("template_id", ""))
 	unit.nation = String(raw.get("nation", ""))
 	unit.type = _parse_unit_type(raw.get("type", UnitType.Value.INFANTRY), raw)
-	unit.size = _parse_unit_size(raw.get("size", UnitSize.Value.PLATOON), raw)
+	var raw_size: Variant = raw.get("size", UnitSize.Value.PLATOON)
+	var size_context := raw.duplicate(true)
+	if typeof(raw_size) == TYPE_INT:
+		size_context["_legacy_size_index"] = true
+	unit.size = _parse_unit_size(raw_size, size_context)
 	unit.veterancy = int(raw.get("veterancy", Veterancy.Value.REGULAR))
 	unit.children = []
 	for child_data in raw.get("children", []):
@@ -550,19 +554,25 @@ func _parse_unit_type(raw_type: Variant, fallback_data: Dictionary) -> UnitType.
 	return UnitType.Value.RECON
 
 func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.Value:
+	var legacy_size_map := {
+		0: UnitSize.Value.PLATOON,
+		1: UnitSize.Value.COMPANY,
+		2: UnitSize.Value.BATTALION,
+		3: UnitSize.Value.REGIMENT,
+		4: UnitSize.Value.DIVISION,
+		5: UnitSize.Value.ARMY,
+		6: UnitSize.Value.SECTION,
+		7: UnitSize.Value.SQUAD
+	}
+
 	if typeof(raw_size) == TYPE_INT:
-		var legacy_size_map := {
-			0: UnitSize.Value.PLATOON,
-			1: UnitSize.Value.COMPANY,
-			2: UnitSize.Value.BATTALION,
-			3: UnitSize.Value.REGIMENT,
-			4: UnitSize.Value.DIVISION,
-			5: UnitSize.Value.ARMY,
-			6: UnitSize.Value.SECTION,
-			7: UnitSize.Value.SQUAD
-		}
-		if legacy_size_map.has(int(raw_size)):
-			return legacy_size_map[int(raw_size)]
+		var size_value := int(raw_size)
+		if bool(fallback_data.get("_legacy_size_index", false)) and legacy_size_map.has(size_value):
+			return legacy_size_map[size_value]
+		if UnitSize.Value.values().has(size_value):
+			return size_value
+		if legacy_size_map.has(size_value):
+			return legacy_size_map[size_value]
 	elif typeof(raw_size) == TYPE_STRING:
 		var normalized_size := String(raw_size).to_upper()
 		var size_map := {
