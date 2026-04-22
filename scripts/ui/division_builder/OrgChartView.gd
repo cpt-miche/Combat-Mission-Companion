@@ -3,6 +3,7 @@ class_name OrgChartView
 
 signal unit_selected(unit: UnitModel)
 signal delete_requested(unit: UnitModel)
+signal unit_move_requested(unit: UnitModel, new_parent: UnitModel)
 
 const NODE_SIZE := Vector2(160.0, 72.0)
 const LEVEL_SPACING := 180.0
@@ -16,6 +17,11 @@ var _node_rects: Dictionary = {}
 var _pan_offset := Vector2(80.0, 60.0)
 var _zoom := 1.0
 var _is_panning := false
+var _drag_candidate: UnitModel
+var _dragging_unit: UnitModel
+var _is_dragging := false
+var _drag_mouse_position := Vector2.ZERO
+const DRAG_THRESHOLD := 8.0
 
 func set_organization(root: UnitModel, selected: UnitModel) -> void:
 	root_unit = root
@@ -49,10 +55,31 @@ func _gui_input(event: InputEvent) -> void:
 		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
 			var clicked := _pick_unit(mouse_event.position)
 			if clicked != null:
+				if clicked == selected_unit:
+					_drag_candidate = clicked
+					_drag_mouse_position = mouse_event.position
+					accept_event()
+					return
+
+				_drag_candidate = null
+				_dragging_unit = null
+				_is_dragging = false
 				selected_unit = clicked
 				emit_signal("unit_selected", clicked)
 				queue_redraw()
 				accept_event()
+			return
+
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT and not mouse_event.pressed:
+			if _is_dragging and _dragging_unit != null:
+				var drop_target := _pick_unit(mouse_event.position)
+				if drop_target != null and drop_target != _dragging_unit:
+					emit_signal("unit_move_requested", _dragging_unit, drop_target)
+				accept_event()
+			_drag_candidate = null
+			_dragging_unit = null
+			_is_dragging = false
+			queue_redraw()
 			return
 
 		if mouse_event.button_index == MOUSE_BUTTON_RIGHT and mouse_event.pressed:
@@ -62,11 +89,23 @@ func _gui_input(event: InputEvent) -> void:
 				accept_event()
 			return
 
-	if event is InputEventMouseMotion and _is_panning:
+	if event is InputEventMouseMotion:
 		var motion := event as InputEventMouseMotion
-		_pan_offset += motion.relative
-		queue_redraw()
-		accept_event()
+		if _is_panning:
+			_pan_offset += motion.relative
+			queue_redraw()
+			accept_event()
+			return
+
+		if _drag_candidate != null and not _is_dragging:
+			if _drag_mouse_position.distance_to(motion.position) >= DRAG_THRESHOLD:
+				_dragging_unit = _drag_candidate
+				_is_dragging = true
+
+		if _is_dragging:
+			_drag_mouse_position = motion.position
+			queue_redraw()
+			accept_event()
 
 func _draw() -> void:
 	_node_rects.clear()
@@ -110,6 +149,9 @@ func _draw_subtree(unit: UnitModel, depth: int, next_y: float) -> float:
 		var to := Vector2(child_rect.position.x, child_rect.get_center().y)
 		draw_line(from, to, Color(0.65, 0.72, 0.8), 2.0)
 
+	if _is_dragging and _dragging_unit != null and unit == _dragging_unit:
+		draw_line(rect.get_center(), _drag_mouse_position, Color(0.27, 0.76, 1.0, 0.8), 2.0)
+
 	return working_y
 
 func _draw_unit_node(unit: UnitModel, rect: Rect2) -> void:
@@ -124,7 +166,8 @@ func _draw_unit_node(unit: UnitModel, rect: Rect2) -> void:
 	draw_rect(rect, border, false, 2.0)
 	_draw_nato_symbol(unit, rect)
 
-	var label := "%s\n%s" % [UnitSize.display_name(unit.size), UnitType.display_name(unit.type)]
+	var title := _display_name_from_template_id(unit.template_id)
+	var label := "%s\n%s %s" % [title, UnitSize.display_name(unit.size), UnitType.display_name(unit.type)]
 	draw_multiline_string(
 		get_theme_default_font(),
 		rect.position + Vector2(8.0, rect.size.y - 30.0),
@@ -206,3 +249,19 @@ func _find_by_id(node: UnitModel, node_id: String) -> UnitModel:
 		if found != null:
 			return found
 	return null
+
+func _display_name_from_template_id(template_id: String) -> String:
+	if template_id.is_empty():
+		return "Unit"
+	var raw := template_id
+	var segments := raw.split("_")
+	if segments.size() > 1 and String(segments[segments.size() - 1]).is_valid_int():
+		segments.remove_at(segments.size() - 1)
+	if not segments.is_empty() and segments[0].length() <= 3:
+		segments.remove_at(0)
+	if segments.is_empty():
+		return "Unit"
+	var words: Array[String] = []
+	for segment in segments:
+		words.append(String(segment).capitalize())
+	return " ".join(words)

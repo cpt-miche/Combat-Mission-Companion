@@ -32,6 +32,7 @@ func _ready() -> void:
 	veterancy_selector.item_selected.connect(_on_veterancy_selected)
 	org_chart_view.unit_selected.connect(_on_org_chart_selected)
 	org_chart_view.delete_requested.connect(_on_org_chart_delete_requested)
+	org_chart_view.unit_move_requested.connect(_on_org_chart_move_requested)
 	save_template_button.pressed.connect(_on_save_template_pressed)
 	load_template_button.pressed.connect(_on_load_template_pressed)
 
@@ -361,12 +362,42 @@ func _on_delete_button_pressed() -> void:
 func _on_org_chart_delete_requested(unit: UnitModel) -> void:
 	_delete_unit(unit)
 
+func _on_org_chart_move_requested(unit: UnitModel, new_parent: UnitModel) -> void:
+	_move_unit(unit, new_parent)
+
 func _delete_unit(unit: UnitModel) -> void:
 	if unit == null or unit == _root_unit:
 		return
 	if _remove_child_recursive(_root_unit, unit.id):
 		_selected_unit = _root_unit
 		_refresh_all()
+
+func _move_unit(unit: UnitModel, new_parent: UnitModel) -> void:
+	if unit == null or new_parent == null:
+		return
+	if unit == _root_unit:
+		pending_unit_label.text = "Root unit cannot be moved."
+		return
+	if unit == new_parent:
+		return
+	if _contains_unit(unit, new_parent.id):
+		pending_unit_label.text = "Cannot move a unit into its own subtree."
+		return
+
+	var current_parent := _find_parent(_root_unit, unit.id)
+	if current_parent == null:
+		return
+	if current_parent == new_parent:
+		return
+
+	if not OrganizationValidator.can_add_child(new_parent, unit):
+		pending_unit_label.text = "Cannot move: %s cannot contain %s." % [_unit_label(new_parent), _unit_label(unit)]
+		return
+
+	current_parent.children.erase(unit)
+	new_parent.children.append(unit)
+	_selected_unit = unit
+	_refresh_all()
 
 func _remove_child_recursive(parent: UnitModel, target_id: String) -> bool:
 	for i in range(parent.children.size()):
@@ -379,6 +410,29 @@ func _remove_child_recursive(parent: UnitModel, target_id: String) -> bool:
 		if child != null and _remove_child_recursive(child, target_id):
 			return true
 
+	return false
+
+func _find_parent(parent: UnitModel, child_id: String) -> UnitModel:
+	if parent == null:
+		return null
+	for child in parent.children:
+		if child == null:
+			continue
+		if child.id == child_id:
+			return parent
+		var nested := _find_parent(child, child_id)
+		if nested != null:
+			return nested
+	return null
+
+func _contains_unit(parent: UnitModel, target_id: String) -> bool:
+	if parent == null:
+		return false
+	if parent.id == target_id:
+		return true
+	for child in parent.children:
+		if _contains_unit(child, target_id):
+			return true
 	return false
 
 func _on_org_chart_selected(unit: UnitModel) -> void:
