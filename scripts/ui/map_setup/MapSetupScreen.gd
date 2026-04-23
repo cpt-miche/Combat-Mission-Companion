@@ -262,8 +262,9 @@ func _refresh_saved_maps(preferred_name: String = "") -> void:
 	delete_map_button.disabled = false
 	var selected_index := 0
 	if not preferred_name.is_empty():
+		var preferred_safe_name := SaveManager.sanitize_name(preferred_name)
 		for index in range(map_selector.get_item_count()):
-			if map_selector.get_item_text(index) == preferred_name:
+			if map_selector.get_item_text(index) == preferred_safe_name:
 				selected_index = index
 				break
 	map_selector.select(selected_index)
