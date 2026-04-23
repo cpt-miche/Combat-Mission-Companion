@@ -21,6 +21,8 @@ extends Control
 
 var _terrain_group := ButtonGroup.new()
 var _mode_group := ButtonGroup.new()
+var _terrain_buttons: Dictionary[String, BaseButton] = {}
+var _selected_terrain_id: String = TerrainCatalog.default_terrain_id()
 
 func _ready() -> void:
 	_build_palette()
@@ -41,6 +43,7 @@ func _ready() -> void:
 	_refresh_ui()
 
 func _build_palette() -> void:
+	_terrain_buttons.clear()
 	for terrain_id in TerrainCatalog.all_ids():
 		var button := CheckButton.new()
 		button.text = TerrainCatalog.display_name(terrain_id)
@@ -50,16 +53,28 @@ func _build_palette() -> void:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.toggled.connect(_on_terrain_toggled.bind(terrain_id))
 		terrain_list.add_child(button)
-		if terrain_id == TerrainCatalog.default_terrain_id():
-			button.button_pressed = true
-			hex_map_view.set_selected_terrain(terrain_id)
-			current_terrain_value.text = TerrainCatalog.display_name(terrain_id)
+		_terrain_buttons[terrain_id] = button
+
+	_set_selected_terrain(_selected_terrain_id, true)
 
 func _on_terrain_toggled(is_toggled: bool, terrain_id: String) -> void:
 	if not is_toggled:
 		return
-	hex_map_view.set_selected_terrain(terrain_id)
-	current_terrain_value.text = TerrainCatalog.display_name(terrain_id)
+	_set_selected_terrain(terrain_id, false)
+
+func _set_selected_terrain(terrain_id: String, sync_button_state: bool = true) -> void:
+	_selected_terrain_id = TerrainCatalog.normalize_terrain_id(terrain_id)
+	hex_map_view.set_selected_terrain(_selected_terrain_id)
+	current_terrain_value.text = "Brush: %s" % TerrainCatalog.display_name(_selected_terrain_id)
+
+	if not sync_button_state:
+		return
+
+	for id in _terrain_buttons.keys():
+		var button: BaseButton = _terrain_buttons[id]
+		if button == null:
+			continue
+		button.button_pressed = id == _selected_terrain_id
 
 func _on_clear_all_pressed() -> void:
 	hex_map_view.clear_all()
