@@ -114,6 +114,8 @@ func _gui_input(event: InputEvent) -> void:
 				_is_painting = false
 				_has_last_brush_axial = false
 			else:
+				if mouse_button.button_mask & MOUSE_BUTTON_MASK_LEFT:
+					_is_painting = true
 				_has_last_brush_axial = false
 			if mouse_button.pressed:
 				_paint_at(mouse_button.position, DEFAULT_TERRAIN)
