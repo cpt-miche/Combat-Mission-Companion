@@ -48,6 +48,36 @@ func clear_all() -> void:
 	hexes.clear()
 	queue_redraw()
 
+func export_terrain_map() -> Dictionary:
+	var terrain_map := {}
+	for axial in hexes.keys():
+		var cell: HexCellData = hexes[axial]
+		if cell == null:
+			continue
+		var terrain_id := TerrainCatalog.normalize_terrain_id(cell.terrain)
+		if terrain_id == DEFAULT_TERRAIN:
+			continue
+		terrain_map["%d,%d" % [axial.x, axial.y]] = terrain_id
+	return terrain_map
+
+func import_terrain_map(serialized_map: Dictionary) -> void:
+	hexes.clear()
+	for coordinate in serialized_map.keys():
+		var coordinate_text := String(coordinate)
+		var parts := coordinate_text.split(",")
+		if parts.size() != 2:
+			continue
+		var q := int(parts[0])
+		var r := int(parts[1])
+		var axial := Vector2i(q, r)
+		if not _is_axial_on_map(axial):
+			continue
+		var terrain_id := TerrainCatalog.normalize_terrain_id(String(serialized_map.get(coordinate, DEFAULT_TERRAIN)))
+		if terrain_id == DEFAULT_TERRAIN:
+			continue
+		hexes[axial] = HexCellData.new(terrain_id)
+	queue_redraw()
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mouse_button := event as InputEventMouseButton
