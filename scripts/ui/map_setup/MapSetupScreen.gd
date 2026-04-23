@@ -27,6 +27,7 @@ var _selected_terrain_id: String = TerrainCatalog.default_terrain_id()
 func _ready() -> void:
 	_build_palette()
 	_build_terrain_legend()
+	clear_all_button.pressed.connect(hex_map_view.clear_all)
 	clear_all_button.pressed.connect(_on_clear_all_pressed)
 	confirm_button.pressed.connect(_on_confirm_pressed)
 	load_png_button.pressed.connect(hex_map_view.open_map_dialog)
@@ -77,7 +78,7 @@ func _set_selected_terrain(terrain_id: String, sync_button_state: bool = true) -
 		button.button_pressed = id == _selected_terrain_id
 
 func _on_clear_all_pressed() -> void:
-	hex_map_view.clear_all()
+	_sync_game_state_terrain_data()
 
 func _on_confirm_pressed() -> void:
 	_sync_game_state_map_data()
@@ -203,6 +204,9 @@ func _persist_territory_map() -> void:
 func _sync_game_state_map_data() -> void:
 	GameState.terrain_map = hex_map_view.export_terrain_map()
 	GameState.territory_map = _territory_map.duplicate(true)
+
+func _sync_game_state_terrain_data() -> void:
+	GameState.terrain_map = hex_map_view.export_terrain_map()
 
 func _build_map_payload(map_name: String) -> Dictionary:
 	return {

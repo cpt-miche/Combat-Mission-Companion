@@ -47,6 +47,7 @@ func set_selected_terrain(terrain: String) -> void:
 
 func clear_all() -> void:
 	hexes.clear()
+	_has_last_brush_axial = false
 	queue_redraw()
 
 func export_terrain_map() -> Dictionary:
