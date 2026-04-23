@@ -182,3 +182,8 @@ scroll_active = false
 unique_name_in_owner = true
 layout_mode = 2
 text = "Delete Selected Unit"
+
+[node name="StartDeploymentButton" type="Button" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Submit Structure & Deploy"
