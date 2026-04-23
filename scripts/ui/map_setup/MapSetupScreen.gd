@@ -14,6 +14,7 @@ extends Control
 @onready var current_terrain_value: Label = %CurrentTerrainValue
 @onready var hex_map_view: HexMapView = %HexMapView
 @onready var clear_all_button: Button = %ClearAllButton
+@onready var clear_all_palette_button: Button = %ClearAllPaletteButton
 @onready var confirm_button: Button = %ConfirmButton
 @onready var load_png_button: Button = %LoadPngButton
 @onready var mode_prompt_label: Label = %ModePromptLabel
@@ -38,6 +39,8 @@ func _ready() -> void:
 	_build_terrain_legend()
 	clear_all_button.pressed.connect(hex_map_view.clear_all)
 	clear_all_button.pressed.connect(_on_clear_all_pressed)
+	clear_all_palette_button.pressed.connect(hex_map_view.clear_all)
+	clear_all_palette_button.pressed.connect(_on_clear_all_pressed)
 	confirm_button.pressed.connect(_on_confirm_pressed)
 	load_png_button.pressed.connect(hex_map_view.open_map_dialog)
 	terrain_mode_button.pressed.connect(_on_select_terrain_mode_pressed)
@@ -91,7 +94,8 @@ func _on_clear_all_pressed() -> void:
 
 func _on_confirm_pressed() -> void:
 	_sync_game_state_map_data()
-	print("Map setup confirmed: %d customized hexes" % hex_map_view.hexes.size())
+	map_status_label.text = "Submitted unsaved map. Starting deployment."
+	GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
 
 enum Mode {
 	TERRAIN_EDIT,
@@ -99,8 +103,8 @@ enum Mode {
 	TERRITORY_P2
 }
 
-const GRID_COLUMNS := 8
-const GRID_ROWS := 6
+const GRID_COLUMNS := MapGridConfig.default_columns()
+const GRID_ROWS := MapGridConfig.default_rows()
 const HEX_RADIUS := 32.0
 const HEX_HORIZONTAL_SPACING := HEX_RADIUS * 1.7320508
 const HEX_VERTICAL_SPACING := HEX_RADIUS * 1.5

@@ -46,86 +46,99 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="PaletteVBox" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin"]
+[node name="PaletteScroll" type="ScrollContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin"]
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="PaletteHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="PaletteVBox" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="PaletteHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 layout_mode = 2
 text = "Terrain Palette"
 
-[node name="LoadPngButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="LoadPngButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Load Map PNG"
 
-[node name="MapSaveHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="MapSaveHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 layout_mode = 2
 text = "Map Save/Load"
 
-[node name="MapNameInput" type="LineEdit" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="MapNameInput" type="LineEdit" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Map Name"
 
-[node name="MapSaveButtons" type="HBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="MapSaveButtons" type="HBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 layout_mode = 2
 
-[node name="SaveMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox/MapSaveButtons"]
+[node name="SaveMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapSaveButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Save Map"
 
-[node name="MapSelector" type="OptionButton" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="ClearAllPaletteButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapSaveButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Clear All"
+tooltip_text = "Reset all painted terrain to the default terrain."
+
+[node name="MapSelector" type="OptionButton" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="MapLoadButtons" type="HBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="MapLoadButtons" type="HBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 layout_mode = 2
 
-[node name="LoadMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox/MapLoadButtons"]
+[node name="LoadMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapLoadButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Load Selected"
 
-[node name="DeleteMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox/MapLoadButtons"]
+[node name="DeleteMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapLoadButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Delete"
 
-[node name="MapStatusLabel" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="MapStatusLabel" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "No map loaded."
 autowrap_mode = 2
 
-[node name="PaletteHint" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="PaletteHint" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 layout_mode = 2
-text = "LMB click: paint one hex\nLMB drag: paint many\nRMB drag: reset to default\nMMB pan / wheel zoom\nClear All: reset entire map"
+text = "LMB on hex: paint one/drag paint\nLMB on background: drag-pan\nRMB drag: reset to default\nMMB pan / wheel zoom\nClear All: reset entire map"
 autowrap_mode = 2
 
-[node name="CurrentTerrainHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="CurrentTerrainHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 layout_mode = 2
 text = "Current Terrain"
 
-[node name="CurrentTerrainValue" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="CurrentTerrainValue" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Light Terrain"
 
-[node name="TerrainList" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="TerrainList" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TerrainLegendHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="TerrainLegendHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 layout_mode = 2
 text = "Terrain Legend"
 
-[node name="TerrainLegendList" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+[node name="TerrainLegendList" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 
@@ -193,7 +206,7 @@ script = ExtResource("2_fjgke")
 
 [node name="BottomControls" type="HBoxContainer" parent="RootMargin/RootVBox"]
 layout_mode = 2
-alignment = 2
+alignment = 0
 
 [node name="ClearAllButton" type="Button" parent="RootMargin/RootVBox/BottomControls"]
 unique_name_in_owner = true
@@ -204,4 +217,4 @@ tooltip_text = "Reset all painted terrain to the default terrain."
 [node name="ConfirmButton" type="Button" parent="RootMargin/RootVBox/BottomControls"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Confirm"
+text = "Submit & Play"
