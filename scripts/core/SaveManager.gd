@@ -19,6 +19,9 @@ func _safe_file_name(raw_name: String) -> String:
 	safe_name = safe_name.replace("/", "_").replace("\\", "_").replace(":", "_")
 	return safe_name
 
+func sanitize_name(raw_name: String) -> String:
+	return _safe_file_name(raw_name)
+
 func _write_json(path: String, payload: Dictionary) -> bool:
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
