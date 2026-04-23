@@ -64,10 +64,68 @@ layout_mode = 2
 text = "LMB drag paint\nRMB drag reset\nMMB pan / wheel zoom"
 autowrap_mode = 2
 
+[node name="CurrentTerrainHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+layout_mode = 2
+text = "Current Terrain"
+
+[node name="CurrentTerrainValue" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Light Terrain"
+
 [node name="TerrainList" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="TerrainLegendHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+layout_mode = 2
+text = "Terrain Legend"
+
+[node name="TerrainLegendList" type="VBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ModePanel" type="PanelContainer" parent="RootMargin/RootVBox"]
+layout_mode = 2
+
+[node name="ModeMargin" type="MarginContainer" parent="RootMargin/RootVBox/ModePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="ModeVBox" type="VBoxContainer" parent="RootMargin/RootVBox/ModePanel/ModeMargin"]
+layout_mode = 2
+
+[node name="ModePromptLabel" type="Label" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Mode: Terrain Edit"
+
+[node name="ModeButtons" type="HBoxContainer" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox"]
+layout_mode = 2
+
+[node name="TerrainModeButton" type="Button" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox/ModeButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Terrain Paint"
+
+[node name="SelectP1TerritoryButton" type="Button" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox/ModeButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Territory P1"
+
+[node name="SwitchToP2Button" type="Button" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox/ModeButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Territory P2"
+
+[node name="ConfirmTerritoriesButton" type="Button" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Confirm Territories"
 
 [node name="CanvasPanel" type="PanelContainer" parent="RootMargin/RootVBox/MainSplit"]
 layout_mode = 2

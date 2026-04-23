@@ -8,6 +8,9 @@ const MIN_ZOOM := 0.2
 const MAX_ZOOM := 4.0
 const ZOOM_STEP := 1.1
 const DEFAULT_TERRAIN := TerrainCatalog.DEFAULT_TERRAIN_ID
+const GRID_COLUMNS := 8
+const GRID_ROWS := 6
+const MAP_PADDING := Vector2(40.0, 40.0)
 
 var hex_size: float = 24.0
 var map_texture: Texture2D
@@ -22,6 +25,7 @@ var _is_painting := false
 var _is_erasing := false
 var _is_panning := false
 var _last_mouse_position := Vector2.ZERO
+var _icon_cache: Dictionary = {}
 
 @onready var file_dialog: FileDialog = FileDialog.new()
 
@@ -116,9 +120,6 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_hex_grid() -> void:
-	if map_texture == null:
-		return
-
 	for axial in _generate_axial_coordinates():
 		var corners := _hex_corners_world(_axial_to_world(axial))
 		draw_polyline(corners, Color(1, 1, 1, 0.25), 1.0, true)
@@ -132,11 +133,14 @@ func _draw_painted_hexes() -> void:
 		var corners := _hex_corners_world(_axial_to_world(axial))
 		var color := TerrainCatalog.editor_color(terrain, 0.5)
 		draw_colored_polygon(corners, color)
+		var icon := _icon_texture_for_terrain(terrain)
+		if icon != null:
+			var center := _axial_to_world(axial)
+			var icon_position := center - (icon.get_size() * 0.5)
+			draw_texture(icon, icon_position, Color(1, 1, 1, 0.8))
 		draw_polyline(corners, Color(0, 0, 0, 0.2), 1.0, true)
 
 func _paint_at(screen_position: Vector2, terrain: String) -> void:
-	if map_texture == null:
-		return
 	var terrain_id := TerrainCatalog.normalize_terrain_id(terrain)
 	var world_position := _screen_to_world(screen_position)
 	var axial := _world_to_axial(world_position)
@@ -161,33 +165,22 @@ func _on_file_selected(path: String) -> void:
 
 func _generate_axial_coordinates() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
-	if map_texture == null:
-		return result
-
-	var max_q := int(ceil(map_texture.get_width() / (hex_size * 1.5))) + 2
-	var max_r := int(ceil(map_texture.get_height() / (hex_size * SQRT3))) + 2
-
-	for q in range(-1, max_q):
-		for r in range(-1, max_r):
-			var axial := Vector2i(q, r)
-			if _is_axial_on_map(axial):
-				result.append(axial)
+	for q in range(GRID_COLUMNS):
+		for r in range(GRID_ROWS):
+			result.append(Vector2i(q, r))
 
 	return result
 
 func _is_axial_on_map(axial: Vector2i) -> bool:
-	if map_texture == null:
-		return false
-	var center := _axial_to_world(axial)
-	return center.x >= map_offset.x and center.y >= map_offset.y and center.x <= map_offset.x + map_texture.get_width() and center.y <= map_offset.y + map_texture.get_height()
+	return axial.x >= 0 and axial.y >= 0 and axial.x < GRID_COLUMNS and axial.y < GRID_ROWS
 
 func _axial_to_world(axial: Vector2i) -> Vector2:
 	var x := hex_size * (1.5 * axial.x)
 	var y := hex_size * (SQRT3 * (axial.y + axial.x * 0.5))
-	return map_offset + Vector2(x, y)
+	return map_offset + MAP_PADDING + Vector2(x, y)
 
 func _world_to_axial(world: Vector2) -> Vector2i:
-	var local := world - map_offset
+	var local := world - map_offset - MAP_PADDING
 	var q := (2.0 / 3.0 * local.x) / hex_size
 	var r := (-1.0 / 3.0 * local.x + SQRT3 / 3.0 * local.y) / hex_size
 	return _hex_round(q, r)
@@ -222,3 +215,17 @@ func _view_transform() -> Transform2D:
 func _screen_to_world(screen_pos: Vector2, sample_zoom: float = -1.0) -> Vector2:
 	var active_zoom := zoom if sample_zoom < 0.0 else sample_zoom
 	return (screen_pos - pan_offset) / active_zoom
+
+func _icon_texture_for_terrain(terrain_id: String) -> Texture2D:
+	if _icon_cache.has(terrain_id):
+		return _icon_cache[terrain_id] as Texture2D
+
+	var icon_path := TerrainCatalog.icon_path(terrain_id, "terrain")
+	if icon_path.is_empty():
+		_icon_cache[terrain_id] = null
+		return null
+
+	var icon_resource := load(icon_path)
+	var icon_texture := icon_resource as Texture2D
+	_icon_cache[terrain_id] = icon_texture
+	return icon_texture
