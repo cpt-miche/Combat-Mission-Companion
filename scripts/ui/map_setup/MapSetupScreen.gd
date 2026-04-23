@@ -243,11 +243,9 @@ func _on_delete_map_pressed() -> void:
 	map_status_label.text = "Failed to delete map '%s'." % selected_name
 
 func _apply_map_payload(payload: Dictionary) -> void:
-	var terrain_payload := (payload.get("terrain", {}) as Dictionary).duplicate(true)
-	var territory_payload := (payload.get("territory", {}) as Dictionary).duplicate(true)
-	hex_map_view.import_terrain_map(terrain_payload)
-	_territory_map = territory_payload
-	_sync_game_state_map_data()
+	GameState.apply_map_payload(payload)
+	hex_map_view.import_terrain_map(GameState.terrain_map.duplicate(true))
+	_territory_map = GameState.territory_map.duplicate(true)
 	queue_redraw()
 
 func _refresh_saved_maps(preferred_name: String = "") -> void:
