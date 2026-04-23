@@ -35,7 +35,7 @@ func _ready() -> void:
 	save_map_button.pressed.connect(_on_save_map_pressed)
 	load_map_button.pressed.connect(_on_load_map_pressed)
 	delete_map_button.pressed.connect(_on_delete_map_pressed)
-	_load_existing_territory_map()
+	_load_existing_map_data()
 	_refresh_saved_maps()
 	_configure_mode_buttons()
 	_refresh_ui()
@@ -178,7 +178,8 @@ func _is_territory_mode() -> bool:
 func _ownership_for_mode() -> GameState.TerritoryOwnership:
 	return GameState.TerritoryOwnership.PLAYER_1 if _mode == Mode.TERRITORY_P1 else GameState.TerritoryOwnership.PLAYER_2
 
-func _load_existing_territory_map() -> void:
+func _load_existing_map_data() -> void:
+	hex_map_view.import_terrain_map(GameState.terrain_map.duplicate(true))
 	_territory_map = GameState.territory_map.duplicate(true)
 
 func _persist_territory_map() -> void:
