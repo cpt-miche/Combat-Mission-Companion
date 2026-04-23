@@ -191,7 +191,7 @@ func _sync_game_state_map_data() -> void:
 
 func _build_map_payload(map_name: String) -> Dictionary:
 	return {
-		"version": 1,
+		"version": GameState.MAP_PAYLOAD_VERSION_CURRENT,
 		"name": map_name,
 		"grid": {
 			"rows": GRID_ROWS,
