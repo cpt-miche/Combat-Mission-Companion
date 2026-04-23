@@ -1,7 +1,5 @@
 extends Control
 
-const TERRAIN_TYPES := ["Highway", "Road", "Light", "Heavy", "Woods"]
-
 @onready var terrain_list: VBoxContainer = %TerrainList
 @onready var hex_map_view: HexMapView = %HexMapView
 @onready var clear_all_button: Button = %ClearAllButton
@@ -22,23 +20,23 @@ func _ready() -> void:
 	_refresh_ui()
 
 func _build_palette() -> void:
-	for terrain in TERRAIN_TYPES:
+	for terrain_id in TerrainCatalog.all_ids():
 		var button := CheckButton.new()
-		button.text = terrain
+		button.text = TerrainCatalog.display_name(terrain_id)
 		button.toggle_mode = true
 		button.button_group = _terrain_group
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.toggled.connect(_on_terrain_toggled.bind(terrain))
+		button.toggled.connect(_on_terrain_toggled.bind(terrain_id))
 		terrain_list.add_child(button)
-		if terrain == "Light":
+		if terrain_id == TerrainCatalog.default_terrain_id():
 			button.button_pressed = true
-			hex_map_view.set_selected_terrain(terrain)
+			hex_map_view.set_selected_terrain(terrain_id)
 
-func _on_terrain_toggled(is_toggled: bool, terrain: String) -> void:
+func _on_terrain_toggled(is_toggled: bool, terrain_id: String) -> void:
 	if not is_toggled:
 		return
-	hex_map_view.set_selected_terrain(terrain)
+	hex_map_view.set_selected_terrain(terrain_id)
 
 func _on_clear_all_pressed() -> void:
 	hex_map_view.clear_all()

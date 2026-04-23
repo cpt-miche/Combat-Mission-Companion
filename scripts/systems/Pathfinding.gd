@@ -2,11 +2,13 @@ extends RefCounted
 class_name Pathfinding
 
 const TERRAIN_COSTS := {
-	"Highway": 1,
-	"Road": 1,
-	"Light": 2,
-	"Heavy": 3,
-	"Woods": 4
+	"highway": 1,
+	"road": 1,
+	"light": 2,
+	"medium": 3,
+	"heavy": 4,
+	"woods": 4,
+	"urban": 3
 }
 
 static func find_path(start: Vector2i, goal: Vector2i, terrain_map: Dictionary, blocked_cells: Dictionary = {}) -> Array[Vector2i]:
@@ -49,7 +51,7 @@ static func find_path(start: Vector2i, goal: Vector2i, terrain_map: Dictionary, 
 	return path
 
 static func _move_cost(hex: Vector2i, terrain_map: Dictionary) -> int:
-	var terrain := String(terrain_map.get(_key_for(hex), "Light"))
+	var terrain := TerrainCatalog.normalize_terrain_id(String(terrain_map.get(_key_for(hex), TerrainCatalog.DEFAULT_TERRAIN_ID)))
 	return int(TERRAIN_COSTS.get(terrain, 2))
 
 static func _heuristic(a: Vector2i, b: Vector2i) -> int:
