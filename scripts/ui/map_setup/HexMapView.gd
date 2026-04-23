@@ -8,8 +8,9 @@ const MIN_ZOOM := 0.2
 const MAX_ZOOM := 4.0
 const ZOOM_STEP := 1.1
 const DEFAULT_TERRAIN := TerrainCatalog.DEFAULT_TERRAIN_ID
-const GRID_COLUMNS := 8
-const GRID_ROWS := 6
+const ERASE_BRUSH_ID := "__erase__"
+const GRID_COLUMNS := MapGridConfig.default_columns()
+const GRID_ROWS := MapGridConfig.default_rows()
 const MAP_PADDING := Vector2(40.0, 40.0)
 
 var hex_size: float = 24.0
@@ -17,7 +18,7 @@ var map_texture: Texture2D
 var map_offset: Vector2 = Vector2.ZERO
 var zoom: float = 1.0
 var pan_offset: Vector2 = Vector2.ZERO
-var selected_terrain: String = DEFAULT_TERRAIN
+var selected_terrain: String = TerrainCatalog.default_terrain_id()
 
 var hexes: Dictionary[Vector2i, HexCellData] = {}
 
@@ -57,8 +58,6 @@ func export_terrain_map() -> Dictionary:
 		if cell == null:
 			continue
 		var terrain_id := TerrainCatalog.normalize_terrain_id(cell.terrain)
-		if terrain_id == DEFAULT_TERRAIN:
-			continue
 		terrain_map["%d,%d" % [axial.x, axial.y]] = terrain_id
 	return terrain_map
 
@@ -75,8 +74,6 @@ func import_terrain_map(serialized_map: Dictionary) -> void:
 		if not _is_axial_on_map(axial):
 			continue
 		var terrain_id := TerrainCatalog.normalize_terrain_id(String(serialized_map.get(coordinate, DEFAULT_TERRAIN)))
-		if terrain_id == DEFAULT_TERRAIN:
-			continue
 		hexes[axial] = HexCellData.new(terrain_id)
 	queue_redraw()
 
@@ -102,17 +99,20 @@ func _gui_input(event: InputEvent) -> void:
 			return
 
 		if mouse_button.button_index == MOUSE_BUTTON_LEFT:
-			# QA expectation: a single LMB press paints exactly one hex at press position;
-			# keeping LMB pressed and moving invokes _paint_at from mouse motion for drag painting.
-			_is_painting = mouse_button.pressed
 			if mouse_button.pressed:
 				_is_erasing = false
+				_has_last_brush_axial = false
+				if _is_screen_position_on_map_hex(mouse_button.position):
+					_is_painting = true
+					_is_panning = false
+					_paint_at(mouse_button.position, selected_terrain)
+				else:
+					_is_painting = false
+					_is_panning = true
+			else:
+				_is_painting = false
 				_is_panning = false
 				_has_last_brush_axial = false
-			else:
-				_has_last_brush_axial = false
-			if mouse_button.pressed:
-				_paint_at(mouse_button.position, selected_terrain)
 			accept_event()
 			return
 
@@ -126,7 +126,7 @@ func _gui_input(event: InputEvent) -> void:
 			else:
 				_has_last_brush_axial = false
 			if mouse_button.pressed:
-				_paint_at(mouse_button.position, DEFAULT_TERRAIN)
+				_paint_at(mouse_button.position, ERASE_BRUSH_ID)
 			accept_event()
 			return
 
@@ -144,7 +144,7 @@ func _gui_input(event: InputEvent) -> void:
 			return
 
 		if _is_erasing:
-			_paint_at(mouse_motion.position, DEFAULT_TERRAIN)
+			_paint_at(mouse_motion.position, ERASE_BRUSH_ID)
 			accept_event()
 			return
 
@@ -179,14 +179,13 @@ func _draw_painted_hexes() -> void:
 	for axial in hexes.keys():
 		var cell: HexCellData = hexes[axial]
 		var terrain := TerrainCatalog.normalize_terrain_id(cell.terrain if cell != null else DEFAULT_TERRAIN)
-		if terrain == DEFAULT_TERRAIN:
-			continue
 		var corners := _hex_corners_world(_axial_to_world(axial))
 		var color := TerrainCatalog.editor_color(terrain, 0.5)
 		draw_colored_polygon(corners, color)
 		draw_polyline(corners, Color(0, 0, 0, 0.2), 1.0, true)
 
 func _paint_at(screen_position: Vector2, terrain: String) -> void:
+	var is_erasing := terrain == ERASE_BRUSH_ID
 	var terrain_id := TerrainCatalog.normalize_terrain_id(terrain)
 	var world_position := _screen_to_world(screen_position)
 	var axial := _world_to_axial(world_position)
@@ -200,19 +199,19 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 		var current_cell: HexCellData = hexes[axial]
 		if current_cell != null:
 			current_terrain = TerrainCatalog.normalize_terrain_id(current_cell.terrain)
-	if current_terrain == terrain_id:
+	if not is_erasing and current_terrain == terrain_id:
 		_has_last_brush_axial = true
 		_last_brush_axial = axial
 		return
 
-	if terrain_id == DEFAULT_TERRAIN:
+	if is_erasing:
 		hexes.erase(axial)
 	else:
 		hexes[axial] = HexCellData.new(terrain_id)
 
 	_has_last_brush_axial = true
 	_last_brush_axial = axial
-	painted.emit(axial, terrain_id)
+	painted.emit(axial, DEFAULT_TERRAIN if is_erasing else terrain_id)
 	queue_redraw()
 
 func _on_file_selected(path: String) -> void:
@@ -233,6 +232,11 @@ func _generate_axial_coordinates() -> Array[Vector2i]:
 
 func _is_axial_on_map(axial: Vector2i) -> bool:
 	return axial.x >= 0 and axial.y >= 0 and axial.x < GRID_COLUMNS and axial.y < GRID_ROWS
+
+func _is_screen_position_on_map_hex(screen_pos: Vector2) -> bool:
+	var world_position := _screen_to_world(screen_pos)
+	var axial := _world_to_axial(world_position)
+	return _is_axial_on_map(axial)
 
 func _axial_to_world(axial: Vector2i) -> Vector2:
 	var x := hex_size * (1.5 * axial.x)

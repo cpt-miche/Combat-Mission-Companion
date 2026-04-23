@@ -72,9 +72,11 @@ static func _neighbors(hex: Vector2i) -> Array[Vector2i]:
 	]
 	var offsets: Array[Vector2i] = offsets_odd if hex.y % 2 == 1 else offsets_even
 	var results: Array[Vector2i] = []
+	var max_columns := MapGridConfig.default_columns()
+	var max_rows := MapGridConfig.default_rows()
 	for offset in offsets:
 		var candidate := hex + offset
-		if candidate.x >= 0 and candidate.x < 8 and candidate.y >= 0 and candidate.y < 6:
+		if candidate.x >= 0 and candidate.x < max_columns and candidate.y >= 0 and candidate.y < max_rows:
 			results.append(candidate)
 	return results
 
