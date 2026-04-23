@@ -1,22 +1,33 @@
 extends Control
 
 @onready var terrain_list: VBoxContainer = %TerrainList
+@onready var terrain_legend_list: VBoxContainer = %TerrainLegendList
+@onready var current_terrain_value: Label = %CurrentTerrainValue
 @onready var hex_map_view: HexMapView = %HexMapView
 @onready var clear_all_button: Button = %ClearAllButton
 @onready var confirm_button: Button = %ConfirmButton
 @onready var load_png_button: Button = %LoadPngButton
+@onready var mode_prompt_label: Label = %ModePromptLabel
+@onready var terrain_mode_button: Button = %TerrainModeButton
+@onready var select_p1_button: Button = %SelectP1TerritoryButton
+@onready var switch_to_p2_button: Button = %SwitchToP2Button
+@onready var confirm_territories_button: Button = %ConfirmTerritoriesButton
 
 var _terrain_group := ButtonGroup.new()
+var _mode_group := ButtonGroup.new()
 
 func _ready() -> void:
 	_build_palette()
+	_build_terrain_legend()
 	clear_all_button.pressed.connect(_on_clear_all_pressed)
 	confirm_button.pressed.connect(_on_confirm_pressed)
 	load_png_button.pressed.connect(hex_map_view.open_map_dialog)
+	terrain_mode_button.pressed.connect(_on_select_terrain_mode_pressed)
 	select_p1_button.pressed.connect(_on_select_p1_territory_pressed)
 	switch_to_p2_button.pressed.connect(_on_switch_to_p2_pressed)
 	confirm_territories_button.pressed.connect(_on_confirm_territories_pressed)
 	_load_existing_territory_map()
+	_configure_mode_buttons()
 	_refresh_ui()
 
 func _build_palette() -> void:
@@ -32,11 +43,13 @@ func _build_palette() -> void:
 		if terrain_id == TerrainCatalog.default_terrain_id():
 			button.button_pressed = true
 			hex_map_view.set_selected_terrain(terrain_id)
+			current_terrain_value.text = TerrainCatalog.display_name(terrain_id)
 
 func _on_terrain_toggled(is_toggled: bool, terrain_id: String) -> void:
 	if not is_toggled:
 		return
 	hex_map_view.set_selected_terrain(terrain_id)
+	current_terrain_value.text = TerrainCatalog.display_name(terrain_id)
 
 func _on_clear_all_pressed() -> void:
 	hex_map_view.clear_all()
@@ -57,16 +70,44 @@ const HEX_HORIZONTAL_SPACING := HEX_RADIUS * 1.7320508
 const HEX_VERTICAL_SPACING := HEX_RADIUS * 1.5
 const HEX_ORIGIN := Vector2(120.0, 170.0)
 
-@onready var mode_prompt_label: Label = %ModePromptLabel
-@onready var select_p1_button: Button = %SelectP1TerritoryButton
-@onready var switch_to_p2_button: Button = %SwitchToP2Button
-@onready var confirm_territories_button: Button = %ConfirmTerritoriesButton
-
 var _mode: Mode = Mode.TERRAIN_EDIT
 var _territory_map: Dictionary = {}
 
+func _configure_mode_buttons() -> void:
+	terrain_mode_button.toggle_mode = true
+	select_p1_button.toggle_mode = true
+	switch_to_p2_button.toggle_mode = true
+	terrain_mode_button.button_group = _mode_group
+	select_p1_button.button_group = _mode_group
+	switch_to_p2_button.button_group = _mode_group
+
+func _build_terrain_legend() -> void:
+	for child in terrain_legend_list.get_children():
+		child.queue_free()
+
+	for terrain_id in TerrainCatalog.all_ids():
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		var swatch := ColorRect.new()
+		swatch.custom_minimum_size = Vector2(18.0, 18.0)
+		swatch.color = TerrainCatalog.editor_color(terrain_id, 0.8)
+		row.add_child(swatch)
+
+		var label := Label.new()
+		label.text = TerrainCatalog.display_name(terrain_id)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+
+		terrain_legend_list.add_child(row)
+
+func _on_select_terrain_mode_pressed() -> void:
+	_mode = Mode.TERRAIN_EDIT
+	_refresh_ui()
 
 func _draw() -> void:
+	if not _is_territory_mode():
+		return
 	for row in range(GRID_ROWS):
 		for column in range(GRID_COLUMNS):
 			var center := _hex_center(column, row)
@@ -100,9 +141,12 @@ func _on_confirm_territories_pressed() -> void:
 
 func _refresh_ui() -> void:
 	mode_prompt_label.text = _mode_prompt_text()
-	select_p1_button.disabled = _mode == Mode.TERRITORY_P1
-	switch_to_p2_button.disabled = _mode != Mode.TERRITORY_P1
+	terrain_mode_button.button_pressed = _mode == Mode.TERRAIN_EDIT
+	select_p1_button.button_pressed = _mode == Mode.TERRITORY_P1
+	switch_to_p2_button.button_pressed = _mode == Mode.TERRITORY_P2
+	switch_to_p2_button.disabled = false
 	confirm_territories_button.disabled = _mode != Mode.TERRITORY_P2
+	hex_map_view.mouse_filter = Control.MOUSE_FILTER_STOP if _mode == Mode.TERRAIN_EDIT else Control.MOUSE_FILTER_IGNORE
 	queue_redraw()
 
 func _mode_prompt_text() -> String:
