@@ -1,0 +1,77 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu/MainMenuScreen.gd" id="1_main"]
+
+[node name="MainMenuScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="RootMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CenterVBox" type="VBoxContainer" parent="RootMargin"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="RootMargin/CenterVBox"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 28
+text = "Combat Mission Companion"
+
+[node name="Subtitle" type="Label" parent="RootMargin/CenterVBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Choose an option"
+
+[node name="PlayButton" type="Button" parent="RootMargin/CenterVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 48)
+layout_mode = 2
+text = "Play"
+
+[node name="LoadButton" type="Button" parent="RootMargin/CenterVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 48)
+layout_mode = 2
+text = "Load"
+
+[node name="StatusLabel" type="Label" parent="RootMargin/CenterVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 2
+text = ""
+
+[node name="NationDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Choose Side"
+size = Vector2i(360, 120)
+initial_position = 1
+ok_button_text = "Play as US"
+cancel_button_text = "Play as Germans"
+
+[node name="NationPrompt" type="Label" parent="NationDialog"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 330.0
+offset_bottom = 46.0
+text = "Which side do you want to command?"

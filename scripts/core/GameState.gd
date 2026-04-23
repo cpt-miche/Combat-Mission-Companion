@@ -1,5 +1,6 @@
 extends Node
 enum Phase {
+	MAIN_MENU,
 	DIVISION_BUILDER,
 	MAP_SETUP,
 	DEPLOYMENT_P1,
@@ -16,7 +17,7 @@ enum TerritoryOwnership {
 
 signal phase_changed(new_phase: Phase)
 
-var current_phase: Phase = Phase.DIVISION_BUILDER
+var current_phase: Phase = Phase.MAIN_MENU
 var players: Array[Dictionary] = []
 var current_turn: int = 1
 var territory_map: Dictionary = {}
@@ -24,6 +25,7 @@ var terrain_map: Dictionary = {}
 var gameplay_units: Dictionary = {}
 var combat_log_entries: Array[Dictionary] = []
 var pending_casualties: Dictionary = {}
+var selected_nation_id: String = "usa"
 
 func set_phase(phase: Phase) -> void:
 	if current_phase == phase:
@@ -32,7 +34,7 @@ func set_phase(phase: Phase) -> void:
 	emit_signal("phase_changed", current_phase)
 
 func reset() -> void:
-	current_phase = Phase.DIVISION_BUILDER
+	current_phase = Phase.MAIN_MENU
 	players.clear()
 	current_turn = 1
 	territory_map.clear()
@@ -40,4 +42,5 @@ func reset() -> void:
 	gameplay_units.clear()
 	combat_log_entries.clear()
 	pending_casualties.clear()
+	selected_nation_id = "usa"
 	emit_signal("phase_changed", current_phase)
