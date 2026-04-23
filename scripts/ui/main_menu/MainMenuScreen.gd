@@ -4,25 +4,58 @@ extends Control
 @onready var load_button: Button = %LoadButton
 @onready var status_label: Label = %StatusLabel
 @onready var nation_dialog: ConfirmationDialog = %NationDialog
+@onready var map_dialog: ConfirmationDialog = %MapDialog
+@onready var map_mode_selector: OptionButton = %MapModeSelector
+@onready var saved_map_selector: OptionButton = %SavedMapSelector
+@onready var map_selection_status_label: Label = %MapSelectionStatusLabel
+
+var _pending_nation_id := "usa"
 
 func _ready() -> void:
 	play_button.pressed.connect(_on_play_pressed)
 	load_button.pressed.connect(_on_load_pressed)
 	nation_dialog.confirmed.connect(_on_play_as_usa)
 	nation_dialog.canceled.connect(_on_play_as_germany)
+	map_dialog.confirmed.connect(_on_map_selection_confirmed)
+	map_mode_selector.item_selected.connect(_on_map_mode_selected)
 
 func _on_play_pressed() -> void:
 	nation_dialog.popup_centered()
 
 func _on_play_as_usa() -> void:
-	_start_new_division_builder_for("usa")
+	_open_map_selection_for("usa")
 
 func _on_play_as_germany() -> void:
-	_start_new_division_builder_for("germany")
+	_open_map_selection_for("germany")
 
-func _start_new_division_builder_for(nation_id: String) -> void:
+func _open_map_selection_for(nation_id: String) -> void:
+	_pending_nation_id = nation_id
+	_configure_map_mode_selector()
+	_refresh_saved_map_selector()
+	_refresh_map_dialog_ui()
+	map_dialog.popup_centered()
+
+func _start_new_division_builder_for(nation_id: String, selected_mode: int) -> void:
 	GameState.reset()
 	GameState.selected_nation_id = nation_id
+	GameState.map_flow = selected_mode
+	GameState.selected_map_name = ""
+	if selected_mode == GameState.MapFlow.NEW_MAP:
+		GameState.terrain_map.clear()
+		GameState.territory_map.clear()
+		GameState.set_phase(GameState.Phase.DIVISION_BUILDER)
+		return
+
+	var map_name := _selected_saved_map_name()
+	if map_name.is_empty():
+		status_label.text = "No saved map selected."
+		return
+	var payload := SaveManager.load_map(map_name)
+	if payload.is_empty():
+		status_label.text = "Could not load map '%s'." % map_name
+		return
+	GameState.selected_map_name = map_name
+	GameState.apply_map_payload(payload)
 	GameState.set_phase(GameState.Phase.DIVISION_BUILDER)
 
 func _on_load_pressed() -> void:
@@ -40,10 +73,50 @@ func _apply_loaded_payload(payload: Dictionary) -> void:
 	# Preserve whose turn was in progress when the autosave was created.
 	var loaded_active_player := int(payload.get("active_player", GameState.active_player))
 	GameState.active_player = clampi(loaded_active_player, 0, 1)
-	GameState.terrain_map = (payload.get("terrain", {}) as Dictionary).duplicate(true)
-	GameState.territory_map = (payload.get("territory", {}) as Dictionary).duplicate(true)
+	GameState.apply_map_payload(payload)
 	GameState.pending_casualties = (payload.get("casualties", {}) as Dictionary).duplicate(true)
 	GameState.gameplay_units = _deserialize_units(payload.get("units", {}) as Dictionary)
+
+func _configure_map_mode_selector() -> void:
+	map_mode_selector.clear()
+	map_mode_selector.add_item("New Map", GameState.MapFlow.NEW_MAP)
+	map_mode_selector.add_item("Edit Existing Map", GameState.MapFlow.EDIT_EXISTING_MAP)
+	map_mode_selector.add_item("Play Saved Map", GameState.MapFlow.PLAY_SAVED_MAP)
+	map_mode_selector.select(0)
+
+func _refresh_saved_map_selector() -> void:
+	saved_map_selector.clear()
+	for map_name in SaveManager.list_maps():
+		saved_map_selector.add_item(map_name)
+
+func _on_map_mode_selected(_index: int) -> void:
+	_refresh_map_dialog_ui()
+
+func _refresh_map_dialog_ui() -> void:
+	var mode := _selected_map_mode()
+	var needs_saved_map := mode == GameState.MapFlow.EDIT_EXISTING_MAP or mode == GameState.MapFlow.PLAY_SAVED_MAP
+	saved_map_selector.disabled = not needs_saved_map
+	if needs_saved_map and saved_map_selector.item_count == 0:
+		map_dialog.get_ok_button().disabled = true
+		map_selection_status_label.text = "No saved maps found. Save one in Map Setup first."
+		return
+	map_dialog.get_ok_button().disabled = false
+	map_selection_status_label.text = ""
+
+func _selected_map_mode() -> int:
+	if map_mode_selector.item_count == 0:
+		return GameState.MapFlow.NEW_MAP
+	var selected := maxi(map_mode_selector.selected, 0)
+	return int(map_mode_selector.get_item_id(selected))
+
+func _selected_saved_map_name() -> String:
+	if saved_map_selector.item_count == 0:
+		return ""
+	return saved_map_selector.get_item_text(maxi(saved_map_selector.selected, 0))
+
+func _on_map_selection_confirmed() -> void:
+	var selected_mode := _selected_map_mode()
+	_start_new_division_builder_for(_pending_nation_id, selected_mode)
 
 func _deserialize_units(serialized_units: Dictionary) -> Dictionary:
 	var deserialized := {}

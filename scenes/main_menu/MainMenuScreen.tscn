@@ -75,3 +75,41 @@ offset_top = 16.0
 offset_right = 330.0
 offset_bottom = 46.0
 text = "Which side do you want to command?"
+
+[node name="MapDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Map Selection"
+size = Vector2i(430, 250)
+initial_position = 1
+ok_button_text = "Continue"
+cancel_button_text = "Cancel"
+
+[node name="MapDialogVBox" type="VBoxContainer" parent="MapDialog"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 404.0
+offset_bottom = 204.0
+theme_override_constants/separation = 8
+
+[node name="MapModeLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+layout_mode = 2
+text = "Choose map flow"
+
+[node name="MapModeSelector" type="OptionButton" parent="MapDialog/MapDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SavedMapLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+layout_mode = 2
+text = "Saved map"
+
+[node name="SavedMapSelector" type="OptionButton" parent="MapDialog/MapDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MapSelectionStatusLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 2
+text = ""

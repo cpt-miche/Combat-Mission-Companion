@@ -534,7 +534,10 @@ func _on_start_deployment_pressed() -> void:
 	_ensure_players_initialized()
 	GameState.players[0]["division_tree"] = _unit_to_dict(_root_unit)
 	GameState.players[0]["deployments"] = {}
-	GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
+	if GameState.map_flow == GameState.MapFlow.PLAY_SAVED_MAP:
+		GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
+		return
+	GameState.set_phase(GameState.Phase.MAP_SETUP)
 
 func _ensure_players_initialized() -> void:
 	while GameState.players.size() < 2:
