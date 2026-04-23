@@ -15,6 +15,7 @@ extends Control
 @onready var template_selector: OptionButton = %TemplateSelector
 @onready var save_template_button: Button = %SaveTemplateButton
 @onready var load_template_button: Button = %LoadTemplateButton
+@onready var start_deployment_button: Button = %StartDeploymentButton
 
 var _root_unit: UnitModel
 var _selected_unit: UnitModel
@@ -35,6 +36,7 @@ func _ready() -> void:
 	org_chart_view.unit_move_requested.connect(_on_org_chart_move_requested)
 	save_template_button.pressed.connect(_on_save_template_pressed)
 	load_template_button.pressed.connect(_on_load_template_pressed)
+	start_deployment_button.pressed.connect(_on_start_deployment_pressed)
 
 	_refresh_template_selector()
 	_refresh_all()
@@ -527,6 +529,24 @@ func _on_load_template_pressed() -> void:
 	_pending_unit_data.clear()
 	_refresh_all()
 	pending_unit_label.text = "Template loaded: %s" % template_name
+
+func _on_start_deployment_pressed() -> void:
+	_ensure_players_initialized()
+	GameState.players[0]["division_tree"] = _unit_to_dict(_root_unit)
+	GameState.players[0]["deployments"] = {}
+	GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
+
+func _ensure_players_initialized() -> void:
+	while GameState.players.size() < 2:
+		GameState.players.append({
+			"name": "Player %d" % (GameState.players.size() + 1),
+			"division_tree": {},
+			"deployments": {}
+		})
+
+	for i in range(2):
+		if not GameState.players[i].has("deployments"):
+			GameState.players[i]["deployments"] = {}
 
 func _refresh_template_selector() -> void:
 	template_selector.clear()
