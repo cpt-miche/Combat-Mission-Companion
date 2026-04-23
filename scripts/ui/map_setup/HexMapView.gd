@@ -180,7 +180,7 @@ func _axial_to_world(axial: Vector2i) -> Vector2:
 	return map_offset + MAP_PADDING + Vector2(x, y)
 
 func _world_to_axial(world: Vector2) -> Vector2i:
-	var local := world - map_offset
+	var local := world - map_offset - MAP_PADDING
 	var q := (2.0 / 3.0 * local.x) / hex_size
 	var r := (-1.0 / 3.0 * local.x + SQRT3 / 3.0 * local.y) / hex_size
 	return _hex_round(q, r)
