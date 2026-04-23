@@ -18,11 +18,16 @@ const _LEGACY_NAME_TO_ID := {
 	"road": "road",
 	"light": "light",
 	"light terrain": "light",
+	"open": "light",
+	"clear": "light",
 	"medium": "medium",
 	"medium terrain": "medium",
+	"rough": "medium",
 	"heavy": "heavy",
 	"heavy terrain": "heavy",
+	"dense": "heavy",
 	"woods": "woods",
+	"forest": "woods",
 	"urban": "urban"
 }
 
