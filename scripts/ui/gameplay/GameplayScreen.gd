@@ -4,6 +4,7 @@ const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
 const TurnResolver = preload("res://scripts/systems/TurnResolver.gd")
 const CombatLog = preload("res://scripts/systems/CombatLog.gd")
+const TerrainCatalog = preload("res://scripts/core/TerrainCatalog.gd")
 
 const GRID_COLUMNS := 8
 const GRID_ROWS := 6
@@ -18,6 +19,7 @@ const DRAG_START_THRESHOLD := 6.0
 @onready var info_label: Label = %InfoLabel
 @onready var log_label: RichTextLabel = %CombatLogLabel
 @onready var end_turn_button: Button = %EndTurnButton
+@onready var hovered_terrain_label: Label = %HoveredTerrainLabel
 @onready var animation_timer: Timer = %AnimationTimer
 
 var _units: Dictionary = {}
@@ -41,6 +43,7 @@ var _drag_candidate_unit_id := ""
 var _dragging_unit_id := ""
 var _drag_start_mouse_pos := Vector2.ZERO
 var _drag_mouse_pos := Vector2.ZERO
+var _hovered_hex := Vector2i(-9999, -9999)
 
 func _ready() -> void:
 	_active_player = clampi(GameState.active_player, 0, 1)
@@ -51,6 +54,7 @@ func _ready() -> void:
 	animation_timer.timeout.connect(_on_animation_step)
 	_refresh_log()
 	info_label.text = "Drag friendly units to create move orders. Click+drag empty space to pan. Ctrl+Right-click to issue attack."
+	_update_hovered_terrain_label(TerrainCatalog.default_terrain_id())
 
 func _process(_delta: float) -> void:
 	if _preview_recalc_due_at_msec <= 0:
@@ -164,6 +168,7 @@ func _handle_left_release(position: Vector2) -> void:
 	queue_redraw()
 
 func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
+	_update_hovered_hex(motion.position)
 	if _is_panning:
 		_camera_offset += motion.relative
 		queue_redraw()
@@ -516,3 +521,25 @@ func _world_to_screen(world_position: Vector2) -> Vector2:
 
 func _screen_to_world(screen_position: Vector2) -> Vector2:
 	return screen_position - _camera_offset
+
+
+func _update_hovered_hex(position: Vector2) -> void:
+	var hovered_hex_dict := _find_hex(position)
+	if hovered_hex_dict.is_empty():
+		if _hovered_hex == Vector2i(-9999, -9999):
+			return
+		_hovered_hex = Vector2i(-9999, -9999)
+		_update_hovered_terrain_label(TerrainCatalog.default_terrain_id())
+		return
+
+	var next_hovered_hex := Vector2i(hovered_hex_dict["q"], hovered_hex_dict["r"])
+	if next_hovered_hex == _hovered_hex:
+		return
+	_hovered_hex = next_hovered_hex
+	var coordinate_key := "%d,%d" % [_hovered_hex.x, _hovered_hex.y]
+	var terrain_id := TerrainCatalog.normalize_terrain_id(String(GameState.terrain_map.get(coordinate_key, TerrainCatalog.default_terrain_id())))
+	_update_hovered_terrain_label(terrain_id)
+
+
+func _update_hovered_terrain_label(terrain_id: String) -> void:
+	hovered_terrain_label.text = "Hovered Terrain: %s" % TerrainCatalog.display_name(terrain_id)

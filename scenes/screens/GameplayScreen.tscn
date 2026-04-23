@@ -33,6 +33,15 @@ text = "End Turn"
 unique_name_in_owner = true
 wait_time = 0.35
 
+[node name="HoveredTerrainLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 640.0
+offset_top = 20.0
+offset_right = 1008.0
+offset_bottom = 44.0
+text = "Hovered Terrain: Light Terrain"
+
 [node name="CombatLogLabel" type="RichTextLabel" parent="."]
 unique_name_in_owner = true
 layout_mode = 0
