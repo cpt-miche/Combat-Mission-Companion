@@ -9,8 +9,8 @@ const MAX_ZOOM := 4.0
 const ZOOM_STEP := 1.1
 const DEFAULT_TERRAIN := TerrainCatalog.DEFAULT_TERRAIN_ID
 const ERASE_BRUSH_ID := "__erase__"
-const GRID_COLUMNS := MapGridConfig.default_columns()
-const GRID_ROWS := MapGridConfig.default_rows()
+var GRID_COLUMNS: int = MapGridConfig.default_columns()
+var GRID_ROWS: int = MapGridConfig.default_rows()
 const MAP_PADDING := Vector2(40.0, 40.0)
 
 var hex_size: float = 24.0

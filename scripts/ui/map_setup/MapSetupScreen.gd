@@ -103,8 +103,8 @@ enum Mode {
 	TERRITORY_P2
 }
 
-const GRID_COLUMNS := MapGridConfig.default_columns()
-const GRID_ROWS := MapGridConfig.default_rows()
+var GRID_COLUMNS: int = MapGridConfig.default_columns()
+var GRID_ROWS: int = MapGridConfig.default_rows()
 const HEX_RADIUS := 32.0
 const HEX_HORIZONTAL_SPACING := HEX_RADIUS * 1.7320508
 const HEX_VERTICAL_SPACING := HEX_RADIUS * 1.5
