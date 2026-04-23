@@ -26,6 +26,7 @@ var gameplay_units: Dictionary = {}
 var combat_log_entries: Array[Dictionary] = []
 var pending_casualties: Dictionary = {}
 var selected_nation_id: String = "usa"
+var active_player: int = 0
 
 func set_phase(phase: Phase) -> void:
 	if current_phase == phase:
@@ -43,4 +44,5 @@ func reset() -> void:
 	combat_log_entries.clear()
 	pending_casualties.clear()
 	selected_nation_id = "usa"
+	active_player = 0
 	emit_signal("phase_changed", current_phase)

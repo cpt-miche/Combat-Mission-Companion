@@ -43,6 +43,7 @@ var _drag_start_mouse_pos := Vector2.ZERO
 var _drag_mouse_pos := Vector2.ZERO
 
 func _ready() -> void:
+	_active_player = clampi(GameState.active_player, 0, 1)
 	_load_or_initialize_units()
 	_rebuild_hex_polygon_cache()
 	_begin_player_turn()
@@ -332,6 +333,7 @@ func _on_animation_step() -> void:
 		animation_timer.stop()
 		end_turn_button.disabled = false
 		_active_player = 1 - _active_player
+		GameState.active_player = _active_player
 		GameState.current_turn += 1
 		_begin_player_turn()
 		_refresh_log()
@@ -387,6 +389,7 @@ func _begin_player_turn() -> void:
 	_autosave_current_game()
 
 func _autosave_current_game() -> void:
+	GameState.active_player = _active_player
 	var autosave_payload: Dictionary = {
 		"turn_number": GameState.current_turn,
 		"active_player": _active_player,
