@@ -3,7 +3,7 @@ class_name TerrainCatalog
 
 const DEFAULT_TERRAIN_ID := "light"
 
-const TERRAIN_IDS := PackedStringArray([
+const TERRAIN_IDS := [
 	"highway",
 	"road",
 	"light",
@@ -11,7 +11,7 @@ const TERRAIN_IDS := PackedStringArray([
 	"heavy",
 	"woods",
 	"urban"
-])
+]
 
 const _LEGACY_NAME_TO_ID := {
 	"highway": "highway",
@@ -84,7 +84,7 @@ const _CATALOG := {
 }
 
 static func all_ids() -> PackedStringArray:
-	return TERRAIN_IDS
+	return PackedStringArray(TERRAIN_IDS)
 
 static func default_terrain_id() -> String:
 	return DEFAULT_TERRAIN_ID

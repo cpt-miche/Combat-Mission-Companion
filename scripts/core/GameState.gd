@@ -76,7 +76,7 @@ func validate_map_payload(payload: Dictionary) -> bool:
 	return true
 
 func _extract_map_payload(payload: Dictionary) -> Dictionary:
-	var map_container := payload.get("map", null)
+	var map_container: Variant = payload.get("map", null)
 	if map_container is Dictionary:
 		var extracted := (map_container as Dictionary).duplicate(true)
 		if not extracted.has("terrain") and payload.get("terrain") is Dictionary:
