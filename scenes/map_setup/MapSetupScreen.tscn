@@ -59,6 +59,49 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Load Map PNG"
 
+[node name="MapSaveHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+layout_mode = 2
+text = "Map Save/Load"
+
+[node name="MapNameInput" type="LineEdit" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Map Name"
+
+[node name="MapSaveButtons" type="HBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+layout_mode = 2
+
+[node name="SaveMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox/MapSaveButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Save Map"
+
+[node name="MapSelector" type="OptionButton" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MapLoadButtons" type="HBoxContainer" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+layout_mode = 2
+
+[node name="LoadMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox/MapLoadButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Load Selected"
+
+[node name="DeleteMapButton" type="Button" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox/MapLoadButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Delete"
+
+[node name="MapStatusLabel" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "No map loaded."
+autowrap_mode = 2
+
 [node name="PaletteHint" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
 layout_mode = 2
 text = "LMB drag paint\nRMB drag reset\nMMB pan / wheel zoom"

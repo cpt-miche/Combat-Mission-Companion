@@ -12,6 +12,12 @@ extends Control
 @onready var select_p1_button: Button = %SelectP1TerritoryButton
 @onready var switch_to_p2_button: Button = %SwitchToP2Button
 @onready var confirm_territories_button: Button = %ConfirmTerritoriesButton
+@onready var map_name_input: LineEdit = %MapNameInput
+@onready var map_selector: OptionButton = %MapSelector
+@onready var save_map_button: Button = %SaveMapButton
+@onready var load_map_button: Button = %LoadMapButton
+@onready var delete_map_button: Button = %DeleteMapButton
+@onready var map_status_label: Label = %MapStatusLabel
 
 var _terrain_group := ButtonGroup.new()
 var _mode_group := ButtonGroup.new()
@@ -26,7 +32,11 @@ func _ready() -> void:
 	select_p1_button.pressed.connect(_on_select_p1_territory_pressed)
 	switch_to_p2_button.pressed.connect(_on_switch_to_p2_pressed)
 	confirm_territories_button.pressed.connect(_on_confirm_territories_pressed)
+	save_map_button.pressed.connect(_on_save_map_pressed)
+	load_map_button.pressed.connect(_on_load_map_pressed)
+	delete_map_button.pressed.connect(_on_delete_map_pressed)
 	_load_existing_territory_map()
+	_refresh_saved_maps()
 	_configure_mode_buttons()
 	_refresh_ui()
 
@@ -55,6 +65,7 @@ func _on_clear_all_pressed() -> void:
 	hex_map_view.clear_all()
 
 func _on_confirm_pressed() -> void:
+	_sync_game_state_map_data()
 	print("Map setup confirmed: %d customized hexes" % hex_map_view.hexes.size())
 
 enum Mode {
@@ -137,6 +148,7 @@ func _on_switch_to_p2_pressed() -> void:
 
 func _on_confirm_territories_pressed() -> void:
 	_persist_territory_map()
+	_sync_game_state_map_data()
 	GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
 
 func _refresh_ui() -> void:
@@ -171,6 +183,90 @@ func _load_existing_territory_map() -> void:
 
 func _persist_territory_map() -> void:
 	GameState.territory_map = _territory_map.duplicate(true)
+
+func _sync_game_state_map_data() -> void:
+	GameState.terrain_map = hex_map_view.export_terrain_map()
+	GameState.territory_map = _territory_map.duplicate(true)
+
+func _build_map_payload(map_name: String) -> Dictionary:
+	return {
+		"version": 1,
+		"name": map_name,
+		"grid": {
+			"rows": GRID_ROWS,
+			"columns": GRID_COLUMNS,
+			"hex_radius": HEX_RADIUS,
+			"hex_horizontal_spacing": HEX_HORIZONTAL_SPACING,
+			"hex_vertical_spacing": HEX_VERTICAL_SPACING
+		},
+		"terrain": hex_map_view.export_terrain_map(),
+		"territory": _territory_map.duplicate(true)
+	}
+
+func _on_save_map_pressed() -> void:
+	var map_name := map_name_input.text.strip_edges()
+	if map_name.is_empty():
+		map_status_label.text = "Enter a map name before saving."
+		return
+	var payload := _build_map_payload(map_name)
+	if SaveManager.save_map(map_name, payload):
+		map_status_label.text = "Saved map '%s'." % map_name
+		_refresh_saved_maps(map_name)
+		return
+	map_status_label.text = "Failed to save map '%s'." % map_name
+
+func _on_load_map_pressed() -> void:
+	if map_selector.get_item_count() == 0:
+		map_status_label.text = "No saved maps to load."
+		return
+	var selected_index := maxi(map_selector.get_selected(), 0)
+	var selected_name := map_selector.get_item_text(selected_index)
+	var payload := SaveManager.load_map(selected_name)
+	if payload.is_empty():
+		map_status_label.text = "Could not load map '%s'." % selected_name
+		return
+	_apply_map_payload(payload)
+	map_name_input.text = String(payload.get("name", selected_name))
+	map_status_label.text = "Loaded map '%s'." % selected_name
+
+func _on_delete_map_pressed() -> void:
+	if map_selector.get_item_count() == 0:
+		map_status_label.text = "No saved maps to delete."
+		return
+	var selected_index := maxi(map_selector.get_selected(), 0)
+	var selected_name := map_selector.get_item_text(selected_index)
+	if SaveManager.delete_map(selected_name):
+		map_status_label.text = "Deleted map '%s'." % selected_name
+		_refresh_saved_maps()
+		return
+	map_status_label.text = "Failed to delete map '%s'." % selected_name
+
+func _apply_map_payload(payload: Dictionary) -> void:
+	var terrain_payload := (payload.get("terrain", {}) as Dictionary).duplicate(true)
+	var territory_payload := (payload.get("territory", {}) as Dictionary).duplicate(true)
+	hex_map_view.import_terrain_map(terrain_payload)
+	_territory_map = territory_payload
+	_sync_game_state_map_data()
+	queue_redraw()
+
+func _refresh_saved_maps(preferred_name: String = "") -> void:
+	map_selector.clear()
+	var maps := SaveManager.list_maps()
+	for map_name in maps:
+		map_selector.add_item(map_name)
+	if map_selector.get_item_count() == 0:
+		load_map_button.disabled = true
+		delete_map_button.disabled = true
+		return
+	load_map_button.disabled = false
+	delete_map_button.disabled = false
+	var selected_index := 0
+	if not preferred_name.is_empty():
+		for index in range(map_selector.get_item_count()):
+			if map_selector.get_item_text(index) == preferred_name:
+				selected_index = index
+				break
+	map_selector.select(selected_index)
 
 func _ownership_for(column: int, row: int) -> GameState.TerritoryOwnership:
 	var key := _key_for_coordinate(column, row)
