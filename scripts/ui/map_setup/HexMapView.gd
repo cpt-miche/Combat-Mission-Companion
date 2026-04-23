@@ -165,6 +165,7 @@ func _draw() -> void:
 	if map_texture != null:
 		draw_texture(map_texture, map_offset)
 
+	_draw_default_hexes()
 	_draw_hex_grid()
 	_draw_painted_hexes()
 
@@ -174,6 +175,12 @@ func _draw_hex_grid() -> void:
 	for axial in _generate_axial_coordinates():
 		var corners := _hex_corners_world(_axial_to_world(axial))
 		draw_polyline(corners, Color(1, 1, 1, 0.25), 1.0, true)
+
+func _draw_default_hexes() -> void:
+	var default_color := TerrainCatalog.editor_color(DEFAULT_TERRAIN, 0.5)
+	for axial in _generate_axial_coordinates():
+		var corners := _hex_corners_world(_axial_to_world(axial))
+		draw_colored_polygon(corners, default_color)
 
 func _draw_painted_hexes() -> void:
 	for axial in hexes.keys():
@@ -194,12 +201,13 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 	if _has_last_brush_axial and _last_brush_axial == axial:
 		return
 
+	var has_existing_cell := hexes.has(axial)
 	var current_terrain := DEFAULT_TERRAIN
-	if hexes.has(axial):
+	if has_existing_cell:
 		var current_cell: HexCellData = hexes[axial]
 		if current_cell != null:
 			current_terrain = TerrainCatalog.normalize_terrain_id(current_cell.terrain)
-	if not is_erasing and current_terrain == terrain_id:
+	if not is_erasing and has_existing_cell and current_terrain == terrain_id:
 		_has_last_brush_axial = true
 		_last_brush_axial = axial
 		return
