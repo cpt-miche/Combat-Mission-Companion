@@ -37,6 +37,7 @@ func _on_load_pressed() -> void:
 
 func _apply_loaded_payload(payload: Dictionary) -> void:
 	GameState.current_turn = int(payload.get("turn_number", 1))
+	GameState.active_player = int(payload.get("active_player", 0))
 	GameState.terrain_map = (payload.get("terrain", {}) as Dictionary).duplicate(true)
 	GameState.territory_map = (payload.get("territory", {}) as Dictionary).duplicate(true)
 	GameState.pending_casualties = (payload.get("casualties", {}) as Dictionary).duplicate(true)
