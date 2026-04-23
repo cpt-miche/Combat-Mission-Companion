@@ -93,6 +93,10 @@ func _gui_input(event: InputEvent) -> void:
 
 		if mouse_button.button_index == MOUSE_BUTTON_MIDDLE:
 			_is_panning = mouse_button.pressed
+			if mouse_button.pressed:
+				_is_painting = false
+				_is_erasing = false
+				_has_last_brush_axial = false
 			accept_event()
 			return
 
@@ -100,6 +104,7 @@ func _gui_input(event: InputEvent) -> void:
 			_is_painting = mouse_button.pressed
 			if mouse_button.pressed:
 				_is_erasing = false
+				_is_panning = false
 				_has_last_brush_axial = false
 			else:
 				_has_last_brush_axial = false
@@ -112,10 +117,9 @@ func _gui_input(event: InputEvent) -> void:
 			_is_erasing = mouse_button.pressed
 			if mouse_button.pressed:
 				_is_painting = false
+				_is_panning = false
 				_has_last_brush_axial = false
 			else:
-				if mouse_button.button_mask & MOUSE_BUTTON_MASK_LEFT:
-					_is_painting = true
 				_has_last_brush_axial = false
 			if mouse_button.pressed:
 				_paint_at(mouse_button.position, DEFAULT_TERRAIN)
