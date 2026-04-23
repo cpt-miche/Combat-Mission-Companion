@@ -7,7 +7,7 @@ const SQRT3 := 1.7320508075688772
 const MIN_ZOOM := 0.2
 const MAX_ZOOM := 4.0
 const ZOOM_STEP := 1.1
-const DEFAULT_TERRAIN := "Light"
+const DEFAULT_TERRAIN := TerrainCatalog.DEFAULT_TERRAIN_ID
 
 var hex_size: float = 24.0
 var map_texture: Texture2D
@@ -38,7 +38,7 @@ func open_map_dialog() -> void:
 	file_dialog.popup_centered_ratio(0.75)
 
 func set_selected_terrain(terrain: String) -> void:
-	selected_terrain = terrain
+	selected_terrain = TerrainCatalog.normalize_terrain_id(terrain)
 
 func clear_all() -> void:
 	hexes.clear()
@@ -126,28 +126,29 @@ func _draw_hex_grid() -> void:
 func _draw_painted_hexes() -> void:
 	for axial in hexes.keys():
 		var cell: HexCellData = hexes[axial]
-		var terrain: String = cell.terrain if cell != null else DEFAULT_TERRAIN
+		var terrain := TerrainCatalog.normalize_terrain_id(cell.terrain if cell != null else DEFAULT_TERRAIN)
 		if terrain == DEFAULT_TERRAIN:
 			continue
 		var corners := _hex_corners_world(_axial_to_world(axial))
-		var color := _terrain_color(terrain)
+		var color := TerrainCatalog.editor_color(terrain, 0.5)
 		draw_colored_polygon(corners, color)
 		draw_polyline(corners, Color(0, 0, 0, 0.2), 1.0, true)
 
 func _paint_at(screen_position: Vector2, terrain: String) -> void:
 	if map_texture == null:
 		return
+	var terrain_id := TerrainCatalog.normalize_terrain_id(terrain)
 	var world_position := _screen_to_world(screen_position)
 	var axial := _world_to_axial(world_position)
 	if not _is_axial_on_map(axial):
 		return
 
-	if terrain == DEFAULT_TERRAIN:
+	if terrain_id == DEFAULT_TERRAIN:
 		hexes.erase(axial)
 	else:
-		hexes[axial] = HexCellData.new(terrain)
+		hexes[axial] = HexCellData.new(terrain_id)
 
-	painted.emit(axial, terrain)
+	painted.emit(axial, terrain_id)
 	queue_redraw()
 
 func _on_file_selected(path: String) -> void:
@@ -214,19 +215,6 @@ func _hex_corners_world(center: Vector2) -> PackedVector2Array:
 		var angle := deg_to_rad(60.0 * i)
 		points.append(center + Vector2(cos(angle), sin(angle)) * hex_size)
 	return points
-
-func _terrain_color(terrain: String) -> Color:
-	match terrain:
-		"Highway":
-			return Color(0.95, 0.85, 0.2, 0.5)
-		"Road":
-			return Color(0.85, 0.65, 0.2, 0.45)
-		"Heavy":
-			return Color(0.2, 0.55, 0.2, 0.45)
-		"Woods":
-			return Color(0.1, 0.4, 0.12, 0.5)
-		_:
-			return Color(0.7, 0.75, 0.7, 0.4)
 
 func _view_transform() -> Transform2D:
 	return Transform2D(0.0, Vector2.ONE * zoom, 0.0, pan_offset)
