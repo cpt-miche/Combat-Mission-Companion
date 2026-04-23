@@ -25,7 +25,6 @@ var _is_painting := false
 var _is_erasing := false
 var _is_panning := false
 var _last_mouse_position := Vector2.ZERO
-var _icon_cache: Dictionary = {}
 
 @onready var file_dialog: FileDialog = FileDialog.new()
 
@@ -163,11 +162,6 @@ func _draw_painted_hexes() -> void:
 		var corners := _hex_corners_world(_axial_to_world(axial))
 		var color := TerrainCatalog.editor_color(terrain, 0.5)
 		draw_colored_polygon(corners, color)
-		var icon := _icon_texture_for_terrain(terrain)
-		if icon != null:
-			var center := _axial_to_world(axial)
-			var icon_position := center - (icon.get_size() * 0.5)
-			draw_texture(icon, icon_position, Color(1, 1, 1, 0.8))
 		draw_polyline(corners, Color(0, 0, 0, 0.2), 1.0, true)
 
 func _paint_at(screen_position: Vector2, terrain: String) -> void:
@@ -245,17 +239,3 @@ func _view_transform() -> Transform2D:
 func _screen_to_world(screen_pos: Vector2, sample_zoom: float = -1.0) -> Vector2:
 	var active_zoom := zoom if sample_zoom < 0.0 else sample_zoom
 	return (screen_pos - pan_offset) / active_zoom
-
-func _icon_texture_for_terrain(terrain_id: String) -> Texture2D:
-	if _icon_cache.has(terrain_id):
-		return _icon_cache[terrain_id] as Texture2D
-
-	var icon_path := TerrainCatalog.icon_path(terrain_id, "terrain")
-	if icon_path.is_empty():
-		_icon_cache[terrain_id] = null
-		return null
-
-	var icon_resource := load(icon_path)
-	var icon_texture := icon_resource as Texture2D
-	_icon_cache[terrain_id] = icon_texture
-	return icon_texture

@@ -93,7 +93,7 @@ func save_map(map_name: String, payload: Dictionary) -> bool:
 	var now_unix := Time.get_unix_time_from_system()
 	var existing_payload := load_map(map_name)
 	var map_payload := payload.duplicate(true)
-	map_payload["version"] = int(map_payload.get("version", 1))
+	map_payload["version"] = int(map_payload.get("version", GameState.MAP_PAYLOAD_VERSION_CURRENT))
 	map_payload["name"] = String(map_payload.get("name", map_name))
 	map_payload["grid"] = (map_payload.get("grid", {}) as Dictionary).duplicate(true)
 	map_payload["terrain"] = (map_payload.get("terrain", {}) as Dictionary).duplicate(true)
