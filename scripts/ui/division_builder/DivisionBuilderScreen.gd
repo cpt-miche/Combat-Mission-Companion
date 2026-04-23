@@ -187,10 +187,9 @@ func _can_add_template(template_data: Dictionary) -> bool:
 func _template_display_name(template_data: Dictionary) -> String:
 	var count := maxi(int(template_data.get("count", 1)), 1)
 	var count_prefix := "%dx " % count if count > 1 else ""
-	return "%s%s (%s)" % [
+	return "%s%s" % [
 		count_prefix,
-		String(template_data.get("name", "Unknown")),
-		UnitSize.display_name(template_data.get("size", UnitSize.Value.COMPANY))
+		String(template_data.get("name", "Unknown"))
 	]
 
 func _selected_nation() -> String:
