@@ -25,6 +25,8 @@ var _is_painting := false
 var _is_erasing := false
 var _is_panning := false
 var _last_mouse_position := Vector2.ZERO
+var _has_last_brush_axial := false
+var _last_brush_axial := Vector2i.ZERO
 
 @onready var file_dialog: FileDialog = FileDialog.new()
 
@@ -97,12 +99,22 @@ func _gui_input(event: InputEvent) -> void:
 		if mouse_button.button_index == MOUSE_BUTTON_LEFT:
 			_is_painting = mouse_button.pressed
 			if mouse_button.pressed:
+				_is_erasing = false
+				_has_last_brush_axial = false
+			else:
+				_has_last_brush_axial = false
+			if mouse_button.pressed:
 				_paint_at(mouse_button.position, selected_terrain)
 			accept_event()
 			return
 
 		if mouse_button.button_index == MOUSE_BUTTON_RIGHT:
 			_is_erasing = mouse_button.pressed
+			if mouse_button.pressed:
+				_is_painting = false
+				_has_last_brush_axial = false
+			else:
+				_has_last_brush_axial = false
 			if mouse_button.pressed:
 				_paint_at(mouse_button.position, DEFAULT_TERRAIN)
 			accept_event()
@@ -170,12 +182,26 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 	var axial := _world_to_axial(world_position)
 	if not _is_axial_on_map(axial):
 		return
+	if _has_last_brush_axial and _last_brush_axial == axial:
+		return
+
+	var current_terrain := DEFAULT_TERRAIN
+	if hexes.has(axial):
+		var current_cell: HexCellData = hexes[axial]
+		if current_cell != null:
+			current_terrain = TerrainCatalog.normalize_terrain_id(current_cell.terrain)
+	if current_terrain == terrain_id:
+		_has_last_brush_axial = true
+		_last_brush_axial = axial
+		return
 
 	if terrain_id == DEFAULT_TERRAIN:
 		hexes.erase(axial)
 	else:
 		hexes[axial] = HexCellData.new(terrain_id)
 
+	_has_last_brush_axial = true
+	_last_brush_axial = axial
 	painted.emit(axial, terrain_id)
 	queue_redraw()
 
