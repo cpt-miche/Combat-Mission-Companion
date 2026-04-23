@@ -102,6 +102,8 @@ func _gui_input(event: InputEvent) -> void:
 			return
 
 		if mouse_button.button_index == MOUSE_BUTTON_LEFT:
+			# QA expectation: a single LMB press paints exactly one hex at press position;
+			# keeping LMB pressed and moving invokes _paint_at from mouse motion for drag painting.
 			_is_painting = mouse_button.pressed
 			if mouse_button.pressed:
 				_is_erasing = false
@@ -115,6 +117,7 @@ func _gui_input(event: InputEvent) -> void:
 			return
 
 		if mouse_button.button_index == MOUSE_BUTTON_RIGHT:
+			# QA expectation: RMB acts as an eraser by applying DEFAULT_TERRAIN, including drag erase.
 			_is_erasing = mouse_button.pressed
 			if mouse_button.pressed:
 				_is_painting = false

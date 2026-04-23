@@ -104,7 +104,7 @@ autowrap_mode = 2
 
 [node name="PaletteHint" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
 layout_mode = 2
-text = "LMB drag paint\nRMB drag reset\nMMB pan / wheel zoom"
+text = "LMB click: paint one hex\nLMB drag: paint many\nRMB drag: reset to default\nMMB pan / wheel zoom\nClear All: reset entire map"
 autowrap_mode = 2
 
 [node name="CurrentTerrainHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteVBox"]
@@ -199,6 +199,7 @@ alignment = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "Clear All"
+tooltip_text = "Reset all painted terrain to the default terrain."
 
 [node name="ConfirmButton" type="Button" parent="RootMargin/RootVBox/BottomControls"]
 unique_name_in_owner = true

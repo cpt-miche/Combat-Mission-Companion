@@ -1,5 +1,14 @@
 extends Control
 
+# Terrain paint/erase QA checklist (manual):
+# - Select any terrain from TerrainList, then LMB click a hex => one hex changes to that terrain.
+# - Hold LMB and drag across hexes => each traversed hex paints with selected terrain.
+# - Hold RMB and drag across painted hexes => traversed hexes return to default terrain.
+# - Press Clear All => every hex returns to default terrain (hex_map_view.clear_all()).
+# Behavioral touchpoints:
+# - HexMapView input/painting logic lives in scripts/ui/map_setup/HexMapView.gd.
+# - Clear All wiring lives in _ready() where ClearAllButton is connected to hex_map_view.clear_all.
+
 @onready var terrain_list: VBoxContainer = %TerrainList
 @onready var terrain_legend_list: VBoxContainer = %TerrainLegendList
 @onready var current_terrain_value: Label = %CurrentTerrainValue
