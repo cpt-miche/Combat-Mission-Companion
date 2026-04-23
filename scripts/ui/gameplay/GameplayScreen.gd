@@ -168,11 +168,12 @@ func _handle_left_release(position: Vector2) -> void:
 	queue_redraw()
 
 func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
-	_update_hovered_hex(motion.position)
 	if _is_panning:
 		_camera_offset += motion.relative
+		_update_hovered_hex(motion.position)
 		queue_redraw()
 		return
+	_update_hovered_hex(motion.position)
 	_drag_mouse_pos = motion.position
 	if _dragging_unit_id.is_empty() and not _drag_candidate_unit_id.is_empty():
 		if _drag_start_mouse_pos.distance_to(motion.position) >= DRAG_START_THRESHOLD:
