@@ -247,15 +247,29 @@ func _is_screen_position_on_map_hex(screen_pos: Vector2) -> bool:
 	return _is_axial_on_map(axial)
 
 func _axial_to_world(axial: Vector2i) -> Vector2:
-	var x := hex_size * (1.5 * axial.x)
-	var y := hex_size * (SQRT3 * (axial.y + axial.x * 0.5))
+	var horizontal_spacing := hex_size * SQRT3
+	var vertical_spacing := hex_size * 1.5
+	var x := horizontal_spacing * (axial.x + 0.5 * float(axial.y & 1))
+	var y := vertical_spacing * axial.y
 	return map_offset + MAP_PADDING + Vector2(x, y)
 
 func _world_to_axial(world: Vector2) -> Vector2i:
-	var local := world - map_offset - MAP_PADDING
-	var q := (2.0 / 3.0 * local.x) / hex_size
-	var r := (-1.0 / 3.0 * local.x + SQRT3 / 3.0 * local.y) / hex_size
-	return _hex_round(q, r)
+	var closest_axial := Vector2i(-1, -1)
+	var closest_distance_squared := INF
+	for axial in _generate_axial_coordinates():
+		var center := _axial_to_world(axial)
+		var corners := _hex_corners_world(center)
+		if Geometry2D.is_point_in_polygon(world, corners):
+			return axial
+		var distance_squared := center.distance_squared_to(world)
+		if distance_squared < closest_distance_squared:
+			closest_distance_squared = distance_squared
+			closest_axial = axial
+
+	if closest_distance_squared <= pow(hex_size, 2):
+		return closest_axial
+
+	return Vector2i(-1, -1)
 
 func _hex_round(q: float, r: float) -> Vector2i:
 	var s: float = -q - r
@@ -277,7 +291,7 @@ func _hex_round(q: float, r: float) -> Vector2i:
 func _hex_corners_world(center: Vector2) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	for i in range(6):
-		var angle := deg_to_rad(60.0 * i)
+		var angle := deg_to_rad(60.0 * i + 30.0)
 		points.append(center + Vector2(cos(angle), sin(angle)) * hex_size)
 	return points
 
