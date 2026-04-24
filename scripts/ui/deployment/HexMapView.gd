@@ -239,7 +239,10 @@ func _draw_base_cache_into(canvas: Control, cache_origin: Vector2) -> void:
 			local[i] = corners[i] - cache_origin
 		var owner := _owner_for(axial.x, axial.y)
 		canvas.draw_colored_polygon(local, _color_for_owner(owner))
-		canvas.draw_polyline(local, Color(0.12, 0.12, 0.12, 0.95), 2.0, true)
+		var border := local
+		if not border.is_empty():
+			border.append(border[0])
+		canvas.draw_polyline(border, Color(0.12, 0.12, 0.12, 0.95), 2.0, true)
 
 func _center_for_axial(axial: Vector2i) -> Vector2:
 	var entry: Dictionary = _hex_geometry_cache.get(axial, {})
