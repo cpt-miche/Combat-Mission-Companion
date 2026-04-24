@@ -6,6 +6,8 @@ const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValida
 @onready var unit_list: ItemList = %UnitList
 @onready var status_label: Label = %StatusLabel
 @onready var hex_map_view: DeploymentHexMapView = %HexMapView
+@onready var p2_structure_label: Label = %P2StructureLabel
+@onready var p2_structure_picker: OptionButton = %P2StructurePicker
 @onready var finish_button: Button = %FinishDeploymentButton
 
 var _player_index := 0
@@ -14,10 +16,12 @@ var _deployable_units: Array[Dictionary] = []
 func _ready() -> void:
 	_player_index = 0 if GameState.current_phase == GameState.Phase.DEPLOYMENT_P1 else 1
 	_ensure_players_initialized()
+	_populate_p2_structure_picker()
 	_build_deployable_unit_list()
 	_refresh_phase_ui("Select a unit, then click a hex in your territory.")
 
 	hex_map_view.hex_selected.connect(_on_hex_selected)
+	p2_structure_picker.item_selected.connect(_on_p2_structure_selected)
 	finish_button.pressed.connect(_on_finish_deployment_pressed)
 
 func _ensure_players_initialized() -> void:
@@ -30,11 +34,133 @@ func _ensure_players_initialized() -> void:
 
 	for i in range(2):
 		var player := GameState.players[i]
-		if not player.has("division_tree") or (player.get("division_tree", {}) as Dictionary).is_empty():
+		if not player.has("division_tree"):
+			player["division_tree"] = {}
+		if i == 0 and (player.get("division_tree", {}) as Dictionary).is_empty():
+			player["division_tree"] = _default_division_tree(i)
+		elif i == 1 and (player.get("division_tree", {}) as Dictionary).is_empty():
 			player["division_tree"] = _default_division_tree(i)
 		if not GameState.players[i].has("deployments"):
 			GameState.players[i]["deployments"] = {}
 		GameState.players[i] = player
+
+func _populate_p2_structure_picker() -> void:
+	p2_structure_picker.clear()
+
+	var options: Array[Dictionary] = []
+	options.append_array(_catalog_structure_options())
+	options.append_array(_saved_structure_options())
+
+	if options.is_empty():
+		var fallback_tree := _default_division_tree(1)
+		options.append({
+			"label": "Default Opponent Structure",
+			"tree": fallback_tree
+		})
+
+	var selected_index := 0
+	var current_tree := GameState.players[1].get("division_tree", {}) as Dictionary
+	var matched_current := false
+
+	for i in range(options.size()):
+		var option := options[i]
+		var option_label := String(option.get("label", "Option %d" % i))
+		var option_tree := (option.get("tree", {}) as Dictionary).duplicate(true)
+		p2_structure_picker.add_item(option_label)
+		p2_structure_picker.set_item_metadata(i, option_tree)
+		if not current_tree.is_empty() and option_tree.hash() == current_tree.hash():
+			selected_index = i
+			matched_current = true
+
+	if not current_tree.is_empty() and not matched_current:
+		p2_structure_picker.add_item("Current Opponent Structure")
+		selected_index = p2_structure_picker.item_count - 1
+		p2_structure_picker.set_item_metadata(selected_index, current_tree.duplicate(true))
+
+	p2_structure_picker.select(selected_index)
+	_apply_selected_p2_structure(selected_index, false)
+	var picker_enabled := _player_index == 0
+	p2_structure_label.visible = true
+	p2_structure_picker.visible = true
+	p2_structure_picker.disabled = not picker_enabled
+
+func _catalog_structure_options() -> Array[Dictionary]:
+	var options: Array[Dictionary] = []
+	var nation_id := String(GameState.selected_nation_id)
+	var templates: Array = UnitCatalog.get_nation_templates(nation_id)
+	for template_variant in templates:
+		if typeof(template_variant) != TYPE_DICTIONARY:
+			continue
+		var template := template_variant as Dictionary
+		var label := "Catalog: %s" % String(template.get("display_name", template.get("id", "Template")))
+		options.append({
+			"label": label,
+			"tree": _division_tree_from_catalog_template(template)
+		})
+	return options
+
+func _saved_structure_options() -> Array[Dictionary]:
+	var options: Array[Dictionary] = []
+	var template_names: PackedStringArray = SaveManager.list_division_templates()
+	for template_name in template_names:
+		var payload := SaveManager.load_division_template(template_name)
+		var root_unit := payload.get("root_unit", {})
+		if typeof(root_unit) != TYPE_DICTIONARY:
+			continue
+		var root_dict := root_unit as Dictionary
+		if root_dict.is_empty():
+			continue
+		options.append({
+			"label": "Saved: %s" % template_name,
+			"tree": root_dict.duplicate(true)
+		})
+	return options
+
+func _division_tree_from_catalog_template(template_data: Dictionary, variant_index: int = 1, parent_tree_id: String = "") -> Dictionary:
+	var local_tree_id := String(template_data.get("id", "template"))
+	if variant_index > 1:
+		local_tree_id = "%s_%d" % [local_tree_id, variant_index]
+	var tree_id := local_tree_id if parent_tree_id.is_empty() else "%s__%s" % [parent_tree_id, local_tree_id]
+	var tree_name := String(template_data.get("display_name", tree_id))
+	if variant_index > 1:
+		tree_name = "%s %d" % [tree_name, variant_index]
+
+	var tree := {
+		"id": tree_id,
+		"name": tree_name,
+		"type": String(template_data.get("type", "INFANTRY")).to_lower(),
+		"size": String(template_data.get("size", "COMPANY")).to_lower(),
+		"children": []
+	}
+
+	var expanded_children: Array[Dictionary] = []
+	var children_variant: Variant = template_data.get("children", [])
+	if typeof(children_variant) == TYPE_ARRAY:
+		var child_templates := children_variant as Array
+		for child_variant in child_templates:
+			if typeof(child_variant) != TYPE_DICTIONARY:
+				continue
+			var child_template := child_variant as Dictionary
+			var child_count := maxi(int(child_template.get("count", 1)), 1)
+			for i in range(child_count):
+				expanded_children.append(_division_tree_from_catalog_template(child_template, i + 1, tree_id))
+	tree["children"] = expanded_children
+	return tree
+
+func _on_p2_structure_selected(index: int) -> void:
+	_apply_selected_p2_structure(index, true)
+
+func _apply_selected_p2_structure(index: int, show_status: bool) -> void:
+	var selected_tree := p2_structure_picker.get_item_metadata(index)
+	if typeof(selected_tree) != TYPE_DICTIONARY:
+		return
+
+	GameState.players[1]["division_tree"] = (selected_tree as Dictionary).duplicate(true)
+	GameState.players[1]["deployments"] = {}
+	if _player_index == 1:
+		_build_deployable_unit_list()
+		if show_status:
+			_refresh_phase_ui("Opponent structure updated.")
 
 func _default_division_tree(player_index: int) -> Dictionary:
 	var side_label := "P%d" % (player_index + 1)
