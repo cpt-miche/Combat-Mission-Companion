@@ -19,10 +19,42 @@ static func planner_terrain_for(raw_terrain: Variant) -> String:
 	return String(DeploymentTypes.TERRAIN_COMPATIBILITY.get(normalized, DeploymentTypes.TERRAIN_OPEN))
 
 static func planner_role_for(raw_unit_type: Variant) -> String:
-	var normalized := String(raw_unit_type).strip_edges().to_lower()
+	var normalized := _normalized_unit_type_key(raw_unit_type)
 	if normalized.is_empty():
 		return DeploymentTypes.ROLE_INFANTRY
 	return String(DeploymentTypes.UNIT_ROLE_COMPATIBILITY.get(normalized, DeploymentTypes.ROLE_INFANTRY))
+
+static func _normalized_unit_type_key(raw_unit_type: Variant) -> String:
+	if typeof(raw_unit_type) == TYPE_INT:
+		return _unit_type_name_from_enum_value(int(raw_unit_type))
+	return String(raw_unit_type).strip_edges().to_lower()
+
+static func _unit_type_name_from_enum_value(unit_type_value: int) -> String:
+	match unit_type_value:
+		UnitType.Value.INFANTRY:
+			return "infantry"
+		UnitType.Value.TANK:
+			return "tank"
+		UnitType.Value.ENGINEER:
+			return "engineer"
+		UnitType.Value.ARTILLERY:
+			return "artillery"
+		UnitType.Value.RECON:
+			return "recon"
+		UnitType.Value.AIRBORNE:
+			return "airborne"
+		UnitType.Value.MECHANIZED:
+			return "mechanized"
+		UnitType.Value.MOTORIZED:
+			return "motorized"
+		UnitType.Value.ANTI_TANK:
+			return "anti_tank"
+		UnitType.Value.AIR_DEFENSE:
+			return "air_defense"
+		UnitType.Value.HEADQUARTERS:
+			return "headquarters"
+		_:
+			return String(unit_type_value).strip_edges().to_lower()
 
 static func map_payload_to_hexes(terrain_map: Dictionary, territory_map: Dictionary) -> Array[Dictionary]:
 	var known_hexes := {}
