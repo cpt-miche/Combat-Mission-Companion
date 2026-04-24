@@ -68,6 +68,7 @@ func _ready() -> void:
 	file_dialog.file_selected.connect(_on_file_selected)
 	_setup_base_cache_viewport()
 	_mark_geometry_dirty()
+	_populate_default_hexes()
 
 func open_map_dialog() -> void:
 	file_dialog.popup_centered_ratio(0.75)
@@ -76,8 +77,7 @@ func set_selected_terrain(terrain: String) -> void:
 	selected_terrain = TerrainCatalog.normalize_terrain_id(terrain)
 
 func clear_all() -> void:
-	hexes.clear()
-	_painted_overlay_cache.clear()
+	_populate_default_hexes()
 	_has_last_brush_axial = false
 	queue_redraw()
 
@@ -93,17 +93,19 @@ func set_territory_paint_mode(enabled: bool, owner: int, territory_map: Dictiona
 	queue_redraw()
 
 func export_terrain_map() -> Dictionary:
+	_ensure_geometry_cache()
 	var terrain_map := {}
-	for axial in hexes.keys():
-		var cell: HexCellData = hexes[axial]
-		if cell == null:
-			continue
-		var terrain_id := TerrainCatalog.normalize_terrain_id(cell.terrain)
+	for packed_axial in _map_axials_packed:
+		var axial := Vector2i(int(packed_axial.x), int(packed_axial.y))
+		var cell: HexCellData = hexes.get(axial)
+		var terrain_id := DEFAULT_TERRAIN
+		if cell != null:
+			terrain_id = TerrainCatalog.normalize_terrain_id(cell.terrain)
 		terrain_map["%d,%d" % [axial.x, axial.y]] = terrain_id
 	return terrain_map
 
 func import_terrain_map(serialized_map: Dictionary) -> void:
-	hexes.clear()
+	_populate_default_hexes(false)
 	for coordinate in serialized_map.keys():
 		var coordinate_text := String(coordinate)
 		var parts := coordinate_text.split(",")
@@ -292,7 +294,7 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 		return
 
 	if is_erasing:
-		hexes.erase(axial)
+		hexes[axial] = HexCellData.new(DEFAULT_TERRAIN)
 	else:
 		hexes[axial] = HexCellData.new(terrain_id)
 	_update_painted_overlay_for(axial)
@@ -301,6 +303,16 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 	_last_brush_axial = axial
 	painted.emit(axial, DEFAULT_TERRAIN if is_erasing else terrain_id)
 	queue_redraw()
+
+
+func _populate_default_hexes(rebuild_overlay_cache: bool = true) -> void:
+	_ensure_geometry_cache()
+	hexes.clear()
+	for packed_axial in _map_axials_packed:
+		var axial := Vector2i(int(packed_axial.x), int(packed_axial.y))
+		hexes[axial] = HexCellData.new(DEFAULT_TERRAIN)
+	if rebuild_overlay_cache:
+		_rebuild_painted_overlay_cache()
 
 func _paint_territory_at(screen_position: Vector2, owner_override: int = -1) -> void:
 	if not _territory_mode_enabled:
@@ -353,8 +365,7 @@ func _on_file_selected(path: String) -> void:
 	if loaded is Texture2D:
 		map_texture = loaded
 		map_offset = Vector2.ZERO
-		hexes.clear()
-		_painted_overlay_cache.clear()
+		_populate_default_hexes()
 		_mark_base_cache_dirty()
 		queue_redraw()
 
@@ -457,6 +468,9 @@ func _update_painted_overlay_for(axial: Vector2i) -> void:
 		_painted_overlay_cache.erase(axial)
 		return
 	var terrain := TerrainCatalog.normalize_terrain_id(cell.terrain)
+	if terrain == DEFAULT_TERRAIN:
+		_painted_overlay_cache.erase(axial)
+		return
 	var corners: PackedVector2Array = _corners_for_axial(axial)
 	if corners.is_empty():
 		return
