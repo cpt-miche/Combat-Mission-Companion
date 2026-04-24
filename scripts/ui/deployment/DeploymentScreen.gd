@@ -88,23 +88,36 @@ func _build_deployable_unit_list() -> void:
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
 	var flattened: Array[Dictionary] = []
-	_flatten_units(division_tree, flattened)
+	_flatten_units(division_tree, flattened, 0)
 
-	for unit_data in flattened:
-		if not _is_deployable(unit_data):
-			continue
+	for entry in flattened:
+		var unit_data := entry.get("unit", {}) as Dictionary
+		var depth := int(entry.get("depth", 0))
+		var block_reason := _deployability_block_reason(unit_data)
+		var display_label := _unit_label(unit_data, depth)
+		if not block_reason.is_empty():
+			display_label += "  [Not deployable: %s]" % block_reason
+
+		unit_list.add_item(display_label)
+		var item_index := unit_list.item_count - 1
+		unit_list.set_item_metadata(item_index, {
+			"unit": unit_data,
+			"base_block_reason": block_reason
+		})
+		unit_list.set_item_disabled(item_index, not block_reason.is_empty())
 		_deployable_units.append(unit_data)
-		unit_list.add_item(_unit_label(unit_data))
-		unit_list.set_item_metadata(unit_list.item_count - 1, unit_data)
 
-func _flatten_units(node: Variant, output: Array[Dictionary]) -> void:
+func _flatten_units(node: Variant, output: Array[Dictionary], depth: int) -> void:
 	if typeof(node) != TYPE_DICTIONARY:
 		return
 	var unit := node as Dictionary
 	if not unit.is_empty():
-		output.append(unit)
+		output.append({
+			"unit": unit,
+			"depth": depth
+		})
 	for child in unit.get("children", []):
-		_flatten_units(child, output)
+		_flatten_units(child, output, depth + 1)
 
 
 func _string_for_type(raw_type: Variant) -> String:
@@ -118,17 +131,18 @@ func _string_for_size(raw_size: Variant) -> String:
 	return String(raw_size).to_lower()
 
 func _is_deployable(unit: Dictionary) -> bool:
-	var size := _string_for_size(unit.get("size", ""))
-	if size != "battalion" and size != "company":
-		return false
-	var type := _string_for_type(unit.get("type", ""))
-	return type != "headquarters"
+	return _deployability_block_reason(unit).is_empty()
 
-func _unit_label(unit: Dictionary) -> String:
+func _deployability_block_reason(unit: Dictionary) -> String:
+	var snapshot := _unit_snapshot(unit)
+	snapshot["name"] = String(unit.get("name", unit.get("id", "Unit")))
+	return DeploymentValidator.placement_block_reason(snapshot, [])
+
+func _unit_label(unit: Dictionary, depth: int = 0) -> String:
 	var size := _string_for_size(unit.get("size", "Unknown"))
 	var type := _string_for_type(unit.get("type", "Unit"))
 	var name := String(unit.get("name", unit.get("id", "unnamed")))
-	return "%s - %s %s" % [name, size.capitalize(), type.capitalize()]
+	return "%s%s - %s %s" % ["  ".repeat(max(depth, 0)), name, size.capitalize(), type.capitalize()]
 
 func _on_hex_selected(column: int, row: int) -> void:
 	var selected := unit_list.get_selected_items()
@@ -136,7 +150,13 @@ func _on_hex_selected(column: int, row: int) -> void:
 		_refresh_phase_ui("Select a unit first.")
 		return
 
-	var unit_data := unit_list.get_item_metadata(selected[0]) as Dictionary
+	var selected_metadata := unit_list.get_item_metadata(selected[0]) as Dictionary
+	var unit_data := selected_metadata.get("unit", {}) as Dictionary
+	var base_block_reason := String(selected_metadata.get("base_block_reason", ""))
+	if not base_block_reason.is_empty():
+		_refresh_phase_ui(base_block_reason)
+		return
+
 	var unit_snapshot := _unit_snapshot(unit_data)
 	var unit_id := String(unit_snapshot.get("id", ""))
 	var territory_owner := int(GameState.territory_map.get("%d,%d" % [column, row], GameState.TerritoryOwnership.NEUTRAL))
@@ -154,8 +174,9 @@ func _on_hex_selected(column: int, row: int) -> void:
 	next_deployments.erase(target_key)
 
 	var snapshot := _deployed_unit_snapshots(next_deployments)
-	if not DeploymentValidator.can_place_unit(unit_snapshot, snapshot):
-		_refresh_phase_ui("Cap exceeded: max 1 non-tank battalion OR 3 non-tank companies, plus 1 tank battalion.")
+	var placement_block_reason := DeploymentValidator.placement_block_reason(unit_snapshot, snapshot)
+	if not placement_block_reason.is_empty():
+		_refresh_phase_ui(placement_block_reason)
 		return
 
 	next_deployments[target_key] = unit_snapshot
