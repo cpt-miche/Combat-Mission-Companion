@@ -11,16 +11,27 @@ static func can_place_unit(unit: Dictionary, existing_units: Array[Dictionary]) 
 
 static func placement_block_reason(unit: Dictionary, existing_units: Array[Dictionary]) -> String:
 	var is_tank := bool(unit.get("is_tank", false))
+	var is_headquarters := bool(unit.get("is_headquarters", false))
 	var is_battalion := bool(unit.get("is_battalion", false))
 	var is_company := bool(unit.get("is_company", false))
+	var is_platoon := bool(unit.get("is_platoon", false))
+	var size_rank := int(unit.get("size_rank", -1))
 	var unit_name := String(unit.get("name", unit.get("id", "Unit")))
 
+	if is_headquarters:
+		return "%s is a headquarters unit and cannot be deployed directly." % unit_name
+
+	if size_rank < UnitSize.Value.PLATOON:
+		return "%s is below platoon level and cannot be deployed directly." % unit_name
+
+	if size_rank > UnitSize.Value.BATTALION:
+		return "%s is above battalion level and cannot be deployed directly." % unit_name
+
 	if is_tank:
-		if not is_battalion:
-			return "%s is a tank but not a battalion, and cannot be deployed." % unit_name
-		for placed in existing_units:
-			if bool(placed.get("is_tank", false)) and bool(placed.get("is_battalion", false)):
-				return "Tank battalion limit reached (max 1)."
+		if is_battalion:
+			for placed in existing_units:
+				if bool(placed.get("is_tank", false)) and bool(placed.get("is_battalion", false)):
+					return "Tank battalion limit reached (max 1)."
 		return ""
 
 	var non_tank_battalion_count := 0
@@ -47,4 +58,7 @@ static func placement_block_reason(unit: Dictionary, existing_units: Array[Dicti
 			return "Non-tank company limit reached (max 3)."
 		return ""
 
-	return "%s is not a deployable battalion or company under current deployment rules." % unit_name
+	if is_platoon:
+		return ""
+
+	return "%s is not deployable under current deployment rules." % unit_name

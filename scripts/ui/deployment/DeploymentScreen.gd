@@ -207,11 +207,38 @@ func _unit_snapshot(unit: Dictionary) -> Dictionary:
 	var unit_size := _string_for_size(unit.get("size", ""))
 	return {
 		"id": unit.get("id", ""),
+		"name": String(unit.get("name", unit.get("id", "Unit"))),
+		"type": unit_type,
+		"size": unit_size,
+		"size_rank": _size_rank(unit_size),
 		"label": String(unit.get("name", unit.get("id", "U"))).substr(0, 2).to_upper(),
 		"is_tank": unit_type == "tank",
+		"is_headquarters": unit_type == "headquarters",
 		"is_battalion": unit_size == "battalion",
-		"is_company": unit_size == "company"
+		"is_company": unit_size == "company",
+		"is_platoon": unit_size == "platoon"
 	}
+
+func _size_rank(size_name: String) -> int:
+	match size_name:
+		"squad":
+			return UnitSize.Value.SQUAD
+		"section":
+			return UnitSize.Value.SECTION
+		"platoon":
+			return UnitSize.Value.PLATOON
+		"company":
+			return UnitSize.Value.COMPANY
+		"battalion":
+			return UnitSize.Value.BATTALION
+		"regiment":
+			return UnitSize.Value.REGIMENT
+		"division":
+			return UnitSize.Value.DIVISION
+		"army":
+			return UnitSize.Value.ARMY
+		_:
+			return -1
 
 func _on_finish_deployment_pressed() -> void:
 	if _player_index == 0:
