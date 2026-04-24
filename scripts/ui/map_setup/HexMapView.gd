@@ -1,6 +1,15 @@
 extends Control
 class_name HexMapView
 
+class BaseCacheLayer extends Control:
+	var owner_view: HexMapView
+	var cache_origin := Vector2.ZERO
+
+	func _draw() -> void:
+		if owner_view == null:
+			return
+		owner_view._draw_base_cache_into(self, cache_origin)
+
 signal painted(axial: Vector2i, terrain: String)
 signal territory_painted(axial: Vector2i, owner: int)
 
@@ -34,6 +43,17 @@ var _last_brush_axial := Vector2i.ZERO
 var _territory_mode_enabled := false
 var _territory_brush_owner: int = GameState.TerritoryOwnership.NEUTRAL
 var _territory_map: Dictionary = {}
+var _geometry_dirty := true
+var _base_cache_dirty := true
+var _base_cache_origin := Vector2.ZERO
+var _base_cache_size := Vector2i.ZERO
+var _map_axials: Array[Vector2i] = []
+var _hex_corners_cache: Dictionary[Vector2i, PackedVector2Array] = {}
+var _painted_overlay_cache: Dictionary[Vector2i, Dictionary] = {}
+var _territory_overlay_cache: Dictionary[Vector2i, Dictionary] = {}
+var _base_viewport: SubViewport
+var _base_layer: BaseCacheLayer
+var _last_geometry_signature := ""
 
 @onready var file_dialog: FileDialog = FileDialog.new()
 
@@ -45,6 +65,8 @@ func _ready() -> void:
 	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	file_dialog.filters = PackedStringArray(["*.png ; PNG Images"])
 	file_dialog.file_selected.connect(_on_file_selected)
+	_setup_base_cache_viewport()
+	_mark_geometry_dirty()
 
 func open_map_dialog() -> void:
 	file_dialog.popup_centered_ratio(0.75)
@@ -54,6 +76,7 @@ func set_selected_terrain(terrain: String) -> void:
 
 func clear_all() -> void:
 	hexes.clear()
+	_painted_overlay_cache.clear()
 	_has_last_brush_axial = false
 	queue_redraw()
 
@@ -65,6 +88,7 @@ func set_territory_paint_mode(enabled: bool, owner: int, territory_map: Dictiona
 		_is_painting_territory = false
 		_is_erasing_territory = false
 		_has_last_brush_axial = false
+	_rebuild_territory_overlay_cache()
 	queue_redraw()
 
 func export_terrain_map() -> Dictionary:
@@ -91,6 +115,7 @@ func import_terrain_map(serialized_map: Dictionary) -> void:
 			continue
 		var terrain_id := TerrainCatalog.normalize_terrain_id(String(serialized_map.get(coordinate, DEFAULT_TERRAIN)))
 		hexes[axial] = HexCellData.new(terrain_id)
+	_rebuild_painted_overlay_cache()
 	queue_redraw()
 
 func _gui_input(event: InputEvent) -> void:
@@ -219,36 +244,28 @@ func _apply_zoom(scale_multiplier: float, pivot: Vector2) -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	_sync_geometry_state()
+	_ensure_geometry_cache()
+	_ensure_base_cache()
 	var xform := _view_transform()
 	draw_set_transform(xform.origin, 0.0, xform.get_scale())
 
 	if map_texture != null:
 		draw_texture(map_texture, map_offset)
 
-	_draw_default_hexes()
-	_draw_hex_grid()
+	if _base_viewport != null and _base_cache_size.x > 0 and _base_cache_size.y > 0:
+		draw_texture(_base_viewport.get_texture(), _base_cache_origin)
 	_draw_painted_hexes()
 	_draw_territory_overlay()
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-func _draw_hex_grid() -> void:
-	for axial in _generate_axial_coordinates():
-		var corners := _hex_corners_world(_axial_to_world(axial))
-		draw_polyline(corners, Color(1, 1, 1, 0.25), 1.0, true)
-
-func _draw_default_hexes() -> void:
-	var default_color := TerrainCatalog.editor_color(DEFAULT_TERRAIN, 0.5)
-	for axial in _generate_axial_coordinates():
-		var corners := _hex_corners_world(_axial_to_world(axial))
-		draw_colored_polygon(corners, default_color)
-
 func _draw_painted_hexes() -> void:
-	for axial in hexes.keys():
-		var cell: HexCellData = hexes[axial]
-		var terrain := TerrainCatalog.normalize_terrain_id(cell.terrain if cell != null else DEFAULT_TERRAIN)
-		var corners := _hex_corners_world(_axial_to_world(axial))
-		var color := TerrainCatalog.editor_color(terrain, 0.5)
+	for entry in _painted_overlay_cache.values():
+		var corners: PackedVector2Array = entry.get("corners", PackedVector2Array())
+		if corners.is_empty():
+			continue
+		var color: Color = entry.get("color", TerrainCatalog.editor_color(DEFAULT_TERRAIN, 0.5))
 		draw_colored_polygon(corners, color)
 		draw_polyline(corners, Color(0, 0, 0, 0.2), 1.0, true)
 
@@ -277,6 +294,7 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 		hexes.erase(axial)
 	else:
 		hexes[axial] = HexCellData.new(terrain_id)
+	_update_painted_overlay_for(axial)
 
 	_has_last_brush_axial = true
 	_last_brush_axial = axial
@@ -303,6 +321,7 @@ func _paint_territory_at(screen_position: Vector2, owner_override: int = -1) -> 
 		_territory_map.erase(key)
 	else:
 		_territory_map[key] = target_owner
+	_update_territory_overlay_for(axial)
 	_has_last_brush_axial = true
 	_last_brush_axial = axial
 	territory_painted.emit(axial, target_owner)
@@ -311,12 +330,12 @@ func _paint_territory_at(screen_position: Vector2, owner_override: int = -1) -> 
 func _draw_territory_overlay() -> void:
 	if not _territory_mode_enabled:
 		return
-	for axial in _generate_axial_coordinates():
-		var owner := int(_territory_map.get(_coordinate_key(axial), GameState.TerritoryOwnership.NEUTRAL))
-		if owner == GameState.TerritoryOwnership.NEUTRAL:
+	for entry in _territory_overlay_cache.values():
+		var corners: PackedVector2Array = entry.get("corners", PackedVector2Array())
+		if corners.is_empty():
 			continue
-		var corners := _hex_corners_world(_axial_to_world(axial))
-		draw_colored_polygon(corners, _color_for_owner(owner))
+		var color: Color = entry.get("color", Color.TRANSPARENT)
+		draw_colored_polygon(corners, color)
 
 func _color_for_owner(owner: int) -> Color:
 	if owner == GameState.TerritoryOwnership.PLAYER_1:
@@ -334,6 +353,8 @@ func _on_file_selected(path: String) -> void:
 		map_texture = loaded
 		map_offset = Vector2.ZERO
 		hexes.clear()
+		_painted_overlay_cache.clear()
+		_mark_base_cache_dirty()
 		queue_redraw()
 
 func _generate_axial_coordinates() -> Array[Vector2i]:
@@ -343,6 +364,126 @@ func _generate_axial_coordinates() -> Array[Vector2i]:
 			result.append(Vector2i(q, r))
 
 	return result
+
+func _setup_base_cache_viewport() -> void:
+	_base_viewport = SubViewport.new()
+	_base_viewport.disable_3d = true
+	_base_viewport.transparent_bg = true
+	_base_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	add_child(_base_viewport)
+
+	_base_layer = BaseCacheLayer.new()
+	_base_layer.owner_view = self
+	_base_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_base_viewport.add_child(_base_layer)
+
+func _sync_geometry_state() -> void:
+	var signature := "%d|%d|%.4f" % [GRID_COLUMNS, GRID_ROWS, hex_size]
+	if signature == _last_geometry_signature:
+		return
+	_last_geometry_signature = signature
+	_mark_geometry_dirty()
+
+func _mark_geometry_dirty() -> void:
+	_geometry_dirty = true
+	_mark_base_cache_dirty()
+
+func _mark_base_cache_dirty() -> void:
+	_base_cache_dirty = true
+
+func _ensure_geometry_cache() -> void:
+	if not _geometry_dirty:
+		return
+	_geometry_dirty = false
+	_map_axials = _generate_axial_coordinates()
+	_hex_corners_cache.clear()
+	var min_bound := Vector2(INF, INF)
+	var max_bound := Vector2(-INF, -INF)
+	for axial in _map_axials:
+		var corners := _hex_corners_world(_axial_to_world(axial))
+		_hex_corners_cache[axial] = corners
+		for corner in corners:
+			min_bound.x = min(min_bound.x, corner.x)
+			min_bound.y = min(min_bound.y, corner.y)
+			max_bound.x = max(max_bound.x, corner.x)
+			max_bound.y = max(max_bound.y, corner.y)
+	if _map_axials.is_empty():
+		min_bound = Vector2.ZERO
+		max_bound = Vector2.ZERO
+	_base_cache_origin = min_bound.floor()
+	var bounds_size := (max_bound - min_bound).ceil() + Vector2.ONE * 2.0
+	_base_cache_size = Vector2i(max(1, int(bounds_size.x)), max(1, int(bounds_size.y)))
+	_rebuild_painted_overlay_cache()
+	_rebuild_territory_overlay_cache()
+	_mark_base_cache_dirty()
+
+func _ensure_base_cache() -> void:
+	if not _base_cache_dirty or _base_viewport == null or _base_layer == null:
+		return
+	_base_cache_dirty = false
+	_base_viewport.size = _base_cache_size
+	_base_layer.position = Vector2.ZERO
+	_base_layer.size = Vector2(_base_cache_size)
+	_base_layer.cache_origin = _base_cache_origin
+	_base_layer.queue_redraw()
+	_base_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+func _draw_base_cache_into(canvas: Control, cache_origin: Vector2) -> void:
+	var default_color := TerrainCatalog.editor_color(DEFAULT_TERRAIN, 0.5)
+	for axial in _map_axials:
+		var corners: PackedVector2Array = _hex_corners_cache.get(axial, PackedVector2Array())
+		if corners.is_empty():
+			continue
+		var local := _offset_polygon(corners, -cache_origin)
+		canvas.draw_colored_polygon(local, default_color)
+		canvas.draw_polyline(local, Color(1, 1, 1, 0.25), 1.0, true)
+
+func _offset_polygon(points: PackedVector2Array, delta: Vector2) -> PackedVector2Array:
+	var shifted := PackedVector2Array()
+	shifted.resize(points.size())
+	for i in range(points.size()):
+		shifted[i] = points[i] + delta
+	return shifted
+
+func _rebuild_painted_overlay_cache() -> void:
+	_painted_overlay_cache.clear()
+	for axial in hexes.keys():
+		_update_painted_overlay_for(axial)
+
+func _update_painted_overlay_for(axial: Vector2i) -> void:
+	var cell: HexCellData = hexes.get(axial)
+	if cell == null:
+		_painted_overlay_cache.erase(axial)
+		return
+	var terrain := TerrainCatalog.normalize_terrain_id(cell.terrain)
+	var corners: PackedVector2Array = _hex_corners_cache.get(axial, PackedVector2Array())
+	if corners.is_empty():
+		return
+	_painted_overlay_cache[axial] = {
+		"corners": corners,
+		"color": TerrainCatalog.editor_color(terrain, 0.5)
+	}
+
+func _rebuild_territory_overlay_cache() -> void:
+	_territory_overlay_cache.clear()
+	for key in _territory_map.keys():
+		var parts := String(key).split(",")
+		if parts.size() != 2:
+			continue
+		_update_territory_overlay_for(Vector2i(int(parts[0]), int(parts[1])))
+
+func _update_territory_overlay_for(axial: Vector2i) -> void:
+	var owner := int(_territory_map.get(_coordinate_key(axial), GameState.TerritoryOwnership.NEUTRAL))
+	if owner == GameState.TerritoryOwnership.NEUTRAL:
+		_territory_overlay_cache.erase(axial)
+		return
+	var corners: PackedVector2Array = _hex_corners_cache.get(axial, PackedVector2Array())
+	if corners.is_empty():
+		return
+	_territory_overlay_cache[axial] = {
+		"corners": corners,
+		"color": _color_for_owner(owner)
+	}
 
 func _is_axial_on_map(axial: Vector2i) -> bool:
 	return axial.x >= 0 and axial.y >= 0 and axial.x < GRID_COLUMNS and axial.y < GRID_ROWS
