@@ -509,31 +509,30 @@ func _axial_center_world_fast(q: int, r: int) -> Vector2:
 
 func _world_to_axial(world: Vector2) -> Vector2i:
 	_ensure_geometry_cache()
+	var hex_size_squared := hex_size * hex_size
 	var local := world - map_offset - MAP_PADDING
 	var axial_q := (SQRT3 / 3.0 * local.x - 1.0 / 3.0 * local.y) / hex_size
 	var axial_r := (2.0 / 3.0 * local.y) / hex_size
 	var rounded_axial := _hex_round(axial_q, axial_r)
 	var candidate := _axial_from_cube(rounded_axial)
 
-	if _is_candidate_precise_hit(world, candidate):
+	if _is_candidate_precise_hit(world, candidate, hex_size_squared):
 		return candidate
 
-	var fallback := _nearest_in_local_neighborhood(world, candidate)
+	var fallback := _nearest_in_local_neighborhood(world, candidate, hex_size_squared)
 	if fallback != Vector2i(-1, -1):
 		return fallback
 
 	return Vector2i(-1, -1)
 
-func _is_candidate_precise_hit(world: Vector2, candidate: Vector2i) -> bool:
+func _is_candidate_precise_hit(world: Vector2, candidate: Vector2i, max_hit_distance_squared: float) -> bool:
 	if not _is_axial_on_map(candidate):
 		return false
-	var max_hit_distance_squared := hex_size * hex_size
 	return _center_for_axial(candidate).distance_squared_to(world) <= max_hit_distance_squared
 
-func _nearest_in_local_neighborhood(world: Vector2, candidate: Vector2i) -> Vector2i:
+func _nearest_in_local_neighborhood(world: Vector2, candidate: Vector2i, max_hit_distance_squared: float) -> Vector2i:
 	var best_axial := Vector2i(-1, -1)
 	var best_distance_squared := INF
-	var max_hit_distance_squared := hex_size * hex_size
 	var neighborhood := [candidate]
 	neighborhood.append_array(_adjacent_axials(candidate))
 
