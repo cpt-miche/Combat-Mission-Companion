@@ -48,7 +48,8 @@ var _base_cache_dirty := true
 var _base_cache_origin := Vector2.ZERO
 var _base_cache_size := Vector2i.ZERO
 var _map_axials: Array[Vector2i] = []
-var _hex_corners_cache: Dictionary[Vector2i, PackedVector2Array] = {}
+var _map_axials_packed := PackedVector2Array()
+var _hex_geometry_cache: Dictionary[Vector2i, Dictionary] = {}
 var _painted_overlay_cache: Dictionary[Vector2i, Dictionary] = {}
 var _territory_overlay_cache: Dictionary[Vector2i, Dictionary] = {}
 var _base_viewport: SubViewport
@@ -357,14 +358,6 @@ func _on_file_selected(path: String) -> void:
 		_mark_base_cache_dirty()
 		queue_redraw()
 
-func _generate_axial_coordinates() -> Array[Vector2i]:
-	var result: Array[Vector2i] = []
-	for q in range(GRID_COLUMNS):
-		for r in range(GRID_ROWS):
-			result.append(Vector2i(q, r))
-
-	return result
-
 func _setup_base_cache_viewport() -> void:
 	_base_viewport = SubViewport.new()
 	_base_viewport.disable_3d = true
@@ -395,18 +388,29 @@ func _ensure_geometry_cache() -> void:
 	if not _geometry_dirty:
 		return
 	_geometry_dirty = false
-	_map_axials = _generate_axial_coordinates()
-	_hex_corners_cache.clear()
+	_map_axials.clear()
+	_map_axials_packed = PackedVector2Array()
+	_hex_geometry_cache.clear()
+
 	var min_bound := Vector2(INF, INF)
 	var max_bound := Vector2(-INF, -INF)
-	for axial in _map_axials:
-		var corners := _hex_corners_world(_axial_to_world(axial))
-		_hex_corners_cache[axial] = corners
-		for corner in corners:
-			min_bound.x = min(min_bound.x, corner.x)
-			min_bound.y = min(min_bound.y, corner.y)
-			max_bound.x = max(max_bound.x, corner.x)
-			max_bound.y = max(max_bound.y, corner.y)
+	for q in range(GRID_COLUMNS):
+		for r in range(GRID_ROWS):
+			var axial := Vector2i(q, r)
+			var center := _axial_center_world_fast(q, r)
+			var corners := _hex_corners_world(center)
+			_map_axials.append(axial)
+			_map_axials_packed.append(Vector2(q, r))
+			_hex_geometry_cache[axial] = {
+				"center": center,
+				"corners": corners
+			}
+			for corner in corners:
+				min_bound.x = min(min_bound.x, corner.x)
+				min_bound.y = min(min_bound.y, corner.y)
+				max_bound.x = max(max_bound.x, corner.x)
+				max_bound.y = max(max_bound.y, corner.y)
+
 	if _map_axials.is_empty():
 		min_bound = Vector2.ZERO
 		max_bound = Vector2.ZERO
@@ -430,20 +434,17 @@ func _ensure_base_cache() -> void:
 
 func _draw_base_cache_into(canvas: Control, cache_origin: Vector2) -> void:
 	var default_color := TerrainCatalog.editor_color(DEFAULT_TERRAIN, 0.5)
-	for axial in _map_axials:
-		var corners: PackedVector2Array = _hex_corners_cache.get(axial, PackedVector2Array())
+	for packed_axial in _map_axials_packed:
+		var axial := Vector2i(int(packed_axial.x), int(packed_axial.y))
+		var corners := _corners_for_axial(axial)
 		if corners.is_empty():
 			continue
-		var local := _offset_polygon(corners, -cache_origin)
+		var local := PackedVector2Array()
+		local.resize(corners.size())
+		for i in range(corners.size()):
+			local[i] = corners[i] - cache_origin
 		canvas.draw_colored_polygon(local, default_color)
 		canvas.draw_polyline(local, Color(1, 1, 1, 0.25), 1.0, true)
-
-func _offset_polygon(points: PackedVector2Array, delta: Vector2) -> PackedVector2Array:
-	var shifted := PackedVector2Array()
-	shifted.resize(points.size())
-	for i in range(points.size()):
-		shifted[i] = points[i] + delta
-	return shifted
 
 func _rebuild_painted_overlay_cache() -> void:
 	_painted_overlay_cache.clear()
@@ -456,7 +457,7 @@ func _update_painted_overlay_for(axial: Vector2i) -> void:
 		_painted_overlay_cache.erase(axial)
 		return
 	var terrain := TerrainCatalog.normalize_terrain_id(cell.terrain)
-	var corners: PackedVector2Array = _hex_corners_cache.get(axial, PackedVector2Array())
+	var corners: PackedVector2Array = _corners_for_axial(axial)
 	if corners.is_empty():
 		return
 	_painted_overlay_cache[axial] = {
@@ -477,7 +478,7 @@ func _update_territory_overlay_for(axial: Vector2i) -> void:
 	if owner == GameState.TerritoryOwnership.NEUTRAL:
 		_territory_overlay_cache.erase(axial)
 		return
-	var corners: PackedVector2Array = _hex_corners_cache.get(axial, PackedVector2Array())
+	var corners: PackedVector2Array = _corners_for_axial(axial)
 	if corners.is_empty():
 		return
 	_territory_overlay_cache[axial] = {
@@ -494,13 +495,20 @@ func _is_screen_position_on_map_hex(screen_pos: Vector2) -> bool:
 	return _is_axial_on_map(axial)
 
 func _axial_to_world(axial: Vector2i) -> Vector2:
+	var center := _center_for_axial(axial)
+	if center == Vector2.INF:
+		return _axial_center_world_fast(axial.x, axial.y)
+	return center
+
+func _axial_center_world_fast(q: int, r: int) -> Vector2:
 	var horizontal_spacing := hex_size * SQRT3
 	var vertical_spacing := hex_size * 1.5
-	var x := horizontal_spacing * (axial.x + 0.5 * float(axial.y & 1))
-	var y := vertical_spacing * axial.y
+	var x := horizontal_spacing * (q + 0.5 * float(r & 1))
+	var y := vertical_spacing * r
 	return map_offset + MAP_PADDING + Vector2(x, y)
 
 func _world_to_axial(world: Vector2) -> Vector2i:
+	_ensure_geometry_cache()
 	var local := world - map_offset - MAP_PADDING
 	var axial_q := (SQRT3 / 3.0 * local.x - 1.0 / 3.0 * local.y) / hex_size
 	var axial_r := (2.0 / 3.0 * local.y) / hex_size
@@ -520,7 +528,7 @@ func _is_candidate_precise_hit(world: Vector2, candidate: Vector2i) -> bool:
 	if not _is_axial_on_map(candidate):
 		return false
 	var max_hit_distance_squared := hex_size * hex_size
-	return _axial_to_world(candidate).distance_squared_to(world) <= max_hit_distance_squared
+	return _center_for_axial(candidate).distance_squared_to(world) <= max_hit_distance_squared
 
 func _nearest_in_local_neighborhood(world: Vector2, candidate: Vector2i) -> Vector2i:
 	var best_axial := Vector2i(-1, -1)
@@ -532,7 +540,7 @@ func _nearest_in_local_neighborhood(world: Vector2, candidate: Vector2i) -> Vect
 	for axial in neighborhood:
 		if not _is_axial_on_map(axial):
 			continue
-		var distance_squared := _axial_to_world(axial).distance_squared_to(world)
+		var distance_squared := _center_for_axial(axial).distance_squared_to(world)
 		if distance_squared < best_distance_squared:
 			best_distance_squared = distance_squared
 			best_axial = axial
@@ -588,6 +596,18 @@ func _hex_corners_world(center: Vector2) -> PackedVector2Array:
 		var angle := deg_to_rad(60.0 * i + 30.0)
 		points.append(center + Vector2(cos(angle), sin(angle)) * hex_size)
 	return points
+
+func _center_for_axial(axial: Vector2i) -> Vector2:
+	var entry: Dictionary = _hex_geometry_cache.get(axial, {})
+	if entry.is_empty():
+		return Vector2.INF
+	return entry.get("center", Vector2.INF)
+
+func _corners_for_axial(axial: Vector2i) -> PackedVector2Array:
+	var entry: Dictionary = _hex_geometry_cache.get(axial, {})
+	if entry.is_empty():
+		return PackedVector2Array()
+	return entry.get("corners", PackedVector2Array())
 
 func _view_transform() -> Transform2D:
 	return Transform2D(0.0, Vector2.ONE * zoom, 0.0, pan_offset)
