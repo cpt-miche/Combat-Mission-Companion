@@ -27,6 +27,7 @@ var _is_painting := false
 var _is_erasing := false
 var _is_panning := false
 var _is_painting_territory := false
+var _is_erasing_territory := false
 var _last_mouse_position := Vector2.ZERO
 var _has_last_brush_axial := false
 var _last_brush_axial := Vector2i.ZERO
@@ -62,6 +63,7 @@ func set_territory_paint_mode(enabled: bool, owner: int, territory_map: Dictiona
 	_territory_map = territory_map.duplicate(true)
 	if not enabled:
 		_is_painting_territory = false
+		_is_erasing_territory = false
 		_has_last_brush_axial = false
 	queue_redraw()
 
@@ -108,6 +110,8 @@ func _gui_input(event: InputEvent) -> void:
 			if mouse_button.pressed:
 				_is_painting = false
 				_is_erasing = false
+				_is_painting_territory = false
+				_is_erasing_territory = false
 				_has_last_brush_axial = false
 			accept_event()
 			return
@@ -116,6 +120,7 @@ func _gui_input(event: InputEvent) -> void:
 			if mouse_button.pressed:
 				if _territory_mode_enabled:
 					_is_painting_territory = false
+					_is_erasing_territory = false
 					_is_painting = false
 					_is_erasing = false
 					_has_last_brush_axial = false
@@ -138,6 +143,7 @@ func _gui_input(event: InputEvent) -> void:
 					_is_panning = true
 			else:
 				_is_painting_territory = false
+				_is_erasing_territory = false
 				_is_painting = false
 				_is_panning = false
 				_has_last_brush_axial = false
@@ -145,6 +151,22 @@ func _gui_input(event: InputEvent) -> void:
 			return
 
 		if mouse_button.button_index == MOUSE_BUTTON_RIGHT:
+			if _territory_mode_enabled:
+				_is_erasing = false
+				if mouse_button.pressed:
+					_is_painting_territory = false
+					_is_erasing_territory = false
+					_is_painting = false
+					_is_panning = false
+					_has_last_brush_axial = false
+					if _is_screen_position_on_map_hex(mouse_button.position):
+						_is_erasing_territory = true
+						_paint_territory_at(mouse_button.position, GameState.TerritoryOwnership.NEUTRAL)
+				else:
+					_is_erasing_territory = false
+					_has_last_brush_axial = false
+				accept_event()
+				return
 			# QA expectation: RMB acts as an eraser by applying DEFAULT_TERRAIN, including drag erase.
 			_is_erasing = mouse_button.pressed
 			if mouse_button.pressed:
@@ -173,6 +195,11 @@ func _gui_input(event: InputEvent) -> void:
 
 		if _is_painting_territory:
 			_paint_territory_at(mouse_motion.position)
+			accept_event()
+			return
+
+		if _is_erasing_territory:
+			_paint_territory_at(mouse_motion.position, GameState.TerritoryOwnership.NEUTRAL)
 			accept_event()
 			return
 
@@ -256,9 +283,10 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 	painted.emit(axial, DEFAULT_TERRAIN if is_erasing else terrain_id)
 	queue_redraw()
 
-func _paint_territory_at(screen_position: Vector2) -> void:
+func _paint_territory_at(screen_position: Vector2, owner_override: int = -1) -> void:
 	if not _territory_mode_enabled:
 		return
+	var target_owner := _territory_brush_owner if owner_override < 0 else owner_override
 	var world_position := _screen_to_world(screen_position)
 	var axial := _world_to_axial(world_position)
 	if not _is_axial_on_map(axial):
@@ -267,14 +295,17 @@ func _paint_territory_at(screen_position: Vector2) -> void:
 		return
 	var key := _coordinate_key(axial)
 	var owner := int(_territory_map.get(key, GameState.TerritoryOwnership.NEUTRAL))
-	if owner == _territory_brush_owner:
+	if owner == target_owner:
 		_has_last_brush_axial = true
 		_last_brush_axial = axial
 		return
-	_territory_map[key] = _territory_brush_owner
+	if target_owner == GameState.TerritoryOwnership.NEUTRAL:
+		_territory_map.erase(key)
+	else:
+		_territory_map[key] = target_owner
 	_has_last_brush_axial = true
 	_last_brush_axial = axial
-	territory_painted.emit(axial, _territory_brush_owner)
+	territory_painted.emit(axial, target_owner)
 	queue_redraw()
 
 func _draw_territory_overlay() -> void:

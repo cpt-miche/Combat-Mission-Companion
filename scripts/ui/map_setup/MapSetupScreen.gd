@@ -287,5 +287,8 @@ func _key_for_coordinate(column: int, row: int) -> String:
 
 func _on_hex_territory_painted(axial: Vector2i, owner: int) -> void:
 	var key := _key_for_coordinate(axial.x, axial.y)
-	_territory_map[key] = owner
+	if owner == GameState.TerritoryOwnership.NEUTRAL:
+		_territory_map.erase(key)
+	else:
+		_territory_map[key] = owner
 	_persist_territory_map()
