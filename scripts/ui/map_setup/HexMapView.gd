@@ -291,7 +291,7 @@ func _hex_round(q: float, r: float) -> Vector2i:
 func _hex_corners_world(center: Vector2) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	for i in range(6):
-		var angle := deg_to_rad(60.0 * i)
+		var angle := deg_to_rad(60.0 * i + 30.0)
 		points.append(center + Vector2(cos(angle), sin(angle)) * hex_size)
 	return points
 
