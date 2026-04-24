@@ -360,22 +360,69 @@ func _axial_to_world(axial: Vector2i) -> Vector2:
 	return map_offset + MAP_PADDING + Vector2(x, y)
 
 func _world_to_axial(world: Vector2) -> Vector2i:
-	var closest_axial := Vector2i(-1, -1)
-	var closest_distance_squared := INF
-	for axial in _generate_axial_coordinates():
-		var center := _axial_to_world(axial)
-		var corners := _hex_corners_world(center)
-		if Geometry2D.is_point_in_polygon(world, corners):
-			return axial
-		var distance_squared := center.distance_squared_to(world)
-		if distance_squared < closest_distance_squared:
-			closest_distance_squared = distance_squared
-			closest_axial = axial
+	var local := world - map_offset - MAP_PADDING
+	var axial_q := (SQRT3 / 3.0 * local.x - 1.0 / 3.0 * local.y) / hex_size
+	var axial_r := (2.0 / 3.0 * local.y) / hex_size
+	var rounded_axial := _hex_round(axial_q, axial_r)
+	var candidate := _axial_from_cube(rounded_axial)
 
-	if closest_distance_squared <= pow(hex_size, 2):
-		return closest_axial
+	if _is_candidate_precise_hit(world, candidate):
+		return candidate
+
+	var fallback := _nearest_in_local_neighborhood(world, candidate)
+	if fallback != Vector2i(-1, -1):
+		return fallback
 
 	return Vector2i(-1, -1)
+
+func _is_candidate_precise_hit(world: Vector2, candidate: Vector2i) -> bool:
+	if not _is_axial_on_map(candidate):
+		return false
+	var max_hit_distance_squared := hex_size * hex_size
+	return _axial_to_world(candidate).distance_squared_to(world) <= max_hit_distance_squared
+
+func _nearest_in_local_neighborhood(world: Vector2, candidate: Vector2i) -> Vector2i:
+	var best_axial := Vector2i(-1, -1)
+	var best_distance_squared := INF
+	var max_hit_distance_squared := hex_size * hex_size
+	var neighborhood := [candidate]
+	neighborhood.append_array(_adjacent_axials(candidate))
+
+	for axial in neighborhood:
+		if not _is_axial_on_map(axial):
+			continue
+		var distance_squared := _axial_to_world(axial).distance_squared_to(world)
+		if distance_squared < best_distance_squared:
+			best_distance_squared = distance_squared
+			best_axial = axial
+
+	if best_distance_squared <= max_hit_distance_squared:
+		return best_axial
+
+	return Vector2i(-1, -1)
+
+func _adjacent_axials(axial: Vector2i) -> Array[Vector2i]:
+	var center_cube := _cube_from_axial(axial)
+	var cube_directions := [
+		Vector2i(1, 0),
+		Vector2i(1, -1),
+		Vector2i(0, -1),
+		Vector2i(-1, 0),
+		Vector2i(-1, 1),
+		Vector2i(0, 1)
+	]
+	var neighbors: Array[Vector2i] = []
+	for direction in cube_directions:
+		neighbors.append(_axial_from_cube(center_cube + direction))
+	return neighbors
+
+func _cube_from_axial(axial: Vector2i) -> Vector2i:
+	var cube_q := axial.x - ((axial.y - (axial.y & 1)) / 2)
+	return Vector2i(cube_q, axial.y)
+
+func _axial_from_cube(cube: Vector2i) -> Vector2i:
+	var offset_q := cube.x + ((cube.y - (cube.y & 1)) / 2)
+	return Vector2i(offset_q, cube.y)
 
 func _hex_round(q: float, r: float) -> Vector2i:
 	var s: float = -q - r
