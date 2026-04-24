@@ -2,6 +2,7 @@ extends Control
 class_name HexMapView
 
 signal painted(axial: Vector2i, terrain: String)
+signal territory_painted(axial: Vector2i, owner: int)
 
 const SQRT3 := 1.7320508075688772
 const MIN_ZOOM := 0.2
@@ -25,9 +26,13 @@ var hexes: Dictionary[Vector2i, HexCellData] = {}
 var _is_painting := false
 var _is_erasing := false
 var _is_panning := false
+var _is_painting_territory := false
 var _last_mouse_position := Vector2.ZERO
 var _has_last_brush_axial := false
 var _last_brush_axial := Vector2i.ZERO
+var _territory_mode_enabled := false
+var _territory_brush_owner: int = GameState.TerritoryOwnership.NEUTRAL
+var _territory_map: Dictionary = {}
 
 @onready var file_dialog: FileDialog = FileDialog.new()
 
@@ -49,6 +54,15 @@ func set_selected_terrain(terrain: String) -> void:
 func clear_all() -> void:
 	hexes.clear()
 	_has_last_brush_axial = false
+	queue_redraw()
+
+func set_territory_paint_mode(enabled: bool, owner: int, territory_map: Dictionary) -> void:
+	_territory_mode_enabled = enabled
+	_territory_brush_owner = owner
+	_territory_map = territory_map.duplicate(true)
+	if not enabled:
+		_is_painting_territory = false
+		_has_last_brush_axial = false
 	queue_redraw()
 
 func export_terrain_map() -> Dictionary:
@@ -100,6 +114,19 @@ func _gui_input(event: InputEvent) -> void:
 
 		if mouse_button.button_index == MOUSE_BUTTON_LEFT:
 			if mouse_button.pressed:
+				if _territory_mode_enabled:
+					_is_painting_territory = false
+					_is_painting = false
+					_is_erasing = false
+					_has_last_brush_axial = false
+					if _is_screen_position_on_map_hex(mouse_button.position):
+						_is_painting_territory = true
+						_is_panning = false
+						_paint_territory_at(mouse_button.position)
+					else:
+						_is_panning = true
+					accept_event()
+					return
 				_is_erasing = false
 				_has_last_brush_axial = false
 				if _is_screen_position_on_map_hex(mouse_button.position):
@@ -110,6 +137,7 @@ func _gui_input(event: InputEvent) -> void:
 					_is_painting = false
 					_is_panning = true
 			else:
+				_is_painting_territory = false
 				_is_painting = false
 				_is_panning = false
 				_has_last_brush_axial = false
@@ -143,6 +171,11 @@ func _gui_input(event: InputEvent) -> void:
 			accept_event()
 			return
 
+		if _is_painting_territory:
+			_paint_territory_at(mouse_motion.position)
+			accept_event()
+			return
+
 		if _is_erasing:
 			_paint_at(mouse_motion.position, ERASE_BRUSH_ID)
 			accept_event()
@@ -168,6 +201,7 @@ func _draw() -> void:
 	_draw_default_hexes()
 	_draw_hex_grid()
 	_draw_painted_hexes()
+	_draw_territory_overlay()
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -221,6 +255,47 @@ func _paint_at(screen_position: Vector2, terrain: String) -> void:
 	_last_brush_axial = axial
 	painted.emit(axial, DEFAULT_TERRAIN if is_erasing else terrain_id)
 	queue_redraw()
+
+func _paint_territory_at(screen_position: Vector2) -> void:
+	if not _territory_mode_enabled:
+		return
+	var world_position := _screen_to_world(screen_position)
+	var axial := _world_to_axial(world_position)
+	if not _is_axial_on_map(axial):
+		return
+	if _has_last_brush_axial and _last_brush_axial == axial:
+		return
+	var key := _coordinate_key(axial)
+	var owner := int(_territory_map.get(key, GameState.TerritoryOwnership.NEUTRAL))
+	if owner == _territory_brush_owner:
+		_has_last_brush_axial = true
+		_last_brush_axial = axial
+		return
+	_territory_map[key] = _territory_brush_owner
+	_has_last_brush_axial = true
+	_last_brush_axial = axial
+	territory_painted.emit(axial, _territory_brush_owner)
+	queue_redraw()
+
+func _draw_territory_overlay() -> void:
+	if not _territory_mode_enabled:
+		return
+	for axial in _generate_axial_coordinates():
+		var owner := int(_territory_map.get(_coordinate_key(axial), GameState.TerritoryOwnership.NEUTRAL))
+		if owner == GameState.TerritoryOwnership.NEUTRAL:
+			continue
+		var corners := _hex_corners_world(_axial_to_world(axial))
+		draw_colored_polygon(corners, _color_for_owner(owner))
+
+func _color_for_owner(owner: int) -> Color:
+	if owner == GameState.TerritoryOwnership.PLAYER_1:
+		return Color(0.24, 0.43, 0.92, 0.45)
+	if owner == GameState.TerritoryOwnership.PLAYER_2:
+		return Color(0.89, 0.29, 0.27, 0.45)
+	return Color(0.58, 0.58, 0.58, 0.3)
+
+func _coordinate_key(axial: Vector2i) -> String:
+	return "%d,%d" % [axial.x, axial.y]
 
 func _on_file_selected(path: String) -> void:
 	var loaded: Resource = load(path)
