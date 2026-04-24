@@ -116,10 +116,11 @@ func _saved_structure_options() -> Array[Dictionary]:
 		})
 	return options
 
-func _division_tree_from_catalog_template(template_data: Dictionary, variant_index: int = 1) -> Dictionary:
-	var tree_id := String(template_data.get("id", "template"))
+func _division_tree_from_catalog_template(template_data: Dictionary, variant_index: int = 1, parent_tree_id: String = "") -> Dictionary:
+	var local_tree_id := String(template_data.get("id", "template"))
 	if variant_index > 1:
-		tree_id = "%s_%d" % [tree_id, variant_index]
+		local_tree_id = "%s_%d" % [local_tree_id, variant_index]
+	var tree_id := local_tree_id if parent_tree_id.is_empty() else "%s__%s" % [parent_tree_id, local_tree_id]
 	var tree_name := String(template_data.get("display_name", tree_id))
 	if variant_index > 1:
 		tree_name = "%s %d" % [tree_name, variant_index]
@@ -142,7 +143,7 @@ func _division_tree_from_catalog_template(template_data: Dictionary, variant_ind
 			var child_template := child_variant as Dictionary
 			var child_count := maxi(int(child_template.get("count", 1)), 1)
 			for i in range(child_count):
-				expanded_children.append(_division_tree_from_catalog_template(child_template, i + 1))
+				expanded_children.append(_division_tree_from_catalog_template(child_template, i + 1, tree_id))
 	tree["children"] = expanded_children
 	return tree
 
