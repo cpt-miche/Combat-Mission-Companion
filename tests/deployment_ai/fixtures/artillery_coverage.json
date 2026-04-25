@@ -1,0 +1,36 @@
+{
+  "id": "artillery_coverage",
+  "description": "Artillery should remain off frontline while maximizing range-based frontline coverage.",
+  "elements": [
+    {"id": "u_inf_1", "playerId": 1, "role": "infantry", "size": "company"},
+    {"id": "u_inf_2", "playerId": 1, "role": "infantry", "size": "company"},
+    {"id": "u_arty_1", "playerId": 1, "role": "artillerySupport", "size": "company"}
+  ],
+  "hexes": [
+    {"id": "0,0", "q": 0, "r": 0, "terrain": "open"},
+    {"id": "1,0", "q": 1, "r": 0, "terrain": "open"},
+    {"id": "2,0", "q": 2, "r": 0, "terrain": "open"},
+    {"id": "1,1", "q": 1, "r": 1, "terrain": "road"},
+    {"id": "2,1", "q": 2, "r": 1, "terrain": "road"},
+    {"id": "3,1", "q": 3, "r": 1, "terrain": "rough"}
+  ],
+  "sectorModel": {
+    "frontlineHexes": ["0,0", "1,0", "2,0"],
+    "contestedArea": ["0,0", "1,0", "2,0"],
+    "rearArea": ["1,1", "2,1", "3,1"],
+    "hexScores": {
+      "2,1": {"priority": 7.5},
+      "1,1": {"priority": 7.0},
+      "3,1": {"priority": 6.9},
+      "2,0": {"priority": 8.0},
+      "1,0": {"priority": 7.8},
+      "0,0": {"priority": 7.2}
+    }
+  },
+  "options": {"objectiveMode": "defense-only"},
+  "expected": {
+    "artilleryOnFrontlineAllowed": false,
+    "minFrontlineCoverageHexes": 2,
+    "acceptance": "artillery placement respects standoff and coverage"
+  }
+}

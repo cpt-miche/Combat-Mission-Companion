@@ -36,6 +36,7 @@ var selected_nation_id: String = "usa"
 var active_player: int = 0
 var map_flow: MapFlow = MapFlow.NEW_MAP
 var selected_map_name: String = ""
+var deployment_ai_debug: Dictionary = {}
 
 func set_phase(phase: Phase) -> void:
 	if current_phase == phase:
@@ -56,6 +57,7 @@ func reset() -> void:
 	active_player = 0
 	map_flow = MapFlow.NEW_MAP
 	selected_map_name = ""
+	deployment_ai_debug.clear()
 	emit_signal("phase_changed", current_phase)
 
 func apply_map_payload(payload: Dictionary) -> void:

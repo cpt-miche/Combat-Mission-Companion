@@ -544,7 +544,8 @@ func _ensure_players_initialized() -> void:
 		GameState.players.append({
 			"name": "Player %d" % (GameState.players.size() + 1),
 			"division_tree": {},
-			"deployments": {}
+			"deployments": {},
+			"controller": "human"
 		})
 
 	for i in range(2):
