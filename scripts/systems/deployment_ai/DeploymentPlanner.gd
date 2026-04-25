@@ -38,10 +38,10 @@ static func create_plan(
 	for i in range(ordered_orders.size()):
 		ordered_orders[i]["id"] = "deploy_%03d" % [i + 1]
 
-	return DeploymentTypes.make_deployment_plan(elements, objectives, ordered_orders, {
+	var plan := DeploymentTypes.make_deployment_plan(elements, objectives, ordered_orders, {
 		"planner": "DeploymentPlanner",
 		"objectiveMode": objective_mode,
-		"stages": ["A", "B", "C", "D"],
+		"stages": ["A", "B", "C", "D", "S"],
 		"deterministic": true,
 		"idempotent": true,
 		"constraints": {
@@ -51,6 +51,7 @@ static func create_plan(
 			"antiTankNeverAttack": true
 		}
 	})
+	return DeploymentSanity.sanitize_plan(plan, hexes, sector_model)
 
 static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], sector_model: Dictionary) -> Dictionary:
 	var frontline := _set_from_array(sector_model.get("frontlineHexes", []))
