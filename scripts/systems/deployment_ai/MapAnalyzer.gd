@@ -157,11 +157,11 @@ static func _compute_hex_scores(
 
 	for hex_id in known_hexes.keys():
 		var adjacent_player_owned := _adjacent_owner_count(hex_id, territory_map, known_hexes, player_owner)
-		var objective_proximity := _proximity_from_distance(int(objective_distances.get(hex_id, 99)))
+		var objective_proximity := _proximity_from_distance(int(objective_distances.get(hex_id, -1)))
 		var approach_route_value := _approach_route_value(hex_id, terrain_map, known_hexes)
 		var terrain_value := _terrain_context_value(hex_id, terrain_map, context)
 		var pressure := _compute_pressure(adjacent_player_owned, objective_proximity, approach_route_value)
-		var priority := _compute_priority(pressure, terrain_value, int(frontline_distances.get(hex_id, 99)))
+		var priority := _compute_priority(pressure, terrain_value, int(frontline_distances.get(hex_id, -1)))
 
 		scores[hex_id] = {
 			"pressure": pressure,
