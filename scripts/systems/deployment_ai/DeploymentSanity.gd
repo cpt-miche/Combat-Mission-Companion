@@ -110,6 +110,22 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 		else:
 			placements[unit_id] = String((units_by_id[unit_id] as Dictionary).get("hexId", ""))
 
+	var attack_stacks := {}
+	for order in orders:
+		var as_order := order as Dictionary
+		var unit_id := String(as_order.get("unitId", as_order.get("elementId", "")))
+		if unit_id.is_empty():
+			continue
+		var unit := units_by_id.get(unit_id, {}) as Dictionary
+		if not COMBAT_ROLES.has(String(unit.get("role", ""))):
+			continue
+		if String(as_order.get("stance", "")).to_lower() != "attack":
+			continue
+		var to_hex := String(as_order.get("toHexId", as_order.get("hexId", "")))
+		if to_hex.is_empty():
+			continue
+		attack_stacks[to_hex] = true
+
 	return {
 		"unitsById": units_by_id,
 		"unitIds": unit_ids,
@@ -123,7 +139,8 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 		"priorities": priorities,
 		"maxPriority": max_priority,
 		"frontline": frontline,
-		"rear": rear
+		"rear": rear,
+		"attackStacks": attack_stacks
 	}
 
 static func _repair_isolated_support(state: Dictionary, warnings: Array[String]) -> bool:
@@ -340,9 +357,13 @@ static func _best_frontage_donor(target_hex: String, state: Dictionary) -> Strin
 
 static func _best_combat_stack_for_support(unit_id: String, state: Dictionary) -> String:
 	var from_hex := String(state["placements"].get(unit_id, ""))
+	var unit := state["unitsById"].get(unit_id, {}) as Dictionary
+	var is_anti_tank := String(unit.get("role", "")) == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT
 	var candidates: Array[Dictionary] = []
 	for hex_id in state["hexIds"]:
 		if _combat_load(hex_id, state) <= 0:
+			continue
+		if is_anti_tank and bool((state["attackStacks"] as Dictionary).get(hex_id, false)):
 			continue
 		if not _can_place_support(hex_id, state):
 			continue
