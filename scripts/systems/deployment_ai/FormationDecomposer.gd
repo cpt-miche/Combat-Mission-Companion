@@ -266,7 +266,36 @@ static func _normalized_size(size: Variant) -> String:
 	return String(size).strip_edges().to_lower()
 
 static func _normalized_role(role: Variant) -> String:
+	if typeof(role) == TYPE_INT:
+		return _unit_type_name_from_enum_value(int(role))
 	return String(role).strip_edges().to_lower().replace("_", "")
+
+static func _unit_type_name_from_enum_value(unit_type_value: int) -> String:
+	match unit_type_value:
+		UnitType.Value.INFANTRY:
+			return "infantry"
+		UnitType.Value.TANK:
+			return "tank"
+		UnitType.Value.ENGINEER:
+			return "engineer"
+		UnitType.Value.ARTILLERY:
+			return "artillery"
+		UnitType.Value.RECON:
+			return "recon"
+		UnitType.Value.AIRBORNE:
+			return "airborne"
+		UnitType.Value.MECHANIZED:
+			return "mechanized"
+		UnitType.Value.MOTORIZED:
+			return "motorized"
+		UnitType.Value.ANTI_TANK:
+			return "antitank"
+		UnitType.Value.AIR_DEFENSE:
+			return "airdefense"
+		UnitType.Value.HEADQUARTERS:
+			return "headquarters"
+		_:
+			return String(unit_type_value).strip_edges().to_lower().replace("_", "")
 
 static func _canonical_role(role: Variant) -> String:
 	var normalized := _normalized_role(role)
