@@ -1,0 +1,38 @@
+{
+  "id": "reserve_anti_clumping",
+  "description": "Reserve combat elements should avoid clumping and spread in depth when legal options exist.",
+  "elements": [
+    {"id": "u_inf_1", "playerId": 1, "role": "infantry", "size": "company"},
+    {"id": "u_inf_2", "playerId": 1, "role": "infantry", "size": "company"},
+    {"id": "u_cmd_1", "playerId": 1, "role": "command", "size": "company"},
+    {"id": "u_res_1", "playerId": 1, "role": "mobility", "size": "company"},
+    {"id": "u_res_2", "playerId": 1, "role": "mobility", "size": "company"}
+  ],
+  "hexes": [
+    {"id": "0,0", "q": 0, "r": 0, "terrain": "open"},
+    {"id": "1,0", "q": 1, "r": 0, "terrain": "open"},
+    {"id": "2,0", "q": 2, "r": 0, "terrain": "open"},
+    {"id": "0,1", "q": 0, "r": 1, "terrain": "road"},
+    {"id": "1,1", "q": 1, "r": 1, "terrain": "road"},
+    {"id": "2,1", "q": 2, "r": 1, "terrain": "rough"}
+  ],
+  "sectorModel": {
+    "frontlineHexes": ["0,0", "1,0", "2,0"],
+    "contestedArea": ["0,0", "1,0", "2,0"],
+    "rearArea": ["0,1", "1,1", "2,1"],
+    "hexScores": {
+      "1,1": {"priority": 7.0},
+      "0,1": {"priority": 6.8},
+      "2,1": {"priority": 6.7},
+      "2,0": {"priority": 7.5},
+      "1,0": {"priority": 7.6},
+      "0,0": {"priority": 7.4}
+    }
+  },
+  "options": {"objectiveMode": "mixed_split"},
+  "expected": {
+    "maxReserveUnitsPerHex": 1,
+    "maxAdjacentReserveAnchors": 1,
+    "acceptance": "reserve redistribution preserves spacing"
+  }
+}

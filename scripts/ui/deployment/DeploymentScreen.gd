@@ -1,6 +1,7 @@
 extends Control
 
 const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValidator.gd")
+const DeploymentAIService = preload("res://scripts/systems/deployment_ai/DeploymentAIService.gd")
 
 @onready var phase_label: Label = %PhaseLabel
 @onready var unit_list: ItemList = %UnitList
@@ -29,7 +30,8 @@ func _ensure_players_initialized() -> void:
 		GameState.players.append({
 			"name": "Player %d" % (GameState.players.size() + 1),
 			"division_tree": {},
-			"deployments": {}
+			"deployments": {},
+			"controller": "human"
 		})
 
 	for i in range(2):
@@ -155,8 +157,13 @@ func _apply_selected_p2_structure(index: int, show_status: bool) -> void:
 	if typeof(selected_tree) != TYPE_DICTIONARY:
 		return
 
-	GameState.players[1]["division_tree"] = (selected_tree as Dictionary).duplicate(true)
-	GameState.players[1]["deployments"] = {}
+	var selected_tree_copy := (selected_tree as Dictionary).duplicate(true)
+	var current_tree := GameState.players[1].get("division_tree", {}) as Dictionary
+	var tree_changed := current_tree.is_empty() or current_tree.hash() != selected_tree_copy.hash()
+
+	GameState.players[1]["division_tree"] = selected_tree_copy
+	if tree_changed:
+		GameState.players[1]["deployments"] = {}
 	if _player_index == 1:
 		_build_deployable_unit_list()
 		if show_status:
@@ -368,9 +375,30 @@ func _size_rank(size_name: String) -> int:
 
 func _on_finish_deployment_pressed() -> void:
 	if _player_index == 0:
+		_run_ai_deployment_if_needed(1)
 		GameState.set_phase(GameState.Phase.DEPLOYMENT_P2)
 		return
+
+	_run_ai_deployment_if_needed(0)
 	GameState.set_phase(GameState.Phase.GAMEPLAY)
+
+func _run_ai_deployment_if_needed(player_index: int) -> void:
+	if not _is_ai_controlled(player_index):
+		return
+	var result := DeploymentAIService.run_for_player(player_index)
+	if not bool(result.get("ok", false)):
+		push_warning("AI deployment planning failed for player %d (%s)." % [player_index + 1, String(result.get("reason", "unknown"))])
+
+func _is_ai_controlled(player_index: int) -> bool:
+	if player_index < 0 or player_index >= GameState.players.size():
+		return false
+	var player := GameState.players[player_index] as Dictionary
+	if player.is_empty():
+		return false
+	if bool(player.get("is_ai", false)):
+		return true
+	var controller := String(player.get("controller", "human")).strip_edges().to_lower()
+	return controller == "ai"
 
 func _refresh_phase_ui(message: String) -> void:
 	phase_label.text = "Deployment: Player %d" % (_player_index + 1)
