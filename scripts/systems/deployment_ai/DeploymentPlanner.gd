@@ -71,6 +71,7 @@ static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], 
 		"supportLoad": {},
 		"placementByUnit": {},
 		"stackStanceByHex": {},
+		"stackHasAttackByHex": {},
 		"stackOrder": [],
 		"reserveAnchors": [],
 		"units": {
@@ -155,7 +156,7 @@ static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]
 
 		var placed := false
 		for hex_id in ranked_stacks:
-			if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT and String(state["stackStanceByHex"].get(hex_id, "defense")) == "attack":
+			if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT and bool(state["stackHasAttackByHex"].get(hex_id, false)):
 				continue
 			if not _can_place_support(state, hex_id):
 				continue
@@ -305,6 +306,8 @@ static func _commit_combat_placement(state: Dictionary, unit: Dictionary, hex_id
 	state["combatLoad"][hex_id] = int(state["combatLoad"].get(hex_id, 0)) + cost
 	state["placementByUnit"][String(unit.get("id", ""))] = hex_id
 	state["stackStanceByHex"][hex_id] = stance
+	var has_attack := bool(state["stackHasAttackByHex"].get(hex_id, false))
+	state["stackHasAttackByHex"][hex_id] = has_attack or stance == "attack"
 	if not (state["stackOrder"] as Array).has(hex_id):
 		(state["stackOrder"] as Array).append(hex_id)
 		(state["stackOrder"] as Array).sort()
@@ -321,12 +324,13 @@ static func _can_place_support(state: Dictionary, hex_id: String) -> bool:
 
 static func _support_stack_score(state: Dictionary, unit: Dictionary, hex_id: String) -> float:
 	var stance := String(state["stackStanceByHex"].get(hex_id, "defense"))
+	var has_attack := bool(state["stackHasAttackByHex"].get(hex_id, false))
 	var role := String(unit.get("role", ""))
 	var role_bonus := 0.0
 	if role == DeploymentTypes.ROLE_RECON:
 		role_bonus = 1.0 if stance == "attack" else 0.6
 	elif role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT:
-		role_bonus = 1.0 if stance == "defense" else -2.0
+		role_bonus = -2.0 if has_attack else (1.0 if stance == "defense" else 0.6)
 	elif role == DeploymentTypes.ROLE_WEAPONS:
 		role_bonus = 0.8
 	return float(state["priorities"].get(hex_id, 0.0)) + role_bonus
