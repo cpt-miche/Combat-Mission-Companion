@@ -279,9 +279,11 @@ static func _build_adjacency_map(known_hexes: Dictionary) -> Dictionary:
 	var adjacency := {}
 	var vectors: Array[Vector2i] = []
 	for hex_id in known_hexes.keys():
-		adjacency[hex_id] = []
 		var parsed_hex: Variant = _parse_hex_id(String(hex_id))
 		if parsed_hex is Vector2i:
+			var canonical_id := _hex_id(parsed_hex)
+			if not adjacency.has(canonical_id):
+				adjacency[canonical_id] = []
 			vectors.append(parsed_hex)
 
 	for i in range(vectors.size()):
@@ -297,9 +299,13 @@ static func _build_adjacency_map(known_hexes: Dictionary) -> Dictionary:
 	return adjacency
 
 static func _neighbors_for(hex_id: String, adjacency_map: Dictionary) -> Array[String]:
-	if not adjacency_map.has(hex_id):
+	var parsed_hex: Variant = _parse_hex_id(hex_id)
+	if not parsed_hex is Vector2i:
 		return []
-	return adjacency_map[hex_id] as Array[String]
+	var canonical_id := _hex_id(parsed_hex)
+	if not adjacency_map.has(canonical_id):
+		return []
+	return adjacency_map[canonical_id] as Array[String]
 
 static func _to_sorted_array(hex_set: Dictionary) -> Array[String]:
 	var output: Array[String] = []
