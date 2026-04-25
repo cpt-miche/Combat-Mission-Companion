@@ -157,8 +157,13 @@ func _apply_selected_p2_structure(index: int, show_status: bool) -> void:
 	if typeof(selected_tree) != TYPE_DICTIONARY:
 		return
 
-	GameState.players[1]["division_tree"] = (selected_tree as Dictionary).duplicate(true)
-	GameState.players[1]["deployments"] = {}
+	var selected_tree_copy := (selected_tree as Dictionary).duplicate(true)
+	var current_tree := GameState.players[1].get("division_tree", {}) as Dictionary
+	var tree_changed := current_tree.is_empty() or current_tree.hash() != selected_tree_copy.hash()
+
+	GameState.players[1]["division_tree"] = selected_tree_copy
+	if tree_changed:
+		GameState.players[1]["deployments"] = {}
 	if _player_index == 1:
 		_build_deployable_unit_list()
 		if show_status:
