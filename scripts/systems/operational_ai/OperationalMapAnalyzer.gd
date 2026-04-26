@@ -2,10 +2,11 @@ extends RefCounted
 class_name OperationalMapAnalyzer
 
 static func analyze(territory_map: Dictionary, ai_owner: int, player_owner: int) -> Array[Dictionary]:
-	var known_hexes := _known_hexes(territory_map)
+	var normalized_territory_map := _canonical_territory_map(territory_map)
+	var known_hexes := _known_hexes(normalized_territory_map)
 	var adjacency_map := _build_adjacency_map(known_hexes)
-	var ai_owned := _owned_hexes(territory_map, known_hexes, ai_owner)
-	var frontline := _compute_frontline_hexes(territory_map, ai_owned, player_owner, adjacency_map)
+	var ai_owned := _owned_hexes(normalized_territory_map, known_hexes, ai_owner)
+	var frontline := _compute_frontline_hexes(normalized_territory_map, ai_owned, player_owner, adjacency_map)
 	var sectors := _group_connected_components(ai_owned, adjacency_map)
 
 	var normalized: Array[Dictionary] = []
@@ -16,12 +17,15 @@ static func analyze(territory_map: Dictionary, ai_owner: int, player_owner: int)
 
 		var contested := {}
 		var rear := {}
-		for hex_id in component_set.keys():
-			var distance := int(distances.get(hex_id, -1))
-			if distance >= 0 and distance <= 1:
-				contested[hex_id] = true
-			if distance >= 2:
-				rear[hex_id] = true
+		if component_frontline.is_empty():
+			rear = component_set.duplicate()
+		else:
+			for hex_id in component_set.keys():
+				var distance := int(distances.get(hex_id, -1))
+				if distance >= 0 and distance <= 1:
+					contested[hex_id] = true
+				if distance >= 2:
+					rear[hex_id] = true
 
 		normalized.append({
 			"sectorId": "sector_%s" % _min_hex_id(component),
@@ -44,10 +48,18 @@ static func analyze(territory_map: Dictionary, ai_owner: int, player_owner: int)
 static func _known_hexes(territory_map: Dictionary) -> Dictionary:
 	var known := {}
 	for key_variant in territory_map.keys():
-		var key := String(key_variant).strip_edges()
-		if _is_valid_hex_id(key):
-			known[key] = true
+		var parsed_hex: Variant = _parse_hex_id(String(key_variant))
+		if parsed_hex is Vector2i:
+			known[_hex_id(parsed_hex as Vector2i)] = true
 	return known
+
+static func _canonical_territory_map(territory_map: Dictionary) -> Dictionary:
+	var normalized := {}
+	for key_variant in territory_map.keys():
+		var parsed_hex: Variant = _parse_hex_id(String(key_variant))
+		if parsed_hex is Vector2i:
+			normalized[_hex_id(parsed_hex as Vector2i)] = territory_map[key_variant]
+	return normalized
 
 static func _owned_hexes(territory_map: Dictionary, known_hexes: Dictionary, owner: int) -> Dictionary:
 	var owned := {}
