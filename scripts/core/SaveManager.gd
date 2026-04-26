@@ -209,6 +209,7 @@ func save_ai_trace(trace: Dictionary) -> bool:
 	traces.append(_build_ai_trace_metadata(trace, trace_file, timestamp))
 	index["traces"] = traces
 	if not _save_ai_trace_index(index):
+		_remove_ai_trace_file(trace_file)
 		return false
 
 	var retention_count := int(trace.get("retention_max_files", AI_TRACE_DEFAULT_MAX_FILES))
