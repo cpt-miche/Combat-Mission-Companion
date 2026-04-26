@@ -28,6 +28,17 @@ const DEFAULT_WEIGHTS := {
 	"responseIntent": {
 		"urgency": 0.55,
 		"feasibility": 0.45
+	},
+	"breakthroughSeverity": {
+		"penetration": 0.30,
+		"objectiveProximity": 0.25,
+		"roadAccess": 0.20,
+		"sectorGap": 0.15,
+		"momentum": 0.10
+	},
+	"breakthroughThresholds": {
+		"reserveNeed": 0.55,
+		"reinforcementRequest": 0.75
 	}
 }
 
@@ -37,13 +48,17 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	var turn_index := int(input.get("turnIndex", 0))
 
 	var threat_assessments := _evaluate_threats(input.get("threats", []), cfg)
-	var breakthrough_assessments := _evaluate_breakthroughs(input.get("breakthroughs", []), cfg)
+	var breakthrough_pipeline := _evaluate_breakthrough_pipeline(input.get("breakthroughs", []), cfg)
+	var breakthrough_assessments: Array[Dictionary] = breakthrough_pipeline.get("breakthroughHexes", [])
 	var sector_assessments := _evaluate_sectors(input.get("sectors", []), cfg)
 	var reserve_requests := _evaluate_reserve_requests(input.get("reserveRequests", []), cfg)
+	reserve_requests.append_array(breakthrough_pipeline.get("reserveNeeds", []))
 	var reinforcement_requests := _evaluate_reinforcement_requests(input.get("reinforcementRequests", []), cfg)
+	reinforcement_requests.append_array(breakthrough_pipeline.get("reinforcementRequests", []))
 	var response_intents := _evaluate_response_intents(input.get("responseIntents", []), cfg)
+	var warnings: Array[String] = breakthrough_pipeline.get("warnings", [])
 
-	return OperationalTypes.make_operational_assessment(
+	var assessment := OperationalTypes.make_operational_assessment(
 		operation_id,
 		turn_index,
 		_sort_scored(threat_assessments),
@@ -54,6 +69,10 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 		_sort_scored(response_intents),
 		{"deterministic": true}
 	)
+	assessment["breakthroughHexes"] = _sort_scored(breakthrough_assessments)
+	assessment["reserveNeeds"] = _sort_scored(breakthrough_pipeline.get("reserveNeeds", []))
+	assessment["warnings"] = warnings
+	return assessment
 
 static func _evaluate_threats(threats: Array, cfg: Dictionary) -> Array[Dictionary]:
 	var weights: Dictionary = cfg.get("threat", {})
@@ -110,6 +129,158 @@ static func _evaluate_breakthroughs(breakthroughs: Array, cfg: Dictionary) -> Ar
 			breakthrough
 		))
 	return assessments
+
+static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionary) -> Dictionary:
+	var severity_weights: Dictionary = cfg.get("breakthroughSeverity", {})
+	var thresholds: Dictionary = cfg.get("breakthroughThresholds", {})
+	var reserve_threshold := clamp(float(thresholds.get("reserveNeed", 0.55)), 0.0, 1.0)
+	var reinforcement_threshold := clamp(float(thresholds.get("reinforcementRequest", 0.75)), 0.0, 1.0)
+	var breakthrough_hexes: Array[Dictionary] = []
+	var reserve_needs: Array[Dictionary] = []
+	var reinforcement_requests: Array[Dictionary] = []
+	var warnings: Array[String] = []
+	for index in breakthroughs.size():
+		var breakthrough: Dictionary = breakthroughs[index]
+		var previous_hexes := _string_set(breakthrough.get("previousHexes", []))
+		var current_hexes := _string_set(breakthrough.get("currentHexes", []))
+		var penetration_count := 0
+		for hex_id in current_hexes.keys():
+			if not previous_hexes.has(hex_id):
+				penetration_count += 1
+		var prior_frontline_size := max(previous_hexes.size(), 1)
+		var penetration_factor := clamp(float(penetration_count) / float(prior_frontline_size), 0.0, 1.0)
+		var objective_distance := max(float(breakthrough.get("playerDistanceToObjective", 99.0)), 0.0)
+		var objective_proximity := clamp(1.0 - objective_distance / max(float(breakthrough.get("objectiveThreatRange", 6.0)), 1.0), 0.0, 1.0)
+		var road_access := clamp(max(
+			float(breakthrough.get("roadAccess", 0.0)),
+			float(breakthrough.get("highwayAccess", 0.0))
+		), 0.0, 1.0)
+		var sector_gap := clamp(float(breakthrough.get("sectorGapExposure", breakthrough.get("sectorGap", 0.0))), 0.0, 1.0)
+		var momentum := clamp(float(breakthrough.get("momentum", 0.0)), 0.0, 1.0)
+		var severity := _score_breakthrough_severity(
+			penetration_factor,
+			objective_proximity,
+			road_access,
+			sector_gap,
+			momentum,
+			severity_weights
+		)
+		var reasons := _build_breakthrough_reasons(
+			penetration_count,
+			prior_frontline_size,
+			objective_distance,
+			objective_proximity,
+			road_access,
+			sector_gap,
+			momentum,
+			severity
+		)
+		var breakthrough_id := String(breakthrough.get("id", "breakthrough_%d" % index))
+		var sector_id := String(breakthrough.get("sectorId", ""))
+		breakthrough_hexes.append(OperationalTypes.make_breakthrough_assessment(
+			breakthrough_id,
+			sector_id,
+			severity,
+			severity,
+			reasons,
+			breakthrough
+		))
+		if severity >= reserve_threshold:
+			var reserve_id := "%s_reserve_need" % breakthrough_id
+			var reserve_reasons := reasons.duplicate()
+			reserve_reasons.append("trigger=breakthrough_severity>=%.2f" % reserve_threshold)
+			var requested_strength := clamp(severity * float(breakthrough.get("reserveStrengthScale", 1.0)), 0.1, 1.0)
+			reserve_needs.append(OperationalTypes.make_reserve_request(
+				reserve_id,
+				sector_id,
+				severity,
+				severity,
+				reserve_reasons,
+				requested_strength,
+				breakthrough
+			))
+		if severity >= reinforcement_threshold:
+			var reinf_id := "%s_reinforcement_request" % breakthrough_id
+			var reinf_reasons := reasons.duplicate()
+			reinf_reasons.append("trigger=breakthrough_severity>=%.2f" % reinforcement_threshold)
+			var reinf_strength := clamp(severity * float(breakthrough.get("reinforcementStrengthScale", 1.25)), 0.1, 1.25)
+			reinforcement_requests.append(OperationalTypes.make_reinforcement_request(
+				reinf_id,
+				sector_id,
+				severity,
+				severity,
+				reinf_reasons,
+				reinf_strength,
+				breakthrough
+			))
+		var has_breakthrough := severity > 0.0 and penetration_count > 0
+		if has_breakthrough and not _has_reserve_in_window(breakthrough):
+			var required_window := int(breakthrough.get("requiredReserveTurns", 2))
+			warnings.append(
+				"breakthrough=%s sector=%s no_reserve_response_within=%d_turns" % [breakthrough_id, sector_id, required_window]
+			)
+	breakthrough_hexes = _sort_scored(breakthrough_hexes)
+	return {
+		"breakthroughHexes": breakthrough_hexes,
+		"reserveNeeds": _sort_scored(reserve_needs),
+		"reinforcementRequests": _sort_scored(reinforcement_requests),
+		"warnings": warnings
+	}
+
+static func _score_breakthrough_severity(
+	penetration: float,
+	objective_proximity: float,
+	road_access: float,
+	sector_gap: float,
+	momentum: float,
+	weights: Dictionary
+) -> float:
+	return clamp(
+		penetration * float(weights.get("penetration", 0.30))
+		+ objective_proximity * float(weights.get("objectiveProximity", 0.25))
+		+ road_access * float(weights.get("roadAccess", 0.20))
+		+ sector_gap * float(weights.get("sectorGap", 0.15))
+		+ momentum * float(weights.get("momentum", 0.10)),
+		0.0,
+		1.0
+	)
+
+static func _build_breakthrough_reasons(
+	penetration_count: int,
+	prior_frontline_size: int,
+	objective_distance: float,
+	objective_proximity: float,
+	road_access: float,
+	sector_gap: float,
+	momentum: float,
+	severity: float
+) -> Array[String]:
+	return [
+		"penetration=%d/%d" % [penetration_count, prior_frontline_size],
+		"objective_distance=%.2f" % objective_distance,
+		"objective_proximity=%.3f" % objective_proximity,
+		"road_or_highway_access=%.3f" % road_access,
+		"sector_gap_exposure=%.3f" % sector_gap,
+		"momentum=%.3f" % momentum,
+		"severity=%.3f" % severity
+	]
+
+static func _has_reserve_in_window(breakthrough: Dictionary) -> bool:
+	var reserve_candidates: Array = breakthrough.get("reserveCandidates", [])
+	var required_window := int(breakthrough.get("requiredReserveTurns", 2))
+	for item in reserve_candidates:
+		var reserve: Dictionary = item
+		if bool(reserve.get("available", true)) and int(reserve.get("etaTurns", 999)) <= required_window:
+			return true
+	if bool(breakthrough.get("reserveAvailable", false)) and int(breakthrough.get("reserveEtaTurns", 999)) <= required_window:
+		return true
+	return false
+
+static func _string_set(values: Array) -> Dictionary:
+	var set := {}
+	for value in values:
+		set[String(value)] = true
+	return set
 
 static func _evaluate_sectors(sectors: Array, cfg: Dictionary) -> Array[Dictionary]:
 	var weights: Dictionary = cfg.get("sector", {})
