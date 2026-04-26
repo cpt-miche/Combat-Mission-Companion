@@ -7,9 +7,19 @@ extends Control
 @onready var map_dialog: ConfirmationDialog = %MapDialog
 @onready var map_mode_selector: OptionButton = %MapModeSelector
 @onready var saved_map_selector: OptionButton = %SavedMapSelector
+@onready var map_size_label: Label = %MapSizeLabel
+@onready var map_size_selector: OptionButton = %MapSizeSelector
 @onready var map_selection_status_label: Label = %MapSelectionStatusLabel
 
 var _pending_nation_id := "usa"
+const MAP_SIZE_OPTIONS: Array[Vector2i] = [
+	Vector2i(8, 8),
+	Vector2i(12, 12),
+	Vector2i(16, 16),
+	Vector2i(24, 24),
+	Vector2i(32, 32),
+	Vector2i(64, 64)
+]
 
 func _ready() -> void:
 	play_button.pressed.connect(_on_play_pressed)
@@ -31,16 +41,18 @@ func _on_play_as_germany() -> void:
 func _open_map_selection_for(nation_id: String) -> void:
 	_pending_nation_id = nation_id
 	_configure_map_mode_selector()
+	_configure_map_size_selector()
 	_refresh_saved_map_selector()
 	_refresh_map_dialog_ui()
 	map_dialog.popup_centered()
 
-func _start_new_division_builder_for(nation_id: String, selected_mode: int) -> void:
+func _start_new_division_builder_for(nation_id: String, selected_mode: int, selected_dimensions: Vector2i) -> void:
 	GameState.reset()
 	GameState.selected_nation_id = nation_id
 	GameState.map_flow = selected_mode
 	GameState.selected_map_name = ""
 	if selected_mode == GameState.MapFlow.NEW_MAP:
+		GameState.selected_map_dimensions = selected_dimensions
 		GameState.terrain_map.clear()
 		GameState.territory_map.clear()
 		GameState.set_phase(GameState.Phase.DIVISION_BUILDER)
@@ -89,13 +101,27 @@ func _refresh_saved_map_selector() -> void:
 	for map_name in SaveManager.list_maps():
 		saved_map_selector.add_item(map_name)
 
+func _configure_map_size_selector() -> void:
+	map_size_selector.clear()
+	var selected_index := 0
+	for option_index in MAP_SIZE_OPTIONS.size():
+		var dimensions := MAP_SIZE_OPTIONS[option_index]
+		map_size_selector.add_item("%dx%d" % [dimensions.x, dimensions.y], option_index)
+		if dimensions == GameState.selected_map_dimensions:
+			selected_index = option_index
+	map_size_selector.select(selected_index)
+
 func _on_map_mode_selected(_index: int) -> void:
 	_refresh_map_dialog_ui()
 
 func _refresh_map_dialog_ui() -> void:
 	var mode := _selected_map_mode()
 	var needs_saved_map := mode == GameState.MapFlow.EDIT_EXISTING_MAP or mode == GameState.MapFlow.PLAY_SAVED_MAP
+	var needs_new_map_size := mode == GameState.MapFlow.NEW_MAP
 	saved_map_selector.disabled = not needs_saved_map
+	map_size_selector.disabled = not needs_new_map_size
+	map_size_label.visible = needs_new_map_size
+	map_size_selector.visible = needs_new_map_size
 	if needs_saved_map and saved_map_selector.item_count == 0:
 		map_dialog.get_ok_button().disabled = true
 		map_selection_status_label.text = "No saved maps found. Save one in Map Setup first."
@@ -114,9 +140,16 @@ func _selected_saved_map_name() -> String:
 		return ""
 	return saved_map_selector.get_item_text(maxi(saved_map_selector.selected, 0))
 
+func _selected_map_dimensions() -> Vector2i:
+	if map_size_selector.item_count == 0:
+		return Vector2i(MapGridConfig.default_columns(), MapGridConfig.default_rows())
+	var selected_index := clampi(map_size_selector.selected, 0, MAP_SIZE_OPTIONS.size() - 1)
+	return MAP_SIZE_OPTIONS[selected_index]
+
 func _on_map_selection_confirmed() -> void:
 	var selected_mode := _selected_map_mode()
-	_start_new_division_builder_for(_pending_nation_id, selected_mode)
+	var selected_dimensions := _selected_map_dimensions()
+	_start_new_division_builder_for(_pending_nation_id, selected_mode, selected_dimensions)
 
 func _deserialize_units(serialized_units: Dictionary) -> Dictionary:
 	var deserialized := {}

@@ -37,6 +37,7 @@ var selected_nation_id: String = "usa"
 var active_player: int = 0
 var map_flow: MapFlow = MapFlow.NEW_MAP
 var selected_map_name: String = ""
+var selected_map_dimensions: Vector2i = Vector2i(MapGridConfig.default_columns(), MapGridConfig.default_rows())
 var deployment_ai_debug: Dictionary = {}
 var operational_ai_debug: Dictionary = {}
 var operational_ai_state: Dictionary = {}
@@ -63,6 +64,7 @@ func reset() -> void:
 	active_player = 0
 	map_flow = MapFlow.NEW_MAP
 	selected_map_name = ""
+	selected_map_dimensions = Vector2i(MapGridConfig.default_columns(), MapGridConfig.default_rows())
 	deployment_ai_debug.clear()
 	operational_ai_debug.clear()
 	operational_ai_state.clear()
