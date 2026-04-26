@@ -1,5 +1,4 @@
 extends Node
-class_name DisplaySettings
 signal runtime_display_updated(applied: Dictionary)
 
 const PRESET_720P := Vector2i(1280, 720)
