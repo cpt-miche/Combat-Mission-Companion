@@ -224,40 +224,129 @@ func _default_division_tree(player_index: int) -> Dictionary:
 				"status": "alive",
 				"children": [
 					{
-						"id": "%s_infantry_co_1" % side_label,
-						"name": "%s Infantry Company A" % side_label,
-						"type": "infantry",
+						"id": "%s_bn_hq" % side_label,
+						"name": "%s Battalion Headquarters" % side_label,
+						"type": "headquarters",
+						"size": "section",
+						"status": "alive",
+						"children": []
+					},
+					{
+						"id": "%s_hq_company" % side_label,
+						"name": "%s Headquarters Company" % side_label,
+						"type": "headquarters",
 						"size": "company",
 						"status": "alive",
 						"children": [
 							{
-								"id": "%s_infantry_co_1_plt_1" % side_label,
-								"name": "%s 1st Platoon" % side_label,
-								"type": "infantry",
-								"size": "platoon",
+								"id": "%s_hq_company_hq" % side_label,
+								"name": "%s Company HQ" % side_label,
+								"type": "headquarters",
+								"size": "section",
 								"status": "alive",
 								"children": []
 							},
 							{
-								"id": "%s_infantry_co_1_plt_2" % side_label,
-								"name": "%s 2nd Platoon" % side_label,
-								"type": "infantry",
-								"size": "platoon",
+								"id": "%s_bn_hq_section" % side_label,
+								"name": "%s Battalion HQ Section" % side_label,
+								"type": "headquarters",
+								"size": "section",
 								"status": "alive",
 								"children": []
+							},
+							{
+								"id": "%s_antitank_platoon" % side_label,
+								"name": "%s Antitank Platoon" % side_label,
+								"type": "anti_tank",
+								"size": "platoon",
+								"status": "alive",
+								"children": [
+									{
+										"id": "%s_antitank_platoon_hq" % side_label,
+										"name": "%s Antitank Platoon HQ" % side_label,
+										"type": "headquarters",
+										"size": "section",
+										"status": "alive",
+										"children": []
+									},
+									{
+										"id": "%s_antitank_squad_1" % side_label,
+										"name": "%s Antitank Squad 1" % side_label,
+										"type": "anti_tank",
+										"size": "squad",
+										"status": "alive",
+										"children": []
+									},
+									{
+										"id": "%s_antitank_squad_2" % side_label,
+										"name": "%s Antitank Squad 2" % side_label,
+										"type": "anti_tank",
+										"size": "squad",
+										"status": "alive",
+										"children": []
+									},
+									{
+										"id": "%s_antitank_squad_3" % side_label,
+										"name": "%s Antitank Squad 3" % side_label,
+										"type": "anti_tank",
+										"size": "squad",
+										"status": "alive",
+										"children": []
+									}
+								]
 							}
 						]
 					},
 					{
-						"id": "%s_infantry_co_2" % side_label,
-						"name": "%s Infantry Company B" % side_label,
+						"id": "%s_rifle_company_a" % side_label,
+						"name": "%s Rifle Company A" % side_label,
+						"type": "infantry",
+						"size": "company",
+						"status": "alive",
+						"children": _default_rifle_company_children(side_label, "a")
+					},
+					{
+						"id": "%s_rifle_company_b" % side_label,
+						"name": "%s Rifle Company B" % side_label,
+						"type": "infantry",
+						"size": "company",
+						"status": "alive",
+						"children": _default_rifle_company_children(side_label, "b")
+					},
+					{
+						"id": "%s_rifle_company_c" % side_label,
+						"name": "%s Rifle Company C" % side_label,
+						"type": "infantry",
+						"size": "company",
+						"status": "alive",
+						"children": _default_rifle_company_children(side_label, "c")
+					},
+					{
+						"id": "%s_heavy_weapons_company" % side_label,
+						"name": "%s Heavy Weapons Company" % side_label,
 						"type": "infantry",
 						"size": "company",
 						"status": "alive",
 						"children": [
 							{
-								"id": "%s_infantry_co_2_plt_1" % side_label,
-								"name": "%s 3rd Platoon" % side_label,
+								"id": "%s_heavy_weapons_company_hq" % side_label,
+								"name": "%s Heavy Weapons Company HQ" % side_label,
+								"type": "headquarters",
+								"size": "section",
+								"status": "alive",
+								"children": []
+							},
+							{
+								"id": "%s_heavy_machine_gun_platoon_1" % side_label,
+								"name": "%s Heavy Machine-Gun Platoon 1" % side_label,
+								"type": "infantry",
+								"size": "platoon",
+								"status": "alive",
+								"children": []
+							},
+							{
+								"id": "%s_heavy_machine_gun_platoon_2" % side_label,
+								"name": "%s Heavy Machine-Gun Platoon 2" % side_label,
 								"type": "infantry",
 								"size": "platoon",
 								"status": "alive",
@@ -266,66 +355,75 @@ func _default_division_tree(player_index: int) -> Dictionary:
 						]
 					}
 				]
+			}
+		]
+	}
+
+func _default_rifle_company_children(side_label: String, company_suffix: String) -> Array:
+	var company_tag := "%s_rifle_company_%s" % [side_label, company_suffix]
+	var company_upper := company_suffix.to_upper()
+	return [
+		{
+			"id": "%s_hq" % company_tag,
+			"name": "%s Rifle Company %s HQ" % [side_label, company_upper],
+			"type": "headquarters",
+			"size": "section",
+			"status": "alive",
+			"children": []
+		},
+		_default_rifle_platoon(side_label, company_suffix, 1),
+		_default_rifle_platoon(side_label, company_suffix, 2),
+		_default_rifle_platoon(side_label, company_suffix, 3),
+		{
+			"id": "%s_weapons_platoon" % company_tag,
+			"name": "%s Rifle Company %s Weapons Platoon" % [side_label, company_upper],
+			"type": "infantry",
+			"size": "platoon",
+			"status": "alive",
+			"children": []
+		}
+	]
+
+func _default_rifle_platoon(side_label: String, company_suffix: String, platoon_number: int) -> Dictionary:
+	var platoon_tag := "%s_rifle_company_%s_platoon_%d" % [side_label, company_suffix, platoon_number]
+	return {
+		"id": platoon_tag,
+		"name": "%s Rifle Company %s Platoon %d" % [side_label, company_suffix.to_upper(), platoon_number],
+		"type": "infantry",
+		"size": "platoon",
+		"status": "alive",
+		"children": [
+			{
+				"id": "%s_hq" % platoon_tag,
+				"name": "%s Platoon %d HQ" % [side_label, platoon_number],
+				"type": "headquarters",
+				"size": "section",
+				"status": "alive",
+				"children": []
 			},
 			{
-				"id": "%s_tank_bn" % side_label,
-				"name": "%s Tank Battalion" % side_label,
-				"type": "tank",
-				"size": "battalion",
+				"id": "%s_squad_1" % platoon_tag,
+				"name": "%s Platoon %d Rifle Squad 1" % [side_label, platoon_number],
+				"type": "infantry",
+				"size": "squad",
 				"status": "alive",
-				"children": [
-					{
-						"id": "%s_tank_co_1" % side_label,
-						"name": "%s Tank Company" % side_label,
-						"type": "tank",
-						"size": "company",
-						"status": "alive",
-						"children": [
-							{
-								"id": "%s_tank_co_1_plt_1" % side_label,
-								"name": "%s Tank Platoon" % side_label,
-								"type": "tank",
-								"size": "platoon",
-								"status": "alive",
-								"children": []
-							}
-						]
-					}
-				]
+				"children": []
 			},
 			{
-				"id": "%s_support_bn" % side_label,
-				"name": "%s Support Battalion" % side_label,
-				"type": "engineer",
-				"size": "battalion",
+				"id": "%s_squad_2" % platoon_tag,
+				"name": "%s Platoon %d Rifle Squad 2" % [side_label, platoon_number],
+				"type": "infantry",
+				"size": "squad",
 				"status": "alive",
-				"children": [
-					{
-						"id": "%s_support_co" % side_label,
-						"name": "%s Support Company" % side_label,
-						"type": "engineer",
-						"size": "company",
-						"status": "alive",
-						"children": [
-							{
-								"id": "%s_support_co_plt_1" % side_label,
-								"name": "%s Engineer Platoon" % side_label,
-								"type": "engineer",
-								"size": "platoon",
-								"status": "alive",
-								"children": []
-							},
-							{
-								"id": "%s_support_co_plt_2" % side_label,
-								"name": "%s Weapons Platoon" % side_label,
-								"type": "artillery",
-								"size": "platoon",
-								"status": "alive",
-								"children": []
-							}
-						]
-					}
-				]
+				"children": []
+			},
+			{
+				"id": "%s_squad_3" % platoon_tag,
+				"name": "%s Platoon %d Rifle Squad 3" % [side_label, platoon_number],
+				"type": "infantry",
+				"size": "squad",
+				"status": "alive",
+				"children": []
 			}
 		]
 	}
