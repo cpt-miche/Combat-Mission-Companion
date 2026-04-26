@@ -432,6 +432,7 @@ func _default_rifle_platoon(side_label: String, company_suffix: String, platoon_
 
 func _build_deployable_unit_list() -> void:
 	unit_list.clear()
+	unit_list.hide_root = true
 	_deployable_units.clear()
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
@@ -467,6 +468,9 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant) -> 
 	for child in children_variant:
 		_build_deployable_unit_tree_items(item, child)
 
+	if item.get_child_count() > 0:
+		item.set_collapsed(true)
+
 
 func _string_for_type(raw_type: Variant) -> String:
 	if typeof(raw_type) == TYPE_INT:
@@ -488,11 +492,11 @@ func _deployability_block_reason(unit: Dictionary) -> String:
 	snapshot["name"] = _preferred_unit_name(unit)
 	return DeploymentValidator.placement_block_reason(snapshot, [])
 
-func _unit_label(unit: Dictionary, depth: int = 0) -> String:
+func _unit_label(unit: Dictionary) -> String:
 	var size := _string_for_size(unit.get("size", "Unknown"))
 	var type := _string_for_type(unit.get("type", "Unit"))
 	var name := _preferred_unit_name(unit)
-	return "%s%s - %s %s" % ["  ".repeat(max(depth, 0)), name, size.capitalize(), type.capitalize()]
+	return "%s - %s %s" % [name, size.capitalize(), type.capitalize()]
 
 func _on_hex_selected(column: int, row: int) -> void:
 	var selected_item := unit_list.get_selected()
