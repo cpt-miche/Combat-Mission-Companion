@@ -4,6 +4,9 @@ extends RefCounted
 const MAX_CHILDREN := 6
 const MAX_SAME_TYPE_CHILDREN := 4
 const _ANY_TYPE_KEY := -1
+const _DESCENDANT_FALLBACK_TYPES := {
+	UnitType.Value.ENGINEER: true,
+}
 const REQUIRED_CHILD_MIX_BY_ECHELON_AND_TYPE := {
 	UnitSize.Value.DIVISION: {
 		_ANY_TYPE_KEY: {
@@ -138,12 +141,15 @@ static func _validate_required_child_mix(parent: UnitModel, children: Array[Unit
 		}
 
 	var child_counts := _count_children_by_type(children)
+	var descendant_counts := _count_descendants_by_type(children)
 	var missing_parts: Array[String] = []
 	for unit_type in mix.keys():
 		var required_count := int(mix.get(unit_type, 0))
 		if required_count <= 0:
 			continue
 		var actual_count := int(child_counts.get(unit_type, 0))
+		if actual_count < required_count and _DESCENDANT_FALLBACK_TYPES.has(unit_type):
+			actual_count = int(descendant_counts.get(unit_type, 0))
 		if actual_count < required_count:
 			missing_parts.append("%d %s (has %d)" % [required_count, UnitType.display_name(unit_type), actual_count])
 
@@ -174,3 +180,16 @@ static func _count_children_by_type(children: Array[UnitModel]) -> Dictionary:
 			continue
 		counts[child.type] = int(counts.get(child.type, 0)) + 1
 	return counts
+
+static func _count_descendants_by_type(children: Array[UnitModel]) -> Dictionary:
+	var counts := {}
+	for child in children:
+		_count_descendants_recursive(child, counts)
+	return counts
+
+static func _count_descendants_recursive(unit: UnitModel, counts: Dictionary) -> void:
+	if unit == null:
+		return
+	counts[unit.type] = int(counts.get(unit.type, 0)) + 1
+	for child in unit.children:
+		_count_descendants_recursive(child, counts)
