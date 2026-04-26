@@ -233,7 +233,15 @@ func _default_division_tree(player_index: int) -> Dictionary:
 						"name": "%s Tank Company" % side_label,
 						"type": "tank",
 						"size": "company",
-						"children": []
+						"children": [
+							{
+								"id": "%s_tank_co_1_plt_1" % side_label,
+								"name": "%s Tank Platoon" % side_label,
+								"type": "tank",
+								"size": "platoon",
+								"children": []
+							}
+						]
 					}
 				]
 			},
@@ -253,6 +261,13 @@ func _default_division_tree(player_index: int) -> Dictionary:
 								"id": "%s_support_co_plt_1" % side_label,
 								"name": "%s Engineer Platoon" % side_label,
 								"type": "engineer",
+								"size": "platoon",
+								"children": []
+							},
+							{
+								"id": "%s_support_co_plt_2" % side_label,
+								"name": "%s Weapons Platoon" % side_label,
+								"type": "artillery",
 								"size": "platoon",
 								"children": []
 							}
