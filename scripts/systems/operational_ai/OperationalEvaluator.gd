@@ -776,7 +776,7 @@ static func _evaluate_structural_warnings(
 	if _has_reserve_clumping_in_input(input):
 		warnings.append("warning=reserve_clumping")
 	for opportunity in counterattack_opportunities:
-		var confidence := clamp(float(opportunity.get("urgency", opportunity.get("score", 0.0))), 0.0, 1.0)
+		var confidence: float = clamp(float(opportunity.get("urgency", opportunity.get("score", 0.0))), 0.0, 1.0)
 		if confidence < counterattack_threshold:
 			continue
 		if _counterattack_exposes_defend_objective(opportunity):
