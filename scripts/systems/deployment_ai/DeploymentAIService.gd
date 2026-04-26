@@ -4,6 +4,7 @@ class_name DeploymentAIService
 const DeploymentDataConverter = preload("res://scripts/domain/deployment_ai/DeploymentDataConverter.gd")
 const DeploymentPlanner = preload("res://scripts/systems/deployment_ai/DeploymentPlanner.gd")
 const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValidator.gd")
+const AIDebugTracer = preload("res://scripts/systems/ai_debug/AIDebugTracer.gd")
 
 static func run_for_player(ai_player_index: int) -> Dictionary:
 	if ai_player_index < 0 or ai_player_index >= GameState.players.size():
@@ -13,10 +14,23 @@ static func run_for_player(ai_player_index: int) -> Dictionary:
 	if player.is_empty():
 		return {"ok": false, "reason": "missing_player"}
 
+	var tracer := AIDebugTracer.new()
+	var trace := tracer.start_trace({
+		"phase": "deployment_ai",
+		"turn": int(GameState.current_turn),
+		"player_id": ai_player_index,
+		"ai_version": "DeploymentPlanner",
+		"debug_level": int(GameState.ai_debug_level),
+		"inputs_hash": AIDebugTracer.make_deterministic_id({
+			"playerIndex": ai_player_index,
+			"objectiveMode": _objective_mode_for_player(player)
+		})
+	})
+
 	var elements := _elements_for_player(ai_player_index)
 	if elements.is_empty():
 		GameState.players[ai_player_index]["deployments"] = {}
-		var empty_trace := {
+		var outputs := {
 			"planner": "DeploymentPlanner",
 			"playerIndex": ai_player_index,
 			"objectiveMode": _objective_mode_for_player(player),
@@ -24,7 +38,8 @@ static func run_for_player(ai_player_index: int) -> Dictionary:
 			"resultDeployments": {},
 			"notes": ["No deployable elements available for this player."]
 		}
-		GameState.deployment_ai_debug["player_%d" % ai_player_index] = empty_trace
+		var finished_trace := tracer.finish_trace(trace, outputs, {"planner_ms": 0})
+		GameState.deployment_ai_debug["player_%d" % ai_player_index] = _legacy_debug_from_trace(finished_trace)
 		return {"ok": true, "reason": "no_elements", "deployments": {}}
 
 	var hexes := DeploymentDataConverter.map_payload_to_hexes(GameState.terrain_map, GameState.territory_map)
@@ -42,12 +57,14 @@ static func run_for_player(ai_player_index: int) -> Dictionary:
 	)
 
 	var plan := DeploymentPlanner.create_plan(elements, hexes, sector_model, {
-		"objectiveMode": _objective_mode_for_player(player)
+		"objectiveMode": _objective_mode_for_player(player),
+		"traceEventCallback": func(event_type: String, payload: Dictionary) -> void:
+			tracer.add_event(trace, event_type, payload)
 	})
 	var deployments := _deployments_from_plan(ai_player_index, elements, plan, sector_model)
 	GameState.players[ai_player_index]["deployments"] = deployments
 
-	var trace := {
+	var outputs := {
 		"planner": "DeploymentPlanner",
 		"playerIndex": ai_player_index,
 		"objectiveMode": _objective_mode_for_player(player),
@@ -60,8 +77,18 @@ static func run_for_player(ai_player_index: int) -> Dictionary:
 			"ordersCount": (plan.get("orders", []) as Array).size()
 		}
 	}
-	GameState.deployment_ai_debug["player_%d" % ai_player_index] = trace
+	var finished_trace := tracer.finish_trace(trace, outputs, {"planner_ms": 0})
+	GameState.deployment_ai_debug["player_%d" % ai_player_index] = _legacy_debug_from_trace(finished_trace)
 	return {"ok": true, "reason": "planned", "deployments": deployments, "plan": plan}
+
+static func _legacy_debug_from_trace(final_trace: Dictionary) -> Dictionary:
+	var outputs := final_trace.get("outputs", {}) as Dictionary
+	var legacy := outputs.duplicate(true)
+	legacy["traceId"] = String(final_trace.get("trace_id", ""))
+	legacy["trace"] = final_trace.duplicate(true)
+	legacy["events"] = (final_trace.get("events", []) as Array).duplicate(true)
+	legacy["eventCount"] = int(final_trace.get("event_count", (final_trace.get("events", []) as Array).size()))
+	return legacy
 
 static func _elements_for_player(player_index: int) -> Array[Dictionary]:
 	var all_elements := DeploymentDataConverter.players_to_deployable_elements(GameState.players)
