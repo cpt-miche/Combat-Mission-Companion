@@ -10,7 +10,6 @@ static func can_place_unit(unit: Dictionary, existing_units: Array[Dictionary]) 
 	return placement_block_reason(unit, existing_units).is_empty()
 
 static func placement_block_reason(unit: Dictionary, existing_units: Array[Dictionary]) -> String:
-	var is_tank := bool(unit.get("is_tank", false))
 	var is_headquarters := bool(unit.get("is_headquarters", false))
 	var is_battalion := bool(unit.get("is_battalion", false))
 	var is_company := bool(unit.get("is_company", false))
@@ -34,38 +33,38 @@ static func placement_block_reason(unit: Dictionary, existing_units: Array[Dicti
 	if size_rank > UnitSize.Value.BATTALION:
 		return "%s is a parent formation (regiment/division/army) and cannot be deployed directly. Deploy one of its battalions, companies, or platoons instead." % unit_name
 
-	if is_tank:
-		if is_battalion:
-			for placed in existing_units:
-				if bool(placed.get("is_tank", false)) and bool(placed.get("is_battalion", false)):
-					return "Tank battalion limit reached (max 1)."
-		return ""
-
-	var non_tank_battalion_count := 0
-	var non_tank_company_count := 0
-	for placed in existing_units:
-		if bool(placed.get("is_tank", false)):
-			continue
-		if bool(placed.get("is_battalion", false)):
-			non_tank_battalion_count += 1
-		elif bool(placed.get("is_company", false)):
-			non_tank_company_count += 1
+	var battalion_count := _placed_battalion_count(existing_units)
+	var company_count := _placed_company_count(existing_units)
 
 	if is_battalion:
-		if non_tank_battalion_count >= 1:
-			return "Non-tank battalion limit reached (max 1)."
-		if non_tank_company_count > 0:
-			return "Cannot place a non-tank battalion after non-tank companies are deployed."
+		if battalion_count >= 1:
+			return "Battalion limit reached (max 1)."
+		if company_count > 0:
+			return "Cannot place a battalion after companies are deployed in this hex."
 		return ""
 
 	if is_company:
-		if non_tank_battalion_count > 0:
-			return "Cannot place non-tank companies after a non-tank battalion is deployed."
-		if non_tank_company_count >= 3:
-			return "Non-tank company limit reached (max 3)."
+		if battalion_count > 0:
+			return "Cannot place a company when a battalion is already deployed in this hex."
+		if company_count >= 4:
+			return "Company limit reached (max 4)."
 		return ""
 
 	if is_platoon:
 		return ""
 
 	return "%s is not deployable under current deployment rules." % unit_name
+
+static func _placed_battalion_count(existing_units: Array[Dictionary]) -> int:
+	var count := 0
+	for placed in existing_units:
+		if bool(placed.get("is_battalion", false)):
+			count += 1
+	return count
+
+static func _placed_company_count(existing_units: Array[Dictionary]) -> int:
+	var count := 0
+	for placed in existing_units:
+		if bool(placed.get("is_company", false)):
+			count += 1
+	return count
