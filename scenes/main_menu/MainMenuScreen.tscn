@@ -158,6 +158,22 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Fullscreen"
 
+[node name="UiScaleModeLabel" type="Label" parent="DisplayDialog/DisplayDialogVBox"]
+layout_mode = 2
+text = "UI scale mode"
+
+[node name="UiScaleModeSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="UiScaleValueLabel" type="Label" parent="DisplayDialog/DisplayDialogVBox"]
+layout_mode = 2
+text = "Manual UI scale"
+
+[node name="UiScaleValueSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="DisplayActionRow" type="HBoxContainer" parent="DisplayDialog/DisplayDialogVBox"]
 layout_mode = 2
 
