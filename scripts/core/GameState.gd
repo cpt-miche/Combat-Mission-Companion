@@ -43,6 +43,7 @@ var map_rows: int = MapGridConfig.default_rows()
 var deployment_ai_debug: Dictionary = {}
 var operational_ai_debug: Dictionary = {}
 var operational_ai_state: Dictionary = {}
+var scout_intel_by_observer: Dictionary = {}
 var operational_ai_enabled: bool = false
 var ai_debug_enabled: bool = false
 var ai_debug_level: int = AIDebugTypes.DebugLevel.OFF
@@ -72,6 +73,7 @@ func reset() -> void:
 	deployment_ai_debug.clear()
 	operational_ai_debug.clear()
 	operational_ai_state.clear()
+	scout_intel_by_observer.clear()
 	operational_ai_enabled = false
 	ai_debug_enabled = false
 	ai_debug_level = AIDebugTypes.DebugLevel.OFF

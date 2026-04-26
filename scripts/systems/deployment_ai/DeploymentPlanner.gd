@@ -381,14 +381,44 @@ static func _support_stack_score(state: Dictionary, unit: Dictionary, hex_id: St
 	var stance := String(state["stackStanceByHex"].get(hex_id, "defense"))
 	var has_attack := bool(state["stackHasAttackByHex"].get(hex_id, false))
 	var role := String(unit.get("role", ""))
+	var base_priority := float(state["priorities"].get(hex_id, 0.0))
 	var role_bonus := 0.0
 	if role == DeploymentTypes.ROLE_RECON:
 		role_bonus = 1.0 if stance == "attack" else 0.6
+		var scout_coverage := _expected_scout_coverage_score(state, hex_id, 3)
+		var critical_penalty := _critical_sector_low_intel_penalty(state, hex_id, 3)
+		return base_priority + role_bonus + scout_coverage - critical_penalty
 	elif role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT:
 		role_bonus = -2.0 if has_attack else (1.0 if stance == "defense" else 0.6)
 	elif role == DeploymentTypes.ROLE_WEAPONS:
 		role_bonus = 0.8
-	return float(state["priorities"].get(hex_id, 0.0)) + role_bonus
+	return base_priority + role_bonus
+
+static func _expected_scout_coverage_score(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
+	var anchor := (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
+	var importance_sum := 0.0
+	for frontline_hex in (state["frontline"] as Dictionary).keys():
+		var enemy_hex_id := String(frontline_hex)
+		var enemy_coords := (state["hexCoords"] as Dictionary).get(enemy_hex_id, Vector2i.ZERO) as Vector2i
+		var distance := int((abs(anchor.x - enemy_coords.x) + abs(anchor.x + anchor.y - enemy_coords.x - enemy_coords.y) + abs(anchor.y - enemy_coords.y)) / 2)
+		if distance > 1:
+			continue
+		importance_sum += float(state["priorities"].get(enemy_hex_id, 0.0))
+	return float(expected_floor) * importance_sum
+
+static func _critical_sector_low_intel_penalty(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
+	var anchor := (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
+	var penalty := 0.0
+	for frontline_hex in (state["frontline"] as Dictionary).keys():
+		var enemy_hex_id := String(frontline_hex)
+		var enemy_coords := (state["hexCoords"] as Dictionary).get(enemy_hex_id, Vector2i.ZERO) as Vector2i
+		var distance := int((abs(anchor.x - enemy_coords.x) + abs(anchor.x + anchor.y - enemy_coords.x - enemy_coords.y) + abs(anchor.y - enemy_coords.y)) / 2)
+		if distance > 1:
+			continue
+		var importance := float(state["priorities"].get(enemy_hex_id, 0.0))
+		if importance >= 0.75 and expected_floor < 3:
+			penalty += 2.0 * importance
+	return penalty
 
 static func _frontline_coverage_from(hex_id: String, state: Dictionary) -> int:
 	var coverage := 0

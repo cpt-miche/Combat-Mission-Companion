@@ -22,6 +22,23 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		turn_trace["rng_seed"] = rng_seed
 	var rng := RandomNumberGenerator.new()
 	rng.seed = rng_seed
+	var order_list: Array[Dictionary] = []
+	for order in orders.values():
+		if typeof(order) == TYPE_DICTIONARY:
+			order_list.append(order)
+	order_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return _initiative_score(a, units) > _initiative_score(b, units)
+	)
+	var active_owner := _resolve_active_owner(order_list, units, int(trace_context.get("active_owner", 0)))
+	var prior_scout_intel_by_observer := trace_context.get("scout_intel_by_observer", {}) as Dictionary
+	if prior_scout_intel_by_observer == null:
+		prior_scout_intel_by_observer = {}
+	var prior_owner_intel := prior_scout_intel_by_observer.get(str(active_owner), {}) as Dictionary
+	if prior_owner_intel == null:
+		prior_owner_intel = {}
+	var updated_owner_intel := ReconSystem.resolve_turn_start_intel(units, active_owner, prior_owner_intel, rng)
+	var updated_scout_intel_by_observer := prior_scout_intel_by_observer.duplicate(true)
+	updated_scout_intel_by_observer[str(active_owner)] = updated_owner_intel
 	_add_trace_event(trace_events, turn_trace, "rng_initialized", {
 		"rng_seed": rng_seed,
 		"rng_state": str(rng.state)
@@ -32,14 +49,6 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		"reason": String(operational_result.get("reason", "")),
 		"ok": bool(operational_result.get("ok", false))
 	})
-
-	var order_list: Array[Dictionary] = []
-	for order in orders.values():
-		if typeof(order) == TYPE_DICTIONARY:
-			order_list.append(order)
-	order_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return _initiative_score(a, units) > _initiative_score(b, units)
-	)
 
 	for order in order_list:
 		var unit_id := String(order.get("unit_id", ""))
@@ -114,7 +123,7 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 				})
 				continue
 
-			var recon := ReconSystem.resolve_recon(unit_state, target)
+			var recon := ReconSystem.resolve_recon(unit_state, target, 0, rng)
 			known_enemy_units.append(target_id)
 			var rng_state_before := str(rng.state)
 			var enemy_losses := rng.randi_range(1, 12)
@@ -159,9 +168,19 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		"trace_id": String(turn_trace.get("trace_id", "")),
 		"session_id": String(turn_trace.get("session_id", "")),
 		"rng_seed": rng_seed,
+		"scout_intel_by_observer": updated_scout_intel_by_observer,
 		"trace_events": trace_events,
 		"trace_anomalies": trace_anomalies
 	}
+
+static func _resolve_active_owner(order_list: Array[Dictionary], units: Dictionary, fallback_owner: int = 0) -> int:
+	for order in order_list:
+		var unit_id := String(order.get("unit_id", ""))
+		if unit_id.is_empty() or not units.has(unit_id):
+			continue
+		var unit_state := units[unit_id] as Dictionary
+		return int(unit_state.get("owner", 0))
+	return fallback_owner
 
 static func _initiative_score(order: Dictionary, units: Dictionary) -> int:
 	var unit := units.get(order.get("unit_id", ""), {}) as Dictionary
