@@ -424,21 +424,21 @@
       "default_veterancy": "REGULAR",
       "children": [
         {
-          "id": "usa_16th_infantry_regiment",
-          "display_name": "16th Infantry Regiment",
+          "id": "usa_division_inf_regiment_1",
+          "display_name": "Infantry Regiment",
           "type": "INFANTRY",
           "size": "REGIMENT",
           "count": 1,
           "children": [
             {
-              "id": "usa_16th_inf_1st_bn",
-              "display_name": "1st Battalion",
+              "id": "usa_division_inf_regiment_1_bn_1",
+              "display_name": "Infantry Battalion",
               "type": "INFANTRY",
               "size": "BATTALION",
               "count": 1,
               "children": [
                 {
-                  "id": "usa_16th_inf_1st_bn_hq_co",
+                  "id": "usa_division_inf_regiment_1_bn_1_hq_co",
                   "display_name": "Headquarters Company",
                   "type": "HEADQUARTERS",
                   "size": "COMPANY",
@@ -446,7 +446,7 @@
                   "children": []
                 },
                 {
-                  "id": "usa_16th_inf_1st_bn_rifle_co",
+                  "id": "usa_division_inf_regiment_1_bn_1_rifle_co",
                   "display_name": "Rifle Company",
                   "type": "INFANTRY",
                   "size": "COMPANY",
@@ -456,14 +456,14 @@
               ]
             },
             {
-              "id": "usa_16th_inf_2nd_bn",
-              "display_name": "2nd Battalion",
+              "id": "usa_division_inf_regiment_1_bn_2",
+              "display_name": "Infantry Battalion",
               "type": "INFANTRY",
               "size": "BATTALION",
               "count": 1,
               "children": [
                 {
-                  "id": "usa_16th_inf_2nd_bn_hq_co",
+                  "id": "usa_division_inf_regiment_1_bn_2_hq_co",
                   "display_name": "Headquarters Company",
                   "type": "HEADQUARTERS",
                   "size": "COMPANY",
@@ -471,7 +471,7 @@
                   "children": []
                 },
                 {
-                  "id": "usa_16th_inf_2nd_bn_rifle_co",
+                  "id": "usa_division_inf_regiment_1_bn_2_rifle_co",
                   "display_name": "Rifle Company",
                   "type": "INFANTRY",
                   "size": "COMPANY",
@@ -483,21 +483,21 @@
           ]
         },
         {
-          "id": "usa_18th_infantry_regiment",
-          "display_name": "18th Infantry Regiment",
+          "id": "usa_division_inf_regiment_2",
+          "display_name": "Infantry Regiment",
           "type": "INFANTRY",
           "size": "REGIMENT",
           "count": 1,
           "children": [
             {
-              "id": "usa_18th_inf_1st_bn",
-              "display_name": "1st Battalion",
+              "id": "usa_division_inf_regiment_2_bn_1",
+              "display_name": "Infantry Battalion",
               "type": "INFANTRY",
               "size": "BATTALION",
               "count": 1,
               "children": [
                 {
-                  "id": "usa_18th_inf_1st_bn_hq_co",
+                  "id": "usa_division_inf_regiment_2_bn_1_hq_co",
                   "display_name": "Headquarters Company",
                   "type": "HEADQUARTERS",
                   "size": "COMPANY",
@@ -505,7 +505,7 @@
                   "children": []
                 },
                 {
-                  "id": "usa_18th_inf_1st_bn_rifle_co",
+                  "id": "usa_division_inf_regiment_2_bn_1_rifle_co",
                   "display_name": "Rifle Company",
                   "type": "INFANTRY",
                   "size": "COMPANY",
