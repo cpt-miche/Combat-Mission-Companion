@@ -70,7 +70,7 @@ static func _capture_timestamp_unix() -> int:
 func _should_drop_event(trace: Dictionary, payload: Dictionary) -> bool:
 	var event_level: int = int(payload.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
 	var trace_level: int = int(trace.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
-	return event_level == AIDebugTypes.DebugLevel.VERBOSE and trace_level != AIDebugTypes.DebugLevel.VERBOSE
+	return trace_level < event_level
 
 
 func _normalize_event_shape(event_type: String, payload: Dictionary) -> Dictionary:
