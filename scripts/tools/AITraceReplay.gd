@@ -30,15 +30,16 @@ static func replay_trace(trace: Dictionary) -> Dictionary:
 		return reconstruction
 
 	var tracer_events: Array[Dictionary] = []
+	var options: Dictionary = {
+		"objectiveMode": String(reconstruction.get("objectiveMode", "mixed_split")),
+		"traceEventCallback": func(event_type: String, payload: Dictionary) -> void:
+			tracer_events.append(_normalize_event_for_compare(event_type, payload))
+	}
 	var plan := DeploymentPlanner.create_plan(
 		reconstruction.get("elements", []) as Array[Dictionary],
 		reconstruction.get("hexes", []) as Array[Dictionary],
 		reconstruction.get("sectorModel", {}) as Dictionary,
-		{
-			"objectiveMode": String(reconstruction.get("objectiveMode", "mixed_split")),
-			"traceEventCallback": func(event_type: String, payload: Dictionary) -> void:
-				tracer_events.append(_normalize_event_for_compare(event_type, payload))
-		}
+		options
 	)
 
 	var expected_events := _normalize_events_from_trace(trace)
