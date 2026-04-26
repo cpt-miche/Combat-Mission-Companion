@@ -26,6 +26,7 @@ var _pre_apply_display_settings := {
 	"preset_id": DisplaySettings.DEFAULT_PRESET_ID,
 	"window_mode": DisplaySettings.DEFAULT_WINDOW_MODE
 }
+var _has_pending_display_revert := false
 
 func _ready() -> void:
 	play_button.pressed.connect(_on_play_pressed)
@@ -204,15 +205,22 @@ func _refresh_display_state_from_runtime() -> void:
 		"preset_id": DisplaySettings.get_selected_preset_id(),
 		"window_mode": DisplaySettings.get_selected_window_mode()
 	}
-	_pre_apply_display_settings = _last_applied_display_settings.duplicate(true)
+	if not _has_pending_display_revert:
+		_pre_apply_display_settings = _last_applied_display_settings.duplicate(true)
 	_select_resolution_in_ui(String(_last_applied_display_settings.get("preset_id", DisplaySettings.DEFAULT_PRESET_ID)))
 	var mode := String(_last_applied_display_settings.get("window_mode", DisplaySettings.DEFAULT_WINDOW_MODE))
 	window_mode_toggle.button_pressed = mode == DisplaySettings.WINDOW_MODE_FULLSCREEN
-	revert_display_button.disabled = true
+	revert_display_button.disabled = not _has_pending_display_revert
 	display_status_label.text = ""
 
 func _on_display_pressed() -> void:
-	_refresh_display_state_from_runtime()
+	if _has_pending_display_revert:
+		_select_resolution_in_ui(String(_last_applied_display_settings.get("preset_id", DisplaySettings.DEFAULT_PRESET_ID)))
+		var mode := String(_last_applied_display_settings.get("window_mode", DisplaySettings.DEFAULT_WINDOW_MODE))
+		window_mode_toggle.button_pressed = mode == DisplaySettings.WINDOW_MODE_FULLSCREEN
+		revert_display_button.disabled = false
+	else:
+		_refresh_display_state_from_runtime()
 	display_dialog.popup_centered()
 
 func _on_apply_display_settings_pressed() -> void:
@@ -229,6 +237,7 @@ func _on_apply_display_settings_pressed() -> void:
 	}
 	_select_resolution_in_ui(applied_preset_id)
 	window_mode_toggle.button_pressed = applied_mode == DisplaySettings.WINDOW_MODE_FULLSCREEN
+	_has_pending_display_revert = true
 	revert_display_button.disabled = false
 	if fallback_used:
 		display_status_label.text = "Applied with fallback: %s, %s mode." % [applied_preset_id.to_upper(), applied_mode]
@@ -245,12 +254,13 @@ func _on_revert_display_pressed() -> void:
 	}
 	_select_resolution_in_ui(String(applied.get("preset_id", DisplaySettings.DEFAULT_PRESET_ID)))
 	window_mode_toggle.button_pressed = String(applied.get("window_mode", DisplaySettings.DEFAULT_WINDOW_MODE)) == DisplaySettings.WINDOW_MODE_FULLSCREEN
+	_has_pending_display_revert = false
 	display_status_label.text = "Reverted to last applied settings."
 	revert_display_button.disabled = true
 
 func _on_display_dialog_closed() -> void:
 	display_status_label.text = ""
-	revert_display_button.disabled = true
+	revert_display_button.disabled = not _has_pending_display_revert
 
 func _selected_resolution_preset_id() -> String:
 	if resolution_selector.item_count == 0:
