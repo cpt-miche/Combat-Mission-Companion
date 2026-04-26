@@ -72,6 +72,7 @@ func _initialize_organization(default_nation: String = "") -> void:
 		default_nation = String(nation_selector.get_item_metadata(matching_index))
 
 	_root_unit = _create_unit("army_root", default_nation, UnitType.Value.HEADQUARTERS, UnitSize.Value.ARMY)
+	_assign_unit_names()
 	_selected_unit = _root_unit
 
 func _create_unit(template_id: String, nation: String, unit_type: UnitType.Value, unit_size: UnitSize.Value) -> UnitModel:
@@ -240,6 +241,7 @@ func _on_add_unit_pressed() -> void:
 	if added_roots.is_empty():
 		return
 
+	_assign_unit_names()
 	_selected_unit = added_roots[0]
 	_refresh_all()
 
@@ -364,7 +366,8 @@ func _insert_subtree_with_validation(parent: UnitModel, candidate: UnitModel) ->
 func _unit_label(unit: UnitModel) -> String:
 	if unit == null:
 		return "Unknown unit"
-	return "%s [%s]" % [UnitSize.display_name(unit.size), unit.template_id]
+	var label := unit.display_name if not unit.display_name.is_empty() else UnitSize.display_name(unit.size)
+	return "%s [%s]" % [label, unit.template_id]
 
 func _on_delete_button_pressed() -> void:
 	_delete_unit(_selected_unit)
@@ -379,6 +382,7 @@ func _delete_unit(unit: UnitModel) -> void:
 	if unit == null or unit == _root_unit:
 		return
 	if _remove_child_recursive(_root_unit, unit.id):
+		_assign_unit_names()
 		_selected_unit = _root_unit
 		_refresh_all()
 
@@ -406,6 +410,7 @@ func _move_unit(unit: UnitModel, new_parent: UnitModel) -> void:
 
 	current_parent.children.erase(unit)
 	new_parent.children.append(unit)
+	_assign_unit_names()
 	_selected_unit = unit
 	_refresh_all()
 
@@ -472,7 +477,8 @@ func _update_right_panel() -> void:
 		delete_button.disabled = true
 		return
 
-	selected_name_label.text = "%s (%s)" % [UnitSize.display_name(_selected_unit.size), _selected_unit.id]
+	var selected_display := _selected_unit.display_name if not _selected_unit.display_name.is_empty() else UnitSize.display_name(_selected_unit.size)
+	selected_name_label.text = selected_display
 	selected_meta_label.text = "Type: %s\nNation: %s\nChildren: %d" % [
 		UnitType.display_name(_selected_unit.type),
 		_selected_unit.nation,
@@ -614,6 +620,8 @@ func _unit_to_dict(unit: UnitModel) -> Dictionary:
 	return {
 		"id": unit.id,
 		"template_id": unit.template_id,
+		"display_name": unit.display_name,
+		"short_name": unit.short_name,
 		"nation": unit.nation,
 		"type": int(unit.type),
 		"size": _serialize_unit_size(unit.size),
@@ -649,6 +657,8 @@ func _dict_to_unit(data: Variant) -> UnitModel:
 	var unit := UnitModel.new()
 	unit.id = String(raw.get("id", ""))
 	unit.template_id = String(raw.get("template_id", ""))
+	unit.display_name = String(raw.get("display_name", ""))
+	unit.short_name = String(raw.get("short_name", ""))
 	unit.nation = String(raw.get("nation", ""))
 	unit.type = _parse_unit_type(raw.get("type", UnitType.Value.INFANTRY), raw)
 	var raw_size: Variant = raw.get("size", UnitSize.Value.PLATOON)
@@ -663,6 +673,107 @@ func _dict_to_unit(data: Variant) -> UnitModel:
 		if child != null:
 			unit.children.append(child)
 	return unit
+
+func _assign_unit_names() -> void:
+	if _root_unit == null:
+		return
+	_assign_unit_names_recursive(_root_unit, null)
+
+func _assign_unit_names_recursive(unit: UnitModel, parent: UnitModel) -> void:
+	if unit == null:
+		return
+
+	var sibling_index := 1
+	if parent != null:
+		var same_size_index := 0
+		for sibling in parent.children:
+			if sibling == null:
+				continue
+			if sibling.size == unit.size:
+				same_size_index += 1
+			if sibling == unit:
+				sibling_index = max(same_size_index, 1)
+				break
+
+	var names := _name_for_echelon(unit, sibling_index)
+	unit.display_name = String(names.get("display_name", "Unit"))
+	unit.short_name = String(names.get("short_name", ""))
+
+	for child in unit.children:
+		_assign_unit_names_recursive(child, unit)
+
+func _name_for_echelon(unit: UnitModel, sibling_index: int) -> Dictionary:
+	var nth := _ordinal(sibling_index)
+	var size := unit.size
+	var type_label := UnitType.display_name(unit.type)
+	match size:
+		UnitSize.Value.ARMY:
+			return {
+				"display_name": "Field Army HQ",
+				"short_name": "Army HQ"
+			}
+		UnitSize.Value.DIVISION:
+			return {
+				"display_name": "%s %s Division" % [nth, type_label],
+				"short_name": "%s Div" % nth
+			}
+		UnitSize.Value.REGIMENT:
+			return {
+				"display_name": "%s Regiment" % nth,
+				"short_name": "%s Regt" % nth
+			}
+		UnitSize.Value.BATTALION:
+			return {
+				"display_name": "%s Battalion" % nth,
+				"short_name": "%s BN" % nth
+			}
+		UnitSize.Value.COMPANY:
+			var company_callsigns := ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel"]
+			var callsign := company_callsigns[(sibling_index - 1) % company_callsigns.size()]
+			return {
+				"display_name": "%s Company" % callsign,
+				"short_name": "%s Co" % callsign.substr(0, 1)
+			}
+		UnitSize.Value.PLATOON:
+			return {
+				"display_name": "%s Platoon" % nth,
+				"short_name": "%s PLT" % nth
+			}
+		UnitSize.Value.SECTION:
+			var is_weapons := unit.type == UnitType.Value.ARTILLERY or unit.type == UnitType.Value.ANTI_TANK or unit.type == UnitType.Value.AIR_DEFENSE
+			if is_weapons:
+				return {
+					"display_name": "Weapons Section",
+					"short_name": "Wpns Sec"
+				}
+			return {
+				"display_name": "%s Section" % nth,
+				"short_name": "%s Sec" % nth
+			}
+		UnitSize.Value.SQUAD:
+			return {
+				"display_name": "%s Squad" % nth,
+				"short_name": "%s SQD" % nth
+			}
+		_:
+			return {
+				"display_name": "%s %s" % [nth, UnitSize.display_name(size)],
+				"short_name": "%s" % nth
+			}
+
+func _ordinal(value: int) -> String:
+	var positive_value := maxi(value, 1)
+	var remainder_hundred := positive_value % 100
+	var suffix := "th"
+	if remainder_hundred < 11 or remainder_hundred > 13:
+		match positive_value % 10:
+			1:
+				suffix = "st"
+			2:
+				suffix = "nd"
+			3:
+				suffix = "rd"
+	return "%d%s" % [positive_value, suffix]
 
 func _next_id_from_tree(root: UnitModel) -> int:
 	return _collect_highest_id(root, 0) + 1
