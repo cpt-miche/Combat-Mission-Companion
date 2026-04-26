@@ -143,6 +143,7 @@ static func _stage_a_allocate_combat_anchors(state: Dictionary, objective_mode: 
 		_commit_combat_placement(state, unit, hex_id, stance)
 		var stage_reason := _reason_stage_a(unit, hex_id, stance, state)
 		var order := _make_order(unit, hex_id, "A", stance, stage_reason["reason"], stage_reason["reason_code"])
+		order["reason_meta"] = stage_reason.get("meta", {})
 		orders.append(order)
 		_emit_order_committed(state, "A", unit, hex_id, order)
 		committed += 1
@@ -171,7 +172,14 @@ static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]
 		var placed := false
 		for hex_id in ranked_stacks:
 			var candidate_score := _support_stack_score(state, unit, hex_id)
-			_emit_candidate_scored(state, "B", unit, hex_id, candidate_score, "support_stack_score", "Stage B: scored support attachment candidate.")
+			var candidate_meta := {}
+			if role == DeploymentTypes.ROLE_RECON:
+				var expected_floor := _expected_intel_floor_for_role(role, false)
+				candidate_meta = {
+					"expectedIntelFloor": expected_floor,
+					"intelComponents": _intel_score_components(state, hex_id, expected_floor)
+				}
+			_emit_candidate_scored(state, "B", unit, hex_id, candidate_score, "support_stack_score", "Stage B: scored support attachment candidate.", candidate_meta)
 			if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT and bool(state["stackHasAttackByHex"].get(hex_id, false)):
 				_emit_candidate_rejected(state, "B", unit, hex_id, "anti_tank_attack_stack_blocked", "Stage B: anti-tank support cannot attach to attack stack.", candidate_score)
 				continue
@@ -182,6 +190,7 @@ static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]
 			var stance := "defense" if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT else String(state["stackStanceByHex"].get(hex_id, "support"))
 			var stage_reason := _reason_stage_b(unit, hex_id, state)
 			var order := _make_order(unit, hex_id, "B", stance, stage_reason["reason"], stage_reason["reason_code"])
+			order["reason_meta"] = stage_reason.get("meta", {})
 			orders.append(order)
 			_emit_order_committed(state, "B", unit, hex_id, order)
 			committed += 1
@@ -347,14 +356,34 @@ static func _fallback_ranked_hexes(state: Dictionary) -> Array[String]:
 
 static func _first_legal_combat_hex(state: Dictionary, unit: Dictionary, candidates: Array[String], start_index: int, stage: String, stance: String) -> Dictionary:
 	var cost := _combat_cost(unit)
+	var expected_floor := _expected_intel_floor_for_role(String(unit.get("role", "")), true)
+	var best_hex_id := ""
+	var best_next_index := -1
+	var best_score := -INF
+	var best_score_components := {}
 	for i in range(start_index, candidates.size()):
 		var hex_id := candidates[i]
-		var score := float(state["priorities"].get(hex_id, 0.0))
-		_emit_candidate_scored(state, stage, unit, hex_id, score, "combat_anchor_priority_score", "Stage A: scored combat anchor candidate.", {"stance": stance, "combatCost": cost})
+		var base_priority := float(state["priorities"].get(hex_id, 0.0))
+		var intel_components := _intel_score_components(state, hex_id, expected_floor)
+		var score := base_priority + float(intel_components.get("total", 0.0))
+		_emit_candidate_scored(state, stage, unit, hex_id, score, "combat_anchor_priority_score", "Stage A: scored combat anchor candidate.", {
+			"stance": stance,
+			"combatCost": cost,
+			"basePriority": base_priority,
+			"expectedIntelFloor": expected_floor,
+			"intelComponents": intel_components
+		})
 		if _can_place_combat(state, hex_id, cost):
-			return {"hexId": hex_id, "nextIndex": i + 1}
+			if best_hex_id == "" or score > best_score:
+				best_hex_id = hex_id
+				best_next_index = i + 1
+				best_score = score
+				best_score_components = {"basePriority": base_priority, "expectedIntelFloor": expected_floor, "intelComponents": intel_components}
+			continue
 		_emit_candidate_rejected(state, stage, unit, hex_id, "combat_capacity_exceeded", "Stage A: candidate exceeded combat stack cap.", score, {"stance": stance, "combatCost": cost})
-	return {}
+	if best_hex_id == "":
+		return {}
+	return {"hexId": best_hex_id, "nextIndex": best_next_index, "scoreComponents": best_score_components}
 
 static func _commit_combat_placement(state: Dictionary, unit: Dictionary, hex_id: String, stance: String) -> void:
 	var cost := _combat_cost(unit)
@@ -385,16 +414,22 @@ static func _support_stack_score(state: Dictionary, unit: Dictionary, hex_id: St
 	var role_bonus := 0.0
 	if role == DeploymentTypes.ROLE_RECON:
 		role_bonus = 1.0 if stance == "attack" else 0.6
-		var scout_coverage := _expected_scout_coverage_score(state, hex_id, 3)
-		var critical_penalty := _critical_sector_low_intel_penalty(state, hex_id, 3)
-		return base_priority + role_bonus + scout_coverage - critical_penalty
+		var intel_components := _intel_score_components(state, hex_id, _expected_intel_floor_for_role(role, false))
+		return base_priority + role_bonus + float(intel_components.get("total", 0.0))
 	elif role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT:
 		role_bonus = -2.0 if has_attack else (1.0 if stance == "defense" else 0.6)
 	elif role == DeploymentTypes.ROLE_WEAPONS:
 		role_bonus = 0.8
 	return base_priority + role_bonus
 
-static func _expected_scout_coverage_score(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
+static func _expected_intel_floor_for_role(role: String, is_combat: bool = false) -> int:
+	if is_combat:
+		return 1
+	if role == DeploymentTypes.ROLE_RECON:
+		return 3
+	return 1
+
+static func _adjacent_enemy_importance(state: Dictionary, anchor_hex_id: String) -> float:
 	var anchor := (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
 	var importance_sum := 0.0
 	for frontline_hex in (state["frontline"] as Dictionary).keys():
@@ -404,11 +439,11 @@ static func _expected_scout_coverage_score(state: Dictionary, anchor_hex_id: Str
 		if distance > 1:
 			continue
 		importance_sum += float(state["priorities"].get(enemy_hex_id, 0.0))
-	return float(expected_floor) * importance_sum
+	return importance_sum
 
-static func _critical_sector_low_intel_penalty(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
+static func _critical_adjacent_importance(state: Dictionary, anchor_hex_id: String) -> float:
 	var anchor := (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
-	var penalty := 0.0
+	var importance_sum := 0.0
 	for frontline_hex in (state["frontline"] as Dictionary).keys():
 		var enemy_hex_id := String(frontline_hex)
 		var enemy_coords := (state["hexCoords"] as Dictionary).get(enemy_hex_id, Vector2i.ZERO) as Vector2i
@@ -416,9 +451,40 @@ static func _critical_sector_low_intel_penalty(state: Dictionary, anchor_hex_id:
 		if distance > 1:
 			continue
 		var importance := float(state["priorities"].get(enemy_hex_id, 0.0))
-		if importance >= 0.75 and expected_floor < 3:
-			penalty += 2.0 * importance
-	return penalty
+		if importance >= 0.75:
+			importance_sum += importance
+	return importance_sum
+
+static func _expected_scout_coverage_score(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
+	var importance_sum := _adjacent_enemy_importance(state, anchor_hex_id)
+	return float(expected_floor) * importance_sum
+
+static func _critical_sector_low_intel_penalty(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
+	var critical_importance := _critical_adjacent_importance(state, anchor_hex_id)
+	if expected_floor >= 3:
+		return 0.0
+	return 2.0 * critical_importance
+
+static func _uncertainty_reduction_score(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
+	if expected_floor <= 1:
+		return 0.0
+	var importance_sum := _adjacent_enemy_importance(state, anchor_hex_id)
+	return float(expected_floor - 1) * importance_sum
+
+static func _intel_score_components(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> Dictionary:
+	var objective_importance := _adjacent_enemy_importance(state, anchor_hex_id)
+	var sector_importance := _critical_adjacent_importance(state, anchor_hex_id)
+	var floor_effect := _expected_scout_coverage_score(state, anchor_hex_id, expected_floor)
+	var uncertainty_reduction := _uncertainty_reduction_score(state, anchor_hex_id, expected_floor)
+	var critical_penalty := _critical_sector_low_intel_penalty(state, anchor_hex_id, expected_floor)
+	return {
+		"objectiveImportance": objective_importance,
+		"sectorImportance": sector_importance,
+		"expectedIntelFloorEffect": floor_effect,
+		"uncertaintyReduction": uncertainty_reduction,
+		"criticalLowIntelPenalty": critical_penalty,
+		"total": floor_effect + uncertainty_reduction - critical_penalty
+	}
 
 static func _frontline_coverage_from(hex_id: String, state: Dictionary) -> int:
 	var coverage := 0
@@ -486,7 +552,8 @@ static func _make_order(unit: Dictionary, to_hex_id: String, stage: String, role
 		"role": role,
 		"reason": reason,
 		"reason_code": reason_code,
-		"score": _stage_weight(stage)
+		"score": _stage_weight(stage),
+		"reason_meta": {}
 	}
 
 static func _stage_weight(stage: String) -> float:
@@ -504,16 +571,26 @@ static func _stage_weight(stage: String) -> float:
 
 static func _reason_stage_a(unit: Dictionary, hex_id: String, stance: String, state: Dictionary) -> Dictionary:
 	var p := float(state["priorities"].get(hex_id, 0.0))
+	var expected_floor := _expected_intel_floor_for_role(String(unit.get("role", "")), true)
+	var intel_components := _intel_score_components(state, hex_id, expected_floor)
 	return {
-		"reason": "Stage A: allocated combat anchor (%s) to priority sector %s (priority %.2f) while respecting combat cap %d." % [stance, hex_id, p, MAX_COMBAT_CAPACITY],
-		"reason_code": "combat_anchor_allocated"
+		"reason": "Stage A: allocated combat anchor (%s) to %s (priority %.2f) with intel floor %d, objective importance %.2f, uncertainty reduction %.2f, and combat cap %d." % [stance, hex_id, p, expected_floor, float(intel_components.get("objectiveImportance", 0.0)), float(intel_components.get("uncertaintyReduction", 0.0)), MAX_COMBAT_CAPACITY],
+		"reason_code": "combat_anchor_allocated",
+		"meta": {"basePriority": p, "expectedIntelFloor": expected_floor, "intelComponents": intel_components}
 	}
 
 static func _reason_stage_b(unit: Dictionary, hex_id: String, state: Dictionary) -> Dictionary:
 	var support_now := int(state["supportLoad"].get(hex_id, 0))
+	var role := String(unit.get("role", "support"))
+	var meta := {"supportSlotsNow": support_now, "supportCapacity": MAX_SUPPORT_CAPACITY}
+	if role == DeploymentTypes.ROLE_RECON:
+		var expected_floor := _expected_intel_floor_for_role(role, false)
+		meta["expectedIntelFloor"] = expected_floor
+		meta["intelComponents"] = _intel_score_components(state, hex_id, expected_floor)
 	return {
-		"reason": "Stage B: attached %s to combat stack at %s; support slots now %d/%d." % [String(unit.get("role", "support")), hex_id, support_now, MAX_SUPPORT_CAPACITY],
-		"reason_code": "support_attached_to_stack"
+		"reason": "Stage B: attached %s to combat stack at %s; support slots now %d/%d." % [role, hex_id, support_now, MAX_SUPPORT_CAPACITY],
+		"reason_code": "support_attached_to_stack",
+		"meta": meta
 	}
 
 static func _reason_stage_c(hex_id: String, state: Dictionary) -> Dictionary:
@@ -549,16 +626,18 @@ static func _emit_candidate_rejected(state: Dictionary, stage: String, unit: Dic
 	_emit_trace_event(state, "candidate_rejected", stage, {"reason_code": reason_code, "reason_text": reason_text, "score": score, "meta": event_meta})
 
 static func _emit_order_committed(state: Dictionary, stage: String, unit: Dictionary, hex_id: String, order: Dictionary) -> void:
+	var order_meta := {}
+	if order.get("reason_meta", null) is Dictionary:
+		order_meta = (order.get("reason_meta", {}) as Dictionary).duplicate(true)
+	order_meta["unitId"] = String(unit.get("id", ""))
+	order_meta["candidateId"] = hex_id
+	order_meta["orderId"] = String(order.get("id", ""))
+	order_meta["role"] = String(order.get("role", ""))
 	_emit_trace_event(state, "order_committed", stage, {
 		"reason_code": String(order.get("reason_code", "")),
 		"reason_text": String(order.get("reason", "")),
 		"score": float(order.get("score", 0.0)),
-		"meta": {
-			"unitId": String(unit.get("id", "")),
-			"candidateId": hex_id,
-			"orderId": String(order.get("id", "")),
-			"role": String(order.get("role", ""))
-		}
+		"meta": order_meta
 	})
 
 static func _emit_trace_event(state: Dictionary, event_type: String, stage: String, payload: Dictionary) -> void:
