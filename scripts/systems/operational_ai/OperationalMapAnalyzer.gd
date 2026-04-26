@@ -77,8 +77,8 @@ static func _compute_frontline_hexes(territory_map: Dictionary, ai_owned: Dictio
 				break
 	return frontline
 
-static func _group_connected_components(ai_owned: Dictionary, adjacency_map: Dictionary) -> Array[Array[String]]:
-	var components: Array[Array[String]] = []
+static func _group_connected_components(ai_owned: Dictionary, adjacency_map: Dictionary) -> Array:
+	var components: Array = []
 	var visited := {}
 	for hex_id in _to_sorted_array(ai_owned):
 		if visited.has(hex_id):
@@ -132,7 +132,7 @@ static func _build_adjacency_map(known_hexes: Dictionary) -> Dictionary:
 	for key_variant in known_hexes.keys():
 		var hex_id := String(key_variant)
 		var parsed_hex: Variant = _parse_hex_id(hex_id)
-		if not parsed_hex is Vector2i:
+		if not (parsed_hex is Vector2i):
 			continue
 		for offset in DeploymentDataConverter.HEX_NEIGHBOR_OFFSETS:
 			var neighbor_id := _hex_id((parsed_hex as Vector2i) + offset)
