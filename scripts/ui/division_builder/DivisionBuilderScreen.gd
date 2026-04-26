@@ -562,7 +562,7 @@ func _ensure_players_initialized() -> void:
 			GameState.players[i]["controller"] = "human"
 
 func _reset_builder_for_next_player() -> void:
-	_id_counter = 1
+	# Keep IDs globally unique across both sides so gameplay deployment dictionaries do not collide.
 	_pending_unit_data.clear()
 	_initialize_organization(_default_nation_for_builder_player(_builder_player_index))
 	_refresh_all()
