@@ -43,7 +43,8 @@
         "collection": "recommendedIntents",
         "field": "id",
         "expectedOrder": [
-          "advisory_attack_adj_critical_1_requestRecon"
+          "requestRecon_attack_adj_critical_1",
+          "delay_critical_uncertain"
         ]
       }
     ]
