@@ -92,6 +92,7 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 	var enemy_owner := _territory_owner_for_player(enemy_player_index)
 	var sector_map: Array[Dictionary] = OperationalMapAnalyzer.analyze(GameState.territory_map, ai_owner, enemy_owner)
 	var units_by_hex := _units_by_hex()
+	var observer_intel := _observer_intel_for_player(ai_player_index, ai_owner)
 
 	var threats: Array[Dictionary] = []
 	var breakthroughs: Array[Dictionary] = []
@@ -108,6 +109,7 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 		var enemy_adjacent_count := 0
 		var enemy_strength := 0.0
 		var friendly_strength := 0.0
+		var sector_adjacent_enemy_hexes := {}
 		for hex_id_variant in frontline:
 			var hex_id := String(hex_id_variant)
 			var friendly_units := (units_by_hex.get(hex_id, {}) as Dictionary).get("friendly", []) as Array
@@ -115,6 +117,14 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 			var adjacent_enemies := _adjacent_enemy_units(hex_id, enemy_player_index, units_by_hex)
 			enemy_adjacent_count += adjacent_enemies.size()
 			enemy_strength += float(adjacent_enemies.size())
+			for enemy_hex_id in _adjacent_enemy_hex_ids(hex_id, enemy_player_index, units_by_hex):
+				sector_adjacent_enemy_hexes[String(enemy_hex_id)] = true
+
+		var sector_enemy_hex_ids: Array[String] = []
+		for enemy_hex_id in sector_adjacent_enemy_hexes.keys():
+			sector_enemy_hex_ids.append(String(enemy_hex_id))
+		sector_enemy_hex_ids.sort()
+		var sector_intel := _intel_metrics_for_enemy_hexes(sector_enemy_hex_ids, observer_intel)
 
 		var total_line_cells: int = max(1, frontline.size())
 		var pressure: float = clamp(float(enemy_adjacent_count) / float(total_line_cells * 3), 0.0, 1.0)
@@ -130,8 +140,9 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 			"defensibility": clamp(1.0 - pressure, 0.0, 1.0),
 			"recentEnemyAdvance": 0.0,
 			"support": clamp((readiness + supply) * 0.5, 0.0, 1.0),
-			"enemyObservedConfidence": 1.0,
-			"intelCoverage": 1.0
+			"enemyObservedConfidence": float(sector_intel.get("confidence", 0.0)),
+			"intelCoverage": float(sector_intel.get("coverage", 0.0)),
+			"scoutUncertainty": float(sector_intel.get("uncertainty", 0.0))
 		})
 
 		threats.append({
@@ -161,6 +172,9 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 			var adjacent_enemies := _adjacent_enemy_units(hex_id, enemy_player_index, units_by_hex)
 			if adjacent_enemies.is_empty():
 				continue
+			var adjacent_enemy_hex_ids := _adjacent_enemy_hex_ids(hex_id, enemy_player_index, units_by_hex)
+			adjacent_enemy_hex_ids.sort()
+			var adjacent_intel := _intel_metrics_for_enemy_hexes(adjacent_enemy_hex_ids, observer_intel)
 			enemy_adjacent.append({
 				"id": "adjacent_%s" % hex_id,
 				"hexId": hex_id,
@@ -169,7 +183,8 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 				"enemyWeaknessEstimate": clamp(1.0 - (float(adjacent_enemies.size()) / 4.0), 0.0, 1.0),
 				"localFriendlyPower": clamp(float(((units_by_hex.get(hex_id, {}) as Dictionary).get("friendly", []) as Array).size()) / 4.0, 0.0, 1.0),
 				"artillerySupport": 0.5,
-				"reconSupport": 0.5,
+				"reconSupport": float(adjacent_intel.get("confidence", 0.0)),
+				"scoutUncertainty": float(adjacent_intel.get("uncertainty", 0.0)),
 				"terrainSuitability": 0.5,
 				"defensiveCoherenceRisk": clamp(pressure, 0.0, 1.0),
 				"overextensionRisk": clamp(pressure * 0.7, 0.0, 1.0)
@@ -191,6 +206,63 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 			"featureFlag": bool(GameState.operational_ai_enabled)
 		}
 	}
+
+
+static func _observer_intel_for_player(ai_player_index: int, ai_owner: int) -> Dictionary:
+	var by_observer: Dictionary = GameState.scout_intel_by_observer
+	if by_observer == null:
+		return {}
+	var owner_key := str(ai_owner)
+	if by_observer.has(owner_key) and by_observer[owner_key] is Dictionary:
+		return (by_observer[owner_key] as Dictionary).duplicate(true)
+	var player_key := str(ai_player_index)
+	if by_observer.has(player_key) and by_observer[player_key] is Dictionary:
+		return (by_observer[player_key] as Dictionary).duplicate(true)
+	return {}
+
+static func _adjacent_enemy_hex_ids(hex_id: String, enemy_player_index: int, units_by_hex: Dictionary) -> Array[String]:
+	var result_map := {}
+	var parsed: Variant = _parse_hex_id(hex_id)
+	if not parsed is Vector2i:
+		return []
+	for offset in [Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)]:
+		var neighbor: Vector2i = (parsed as Vector2i) + offset
+		var neighbor_id := "%d,%d" % [neighbor.x, neighbor.y]
+		if not units_by_hex.has(neighbor_id):
+			continue
+		var enemy_units := ((units_by_hex[neighbor_id] as Dictionary).get("enemy", []) as Array)
+		for unit_variant in enemy_units:
+			if typeof(unit_variant) != TYPE_DICTIONARY:
+				continue
+			if int((unit_variant as Dictionary).get("owner", -1)) == enemy_player_index:
+				result_map[neighbor_id] = true
+				break
+	var result: Array[String] = []
+	for enemy_hex_id in result_map.keys():
+		result.append(String(enemy_hex_id))
+	return result
+
+static func _intel_metrics_for_enemy_hexes(enemy_hex_ids: Array[String], observer_intel: Dictionary) -> Dictionary:
+	if enemy_hex_ids.is_empty():
+		return {"coverage": 1.0, "confidence": 1.0, "uncertainty": 0.0}
+	var observed_count := 0
+	var confidence_sum := 0.0
+	for enemy_hex_id in enemy_hex_ids:
+		var scout_level := _scout_level_for_enemy_hex(observer_intel, String(enemy_hex_id))
+		if scout_level > 0:
+			observed_count += 1
+		confidence_sum += float(scout_level) / 4.0
+	var total := float(max(1, enemy_hex_ids.size()))
+	var coverage := clamp(float(observed_count) / total, 0.0, 1.0)
+	var confidence := clamp(confidence_sum / total, 0.0, 1.0)
+	var uncertainty := clamp(1.0 - ((coverage + confidence) * 0.5), 0.0, 1.0)
+	return {"coverage": coverage, "confidence": confidence, "uncertainty": uncertainty}
+
+static func _scout_level_for_enemy_hex(observer_intel: Dictionary, enemy_hex_id: String) -> int:
+	var intel := observer_intel.get(enemy_hex_id, null)
+	if intel is Dictionary:
+		return int(clamp(int((intel as Dictionary).get("scoutLevel", 0)), 0, 4))
+	return 0
 
 static func _units_by_hex() -> Dictionary:
 	var by_hex := {}
