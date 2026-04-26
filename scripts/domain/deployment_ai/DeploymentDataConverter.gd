@@ -156,7 +156,9 @@ static func _flatten_formation_tree(node: Variant, output: Array[Dictionary], pa
 		String(unit.get("type", "infantry")),
 		String(unit.get("size", "company")),
 		parent_id,
-		child_ids
+		child_ids,
+		String(unit.get("status", "alive")).to_lower(),
+		bool(unit.get("is_alive", String(unit.get("status", "alive")).to_lower() != "dead"))
 	))
 
 	for child_variant in unit.get("children", []):
@@ -187,7 +189,9 @@ static func _flatten_deployable_elements(
 		planner_role_for(unit.get("type", "infantry")),
 		String(unit.get("size", "company")),
 		parent_id,
-		deployed_hex_id
+		deployed_hex_id,
+		String(unit.get("status", "alive")).to_lower(),
+		bool(unit.get("is_alive", String(unit.get("status", "alive")).to_lower() != "dead"))
 	))
 
 	for child_variant in unit.get("children", []):

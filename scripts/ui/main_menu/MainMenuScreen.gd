@@ -160,5 +160,10 @@ func _deserialize_units(serialized_units: Dictionary) -> Dictionary:
 		var unit := (serialized_units[unit_id] as Dictionary).duplicate(true)
 		var hex_payload := unit.get("hex", {}) as Dictionary
 		unit["hex"] = Vector2i(int(hex_payload.get("x", 0)), int(hex_payload.get("y", 0)))
+		var normalized_status := String(unit.get("status", "")).to_lower()
+		if normalized_status.is_empty():
+			normalized_status = "alive" if bool(unit.get("is_alive", true)) else "dead"
+		unit["status"] = normalized_status
+		unit["is_alive"] = bool(unit.get("is_alive", normalized_status != "dead"))
 		deserialized[unit_id] = unit
 	return deserialized

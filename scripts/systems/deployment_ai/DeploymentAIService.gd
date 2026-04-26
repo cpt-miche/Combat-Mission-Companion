@@ -234,6 +234,8 @@ static func _unit_snapshot_for(unit: Dictionary) -> Dictionary:
 		"name": String(unit.get("name", unit.get("id", "Unit"))),
 		"type": unit_type,
 		"size": unit_size,
+		"status": String(unit.get("status", "alive")).to_lower(),
+		"is_alive": bool(unit.get("is_alive", String(unit.get("status", "alive")).to_lower() != "dead")),
 		"size_rank": _size_rank(unit_size),
 		"label": String(unit.get("name", unit.get("id", "U"))).substr(0, 2).to_upper(),
 		"is_tank": unit_type == "tank",
