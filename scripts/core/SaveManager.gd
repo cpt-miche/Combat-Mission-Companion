@@ -8,6 +8,7 @@ const AI_TRACE_FILE_PREFIX := "ai_trace_"
 const AI_TRACE_INDEX_PATH := "%s/index.json" % AI_DEBUG_DIR
 const AI_TRACE_MAX_TOTAL_BYTES := 20 * 1024 * 1024
 const AI_TRACE_DEFAULT_MAX_FILES := 100
+const DISPLAY_SETTINGS_PATH := "user://display_settings.json"
 
 func _ensure_templates_dir() -> void:
 	if DirAccess.dir_exists_absolute(DIVISION_TEMPLATES_DIR):
@@ -110,6 +111,12 @@ func save_current_game(payload: Dictionary) -> bool:
 
 func load_current_game() -> Dictionary:
 	return _read_json(CURRENT_GAME_SAVE_PATH)
+
+func save_display_settings(payload: Dictionary) -> bool:
+	return _write_json(DISPLAY_SETTINGS_PATH, payload)
+
+func load_display_settings() -> Dictionary:
+	return _read_json(DISPLAY_SETTINGS_PATH)
 
 func save_division_template(template_name: String, payload: Dictionary) -> bool:
 	var safe_name := _safe_file_name(template_name)
