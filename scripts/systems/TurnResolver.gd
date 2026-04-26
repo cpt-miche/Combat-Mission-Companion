@@ -4,6 +4,7 @@ class_name TurnResolver
 const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
 const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 const ReconSystem = preload("res://scripts/systems/ReconSystem.gd")
+const OperationalAIService = preload("res://scripts/systems/operational_ai/OperationalAIService.gd")
 
 static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: CombatLog, trace_context: Dictionary = {}) -> Dictionary:
 	var execution_queue: Array[Dictionary] = []
@@ -24,6 +25,12 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 	_add_trace_event(trace_events, turn_trace, "rng_initialized", {
 		"rng_seed": rng_seed,
 		"rng_state": str(rng.state)
+	})
+	var operational_result := OperationalAIService.run_for_active_player(turn_trace)
+	_add_trace_event(trace_events, turn_trace, "operational_assessment", {
+		"enabled": bool(operational_result.get("enabled", false)),
+		"reason": String(operational_result.get("reason", "")),
+		"ok": bool(operational_result.get("ok", false))
 	})
 
 	var order_list: Array[Dictionary] = []
