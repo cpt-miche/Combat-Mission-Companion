@@ -12,14 +12,6 @@ extends Control
 @onready var map_selection_status_label: Label = %MapSelectionStatusLabel
 
 var _pending_nation_id := "usa"
-const MAP_SIZE_OPTIONS: Array[Vector2i] = [
-	Vector2i(8, 8),
-	Vector2i(12, 12),
-	Vector2i(16, 16),
-	Vector2i(24, 24),
-	Vector2i(32, 32),
-	Vector2i(64, 64)
-]
 
 func _ready() -> void:
 	play_button.pressed.connect(_on_play_pressed)
@@ -103,11 +95,15 @@ func _refresh_saved_map_selector() -> void:
 
 func _configure_map_size_selector() -> void:
 	map_size_selector.clear()
+	var selected_size := MapGridConfig.normalize_size(GameState.selected_map_dimensions.x)
+	if GameState.selected_map_dimensions.x != GameState.selected_map_dimensions.y:
+		selected_size = MapGridConfig.default_columns()
 	var selected_index := 0
-	for option_index in MAP_SIZE_OPTIONS.size():
-		var dimensions := MAP_SIZE_OPTIONS[option_index]
-		map_size_selector.add_item("%dx%d" % [dimensions.x, dimensions.y], option_index)
-		if dimensions == GameState.selected_map_dimensions:
+	var sizes := MapGridConfig.allowed_sizes()
+	for option_index in sizes.size():
+		var size := sizes[option_index]
+		map_size_selector.add_item("%dx%d" % [size, size], size)
+		if size == selected_size:
 			selected_index = option_index
 	map_size_selector.select(selected_index)
 
@@ -142,13 +138,20 @@ func _selected_saved_map_name() -> String:
 
 func _selected_map_dimensions() -> Vector2i:
 	if map_size_selector.item_count == 0:
-		return Vector2i(MapGridConfig.default_columns(), MapGridConfig.default_rows())
-	var selected_index := clampi(map_size_selector.selected, 0, MAP_SIZE_OPTIONS.size() - 1)
-	return MAP_SIZE_OPTIONS[selected_index]
+		var fallback_size := MapGridConfig.default_columns()
+		return Vector2i(fallback_size, fallback_size)
+	var selected_index := clampi(map_size_selector.selected, 0, map_size_selector.item_count - 1)
+	var selected_size := int(map_size_selector.get_item_id(selected_index))
+	var normalized_size := MapGridConfig.normalize_size(selected_size)
+	return Vector2i(normalized_size, normalized_size)
 
 func _on_map_selection_confirmed() -> void:
 	var selected_mode := _selected_map_mode()
 	var selected_dimensions := _selected_map_dimensions()
+	if selected_mode == GameState.MapFlow.NEW_MAP and not MapGridConfig.is_allowed_size(selected_dimensions.x):
+		var fallback_size := MapGridConfig.default_columns()
+		selected_dimensions = Vector2i(fallback_size, fallback_size)
+		map_selection_status_label.text = "Invalid map size selected. Using %dx%d." % [fallback_size, fallback_size]
 	_start_new_division_builder_for(_pending_nation_id, selected_mode, selected_dimensions)
 
 func _deserialize_units(serialized_units: Dictionary) -> Dictionary:

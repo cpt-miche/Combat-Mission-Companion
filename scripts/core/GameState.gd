@@ -154,12 +154,12 @@ func _apply_grid_payload(raw_grid: Variant) -> void:
 	if grid == null or grid.is_empty():
 		set_runtime_map_dimensions(default_columns, default_rows)
 		return
-	var columns := int(grid.get("columns", default_columns))
-	var rows := int(grid.get("rows", default_rows))
-	if not MapGridConfig.is_allowed_grid_size(columns) or not MapGridConfig.is_allowed_grid_size(rows):
-		push_warning("Map payload grid dimensions are missing/invalid (%s x %s). Falling back to default %d x %d." % [String(columns), String(rows), default_columns, default_rows])
-		columns = default_columns
-		rows = default_rows
+	var raw_columns := int(grid.get("columns", default_columns))
+	var raw_rows := int(grid.get("rows", default_rows))
+	var columns := MapGridConfig.normalize_size(raw_columns, default_columns)
+	var rows := MapGridConfig.normalize_size(raw_rows, default_rows)
+	if columns != raw_columns or rows != raw_rows:
+		push_warning("Map payload grid dimensions are missing/invalid (%s x %s). Falling back to %d x %d." % [String(raw_columns), String(raw_rows), columns, rows])
 	set_runtime_map_dimensions(columns, rows)
 
 func _sanitize_terrain_map(raw_terrain: Variant) -> Dictionary:
