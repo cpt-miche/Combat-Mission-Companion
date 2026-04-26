@@ -2,38 +2,145 @@
   "id": "sanity_repair_triggers",
   "description": "Sanity stage should emit repair-stage orders when isolated support/exposed artillery/clumping occur.",
   "elements": [
-    {"id": "u_inf_1", "playerId": 1, "role": "infantry", "size": "company"},
-    {"id": "u_inf_2", "playerId": 1, "role": "infantry", "size": "company"},
-    {"id": "u_recon_iso", "playerId": 1, "role": "recon", "size": "platoon"},
-    {"id": "u_arty_exposed", "playerId": 1, "role": "artillerySupport", "size": "company"},
-    {"id": "u_res_1", "playerId": 1, "role": "mobility", "size": "company"},
-    {"id": "u_res_2", "playerId": 1, "role": "mobility", "size": "company"}
+    {
+      "id": "u_inf_1",
+      "playerId": 1,
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_inf_2",
+      "playerId": 1,
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_recon_iso",
+      "playerId": 1,
+      "role": "recon",
+      "size": "platoon"
+    },
+    {
+      "id": "u_arty_exposed",
+      "playerId": 1,
+      "role": "artillerySupport",
+      "size": "company"
+    },
+    {
+      "id": "u_res_1",
+      "playerId": 1,
+      "role": "mobility",
+      "size": "company"
+    },
+    {
+      "id": "u_res_2",
+      "playerId": 1,
+      "role": "mobility",
+      "size": "company"
+    }
   ],
   "hexes": [
-    {"id": "0,0", "q": 0, "r": 0, "terrain": "open"},
-    {"id": "1,0", "q": 1, "r": 0, "terrain": "open"},
-    {"id": "2,0", "q": 2, "r": 0, "terrain": "open"},
-    {"id": "0,1", "q": 0, "r": 1, "terrain": "rough"},
-    {"id": "1,1", "q": 1, "r": 1, "terrain": "urban"},
-    {"id": "2,1", "q": 2, "r": 1, "terrain": "road"}
+    {
+      "id": "0,0",
+      "q": 0,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "1,0",
+      "q": 1,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "2,0",
+      "q": 2,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "0,1",
+      "q": 0,
+      "r": 1,
+      "terrain": "rough"
+    },
+    {
+      "id": "1,1",
+      "q": 1,
+      "r": 1,
+      "terrain": "urban"
+    },
+    {
+      "id": "2,1",
+      "q": 2,
+      "r": 1,
+      "terrain": "road"
+    }
   ],
   "sectorModel": {
-    "frontlineHexes": ["0,0", "1,0", "2,0"],
-    "contestedArea": ["0,0", "1,0", "2,0"],
-    "rearArea": ["0,1", "1,1", "2,1"],
+    "frontlineHexes": [
+      "0,0",
+      "1,0",
+      "2,0"
+    ],
+    "contestedArea": [
+      "0,0",
+      "1,0",
+      "2,0"
+    ],
+    "rearArea": [
+      "0,1",
+      "1,1",
+      "2,1"
+    ],
     "hexScores": {
-      "2,0": {"priority": 8.1},
-      "1,0": {"priority": 8.0},
-      "0,0": {"priority": 7.9},
-      "1,1": {"priority": 5.6},
-      "2,1": {"priority": 5.4},
-      "0,1": {"priority": 5.1}
+      "2,0": {
+        "priority": 8.1
+      },
+      "1,0": {
+        "priority": 8.0
+      },
+      "0,0": {
+        "priority": 7.9
+      },
+      "1,1": {
+        "priority": 5.6
+      },
+      "2,1": {
+        "priority": 5.4
+      },
+      "0,1": {
+        "priority": 5.1
+      }
     }
   },
-  "options": {"objectiveMode": "mixed_split"},
+  "options": {
+    "objectiveMode": "mixed_split"
+  },
   "expected": {
     "requiresSanityStageOrder": true,
     "requiresWarningOrReasonPrefix": "Sanity:",
-    "acceptance": "sanity bounded-repair stage remains active"
+    "acceptance": "sanity bounded-repair stage remains active",
+    "eventAssertions": {
+      "must_include_reason_codes": [
+        "stage_started",
+        "stage_completed"
+      ],
+      "must_include_event_types": [
+        "order_committed"
+      ],
+      "stage_sequence": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "S"
+      ],
+      "known_weird_behavior": "sanity_stage_can_emit_non_deterministic_repair_wording"
+    },
+    "orderAssertions": {
+      "must_include_stage": "S",
+      "stable_sort_key": "stage_then_unit_then_hex"
+    }
   }
 }
