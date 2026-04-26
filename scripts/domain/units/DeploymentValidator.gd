@@ -25,7 +25,7 @@ static func placement_block_reason(unit: Dictionary, existing_units: Array[Dicti
 		return "%s is below platoon level and cannot be deployed directly." % unit_name
 
 	if size_rank > UnitSize.Value.BATTALION:
-		return "%s is above battalion level and cannot be deployed directly." % unit_name
+		return "%s is a parent formation (regiment/division/army) and cannot be deployed directly. Deploy one of its battalions, companies, or platoons instead." % unit_name
 
 	if is_tank:
 		if is_battalion:

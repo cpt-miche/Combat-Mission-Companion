@@ -227,6 +227,7 @@ func _on_add_unit_pressed() -> void:
 
 	for i in range(top_level_count):
 		var candidate := _create_unit_from_template_tree(_pending_unit_data, nation, i + 1, top_level_count)
+		candidate = _wrap_candidate_with_required_hq(selected_parent, candidate, nation)
 		_apply_auto_variant_to_candidate(selected_parent, candidate)
 		var insertion_result := _insert_subtree_with_validation(selected_parent, candidate)
 		if not bool(insertion_result.get("ok", false)):
@@ -285,6 +286,28 @@ func _apply_auto_variant_to_candidate(parent: UnitModel, candidate: UnitModel) -
 	var base_template_id := _normalize_template_id(candidate.template_id)
 	var next_variant := _next_variant_index_for_parent(parent, base_template_id)
 	candidate.template_id = base_template_id if next_variant <= 1 else "%s_%d" % [base_template_id, next_variant]
+
+func _wrap_candidate_with_required_hq(parent: UnitModel, candidate: UnitModel, nation: String) -> UnitModel:
+	if parent == null or candidate == null:
+		return candidate
+	if candidate.size != UnitSize.Value.BATTALION:
+		return candidate
+
+	var required_echelons: Array[int] = []
+	if UnitSize.rank(parent.size) > UnitSize.rank(UnitSize.Value.DIVISION):
+		required_echelons.append(UnitSize.Value.DIVISION)
+	if UnitSize.rank(parent.size) > UnitSize.rank(UnitSize.Value.REGIMENT):
+		required_echelons.append(UnitSize.Value.REGIMENT)
+
+	var wrapped := candidate
+	for i in range(required_echelons.size() - 1, -1, -1):
+		var echelon_size := required_echelons[i]
+		var wrapper_template_id := "auto_hq_%s" % _serialize_unit_size(echelon_size).to_lower()
+		var wrapper := _create_unit(wrapper_template_id, nation, wrapped.type, echelon_size)
+		wrapper.children = [wrapped]
+		wrapped = wrapper
+
+	return wrapped
 
 func _next_variant_index_for_parent(parent: UnitModel, base_template_id: String) -> int:
 	var next_variant := 1
@@ -728,11 +751,10 @@ func _name_for_echelon(unit: UnitModel, sibling_index: int) -> Dictionary:
 				"short_name": "%s BN" % nth
 			}
 		UnitSize.Value.COMPANY:
-			var company_callsigns := ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel"]
-			var callsign := company_callsigns[(sibling_index - 1) % company_callsigns.size()]
+			var company_letter := _alphabet_designation(sibling_index)
 			return {
-				"display_name": "%s Company" % callsign,
-				"short_name": "%s Co" % callsign.substr(0, 1)
+				"display_name": "%s Company" % company_letter,
+				"short_name": "%s Co" % company_letter
 			}
 		UnitSize.Value.PLATOON:
 			return {
@@ -774,6 +796,15 @@ func _ordinal(value: int) -> String:
 			3:
 				suffix = "rd"
 	return "%d%s" % [positive_value, suffix]
+
+func _alphabet_designation(value: int) -> String:
+	var index := maxi(value, 1)
+	var letters := ""
+	while index > 0:
+		var remainder := (index - 1) % 26
+		letters = char(65 + remainder) + letters
+		index = int((index - 1) / 26)
+	return letters
 
 func _next_id_from_tree(root: UnitModel) -> int:
 	return _collect_highest_id(root, 0) + 1
@@ -879,7 +910,7 @@ func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.
 		if legacy_size_map.has(size_value):
 			return legacy_size_map[size_value]
 	elif typeof(raw_size) == TYPE_STRING:
-		var normalized_size := String(raw_size).to_upper()
+		var normalized_size := String(raw_size).strip_edges().to_upper()
 		var size_map := {
 			"PLATOON": UnitSize.Value.PLATOON,
 			"SECTION": UnitSize.Value.SECTION,

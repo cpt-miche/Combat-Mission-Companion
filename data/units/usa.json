@@ -415,6 +415,108 @@
       "size": "BATTALION",
       "default_veterancy": "VETERAN",
       "children": []
+    },
+    {
+      "id": "usa_1st_infantry_division",
+      "display_name": "1st Infantry Division",
+      "type": "INFANTRY",
+      "size": "DIVISION",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {
+          "id": "usa_division_inf_regiment_1",
+          "display_name": "Infantry Regiment",
+          "type": "INFANTRY",
+          "size": "REGIMENT",
+          "count": 1,
+          "children": [
+            {
+              "id": "usa_division_inf_regiment_1_bn_1",
+              "display_name": "Infantry Battalion",
+              "type": "INFANTRY",
+              "size": "BATTALION",
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_division_inf_regiment_1_bn_1_hq_co",
+                  "display_name": "Headquarters Company",
+                  "type": "HEADQUARTERS",
+                  "size": "COMPANY",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_division_inf_regiment_1_bn_1_rifle_co",
+                  "display_name": "Rifle Company",
+                  "type": "INFANTRY",
+                  "size": "COMPANY",
+                  "count": 3,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "usa_division_inf_regiment_1_bn_2",
+              "display_name": "Infantry Battalion",
+              "type": "INFANTRY",
+              "size": "BATTALION",
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_division_inf_regiment_1_bn_2_hq_co",
+                  "display_name": "Headquarters Company",
+                  "type": "HEADQUARTERS",
+                  "size": "COMPANY",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_division_inf_regiment_1_bn_2_rifle_co",
+                  "display_name": "Rifle Company",
+                  "type": "INFANTRY",
+                  "size": "COMPANY",
+                  "count": 3,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "usa_division_inf_regiment_2",
+          "display_name": "Infantry Regiment",
+          "type": "INFANTRY",
+          "size": "REGIMENT",
+          "count": 1,
+          "children": [
+            {
+              "id": "usa_division_inf_regiment_2_bn_1",
+              "display_name": "Infantry Battalion",
+              "type": "INFANTRY",
+              "size": "BATTALION",
+              "count": 1,
+              "children": [
+                {
+                  "id": "usa_division_inf_regiment_2_bn_1_hq_co",
+                  "display_name": "Headquarters Company",
+                  "type": "HEADQUARTERS",
+                  "size": "COMPANY",
+                  "count": 1,
+                  "children": []
+                },
+                {
+                  "id": "usa_division_inf_regiment_2_bn_1_rifle_co",
+                  "display_name": "Rifle Company",
+                  "type": "INFANTRY",
+                  "size": "COMPANY",
+                  "count": 3,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }
