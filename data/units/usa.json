@@ -424,93 +424,196 @@
       "default_veterancy": "REGULAR",
       "children": [
         {
-          "id": "usa_division_inf_regiment_1",
+          "id": "usa_division_infantry_regiment",
           "display_name": "Infantry Regiment",
           "type": "INFANTRY",
           "size": "REGIMENT",
-          "count": 1,
+          "count": 3,
           "children": [
             {
-              "id": "usa_division_inf_regiment_1_bn_1",
+              "id": "usa_regiment_infantry_battalion",
               "display_name": "Infantry Battalion",
               "type": "INFANTRY",
               "size": "BATTALION",
-              "count": 1,
+              "count": 3,
               "children": [
                 {
-                  "id": "usa_division_inf_regiment_1_bn_1_hq_co",
-                  "display_name": "Headquarters Company",
-                  "type": "HEADQUARTERS",
+                  "id": "usa_battalion_infantry_company",
+                  "display_name": "Infantry Company",
+                  "type": "INFANTRY",
                   "size": "COMPANY",
+                  "count": 3,
+                  "children": [
+                    {
+                      "id": "usa_company_infantry_platoon",
+                      "display_name": "Infantry Platoon",
+                      "type": "INFANTRY",
+                      "size": "PLATOON",
+                      "count": 3,
+                      "children": [
+                        {
+                          "id": "usa_platoon_infantry_squad",
+                          "display_name": "Infantry Squad",
+                          "type": "INFANTRY",
+                          "size": "SQUAD",
+                          "count": 3,
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "id": "usa_company_weapons_platoon",
+                      "display_name": "Weapons Platoon",
+                      "type": "INFANTRY",
+                      "size": "PLATOON",
+                      "count": 1,
+                      "children": [
+                        {
+                          "id": "usa_weapons_platoon_light_mortar_section",
+                          "display_name": "Light Mortar Section",
+                          "type": "ARTILLERY",
+                          "size": "SECTION",
+                          "count": 1,
+                          "children": []
+                        },
+                        {
+                          "id": "usa_weapons_platoon_medium_mg_section",
+                          "display_name": "Medium Machine-Gun Section",
+                          "type": "INFANTRY",
+                          "size": "SECTION",
+                          "count": 1,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "usa_battalion_antitank_platoon",
+                  "display_name": "Anti-Tank Platoon",
+                  "type": "ANTI_TANK",
+                  "size": "PLATOON",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_antitank_medium_gun",
+                      "display_name": "Medium Anti-Tank Gun",
+                      "type": "ANTI_TANK",
+                      "size": "SECTION",
+                      "count": 3,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "usa_battalion_engineer_platoon",
+                  "display_name": "Engineer Platoon",
+                  "type": "ENGINEER",
+                  "size": "PLATOON",
                   "count": 1,
                   "children": []
                 },
                 {
-                  "id": "usa_division_inf_regiment_1_bn_1_rifle_co",
-                  "display_name": "Rifle Company",
+                  "id": "usa_battalion_weapons_company",
+                  "display_name": "Weapons Company",
                   "type": "INFANTRY",
                   "size": "COMPANY",
-                  "count": 3,
-                  "children": []
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "usa_weapons_company_machine_gun_platoon",
+                      "display_name": "Machine-Gun Platoon",
+                      "type": "INFANTRY",
+                      "size": "PLATOON",
+                      "count": 2,
+                      "children": []
+                    },
+                    {
+                      "id": "usa_weapons_company_mortar_platoon",
+                      "display_name": "Mortar Platoon",
+                      "type": "ARTILLERY",
+                      "size": "PLATOON",
+                      "count": 1,
+                      "children": []
+                    }
+                  ]
                 }
               ]
             },
             {
-              "id": "usa_division_inf_regiment_1_bn_2",
-              "display_name": "Infantry Battalion",
-              "type": "INFANTRY",
-              "size": "BATTALION",
+              "id": "usa_regiment_cannon_company",
+              "display_name": "Cannon Company",
+              "type": "ARTILLERY",
+              "size": "COMPANY",
               "count": 1,
-              "children": [
-                {
-                  "id": "usa_division_inf_regiment_1_bn_2_hq_co",
-                  "display_name": "Headquarters Company",
-                  "type": "HEADQUARTERS",
-                  "size": "COMPANY",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_division_inf_regiment_1_bn_2_rifle_co",
-                  "display_name": "Rifle Company",
-                  "type": "INFANTRY",
-                  "size": "COMPANY",
-                  "count": 3,
-                  "children": []
-                }
-              ]
+              "children": []
+            },
+            {
+              "id": "usa_regiment_heavy_antitank_company",
+              "display_name": "Heavy Anti-Tank Company",
+              "type": "ANTI_TANK",
+              "size": "COMPANY",
+              "count": 1,
+              "children": []
             }
           ]
         },
         {
-          "id": "usa_division_inf_regiment_2",
-          "display_name": "Infantry Regiment",
-          "type": "INFANTRY",
+          "id": "usa_divisional_artillery_element",
+          "display_name": "Divisional Artillery Element",
+          "type": "ARTILLERY",
           "size": "REGIMENT",
           "count": 1,
           "children": [
             {
-              "id": "usa_division_inf_regiment_2_bn_1",
-              "display_name": "Infantry Battalion",
-              "type": "INFANTRY",
+              "id": "usa_divisional_artillery_105mm_battalion",
+              "display_name": "105mm Artillery Battalion",
+              "type": "ARTILLERY",
               "size": "BATTALION",
-              "count": 1,
+              "count": 2,
               "children": [
                 {
-                  "id": "usa_division_inf_regiment_2_bn_1_hq_co",
-                  "display_name": "Headquarters Company",
-                  "type": "HEADQUARTERS",
-                  "size": "COMPANY",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_division_inf_regiment_2_bn_1_rifle_co",
-                  "display_name": "Rifle Company",
-                  "type": "INFANTRY",
+                  "id": "usa_artillery_battalion_howitzer_company_105",
+                  "display_name": "Howitzer Company",
+                  "type": "ARTILLERY",
                   "size": "COMPANY",
                   "count": 3,
-                  "children": []
+                  "children": [
+                    {
+                      "id": "usa_artillery_company_105mm_howitzer",
+                      "display_name": "105mm Howitzer",
+                      "type": "ARTILLERY",
+                      "size": "SECTION",
+                      "count": 4,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "usa_divisional_artillery_155mm_battalion",
+              "display_name": "155mm Artillery Battalion",
+              "type": "ARTILLERY",
+              "size": "BATTALION",
+              "count": 2,
+              "children": [
+                {
+                  "id": "usa_artillery_battalion_howitzer_company_155",
+                  "display_name": "Howitzer Company",
+                  "type": "ARTILLERY",
+                  "size": "COMPANY",
+                  "count": 3,
+                  "children": [
+                    {
+                      "id": "usa_artillery_company_155mm_howitzer",
+                      "display_name": "155mm Howitzer",
+                      "type": "ARTILLERY",
+                      "size": "SECTION",
+                      "count": 4,
+                      "children": []
+                    }
+                  ]
                 }
               ]
             }
