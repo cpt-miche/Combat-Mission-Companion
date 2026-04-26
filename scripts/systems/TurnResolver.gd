@@ -135,8 +135,8 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 			own_casualties.append({
 				"unit_id": unit_id,
 				"children": [
-					{"unit_id": "%s/A" % unit_id, "losses": own_a_losses},
-					{"unit_id": "%s/B" % unit_id, "losses": own_b_losses}
+					{"unit_id": unit_id, "segment": "A", "losses": own_a_losses},
+					{"unit_id": unit_id, "segment": "B", "losses": own_b_losses}
 				]
 			})
 
@@ -153,7 +153,13 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 				"unit_id": unit_id,
 				"target_unit_id": target_id,
 				"enemy_losses": enemy_losses,
-				"own_losses": {"A": own_a_losses, "B": own_b_losses}
+				"own_losses": {"A": own_a_losses, "B": own_b_losses},
+				"own_casualties_by_unit_id": {
+					unit_id: {
+						"total_losses": own_a_losses + own_b_losses,
+						"segments": {"A": own_a_losses, "B": own_b_losses}
+					}
+				}
 			})
 			combat_log.add_entry("%s attacked %s (%s)." % [unit_id, target_id, recon.get("band", "Unknown")], attack_payload)
 
@@ -191,6 +197,8 @@ static func _initiative_score(order: Dictionary, units: Dictionary) -> int:
 static func _is_enemy_adjacent(hex: Vector2i, owner: int, units: Dictionary) -> bool:
 	for unit in units.values():
 		if typeof(unit) != TYPE_DICTIONARY:
+			continue
+		if not GameState.is_unit_alive(unit):
 			continue
 		if int(unit.get("owner", owner)) == owner:
 			continue

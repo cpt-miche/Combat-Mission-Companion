@@ -199,3 +199,85 @@ func _is_valid_hex_key(coordinate_key: String) -> bool:
 	if parts.size() != 2:
 		return false
 	return parts[0].is_valid_int() and parts[1].is_valid_int()
+
+func is_unit_alive(unit: Dictionary) -> bool:
+	var status := String(unit.get("status", "")).to_lower()
+	if not status.is_empty():
+		return status != "dead"
+	return bool(unit.get("is_alive", true))
+
+func mark_unit_status(unit_id: String, status: String, owner_hint: int = -1) -> bool:
+	if unit_id.is_empty():
+		return false
+	var normalized_status := status.to_lower()
+	var is_alive := normalized_status != "dead"
+	var updated := false
+
+	if gameplay_units.has(unit_id):
+		var gameplay_unit := gameplay_units[unit_id] as Dictionary
+		gameplay_unit["status"] = normalized_status
+		gameplay_unit["is_alive"] = is_alive
+		gameplay_units[unit_id] = gameplay_unit
+		updated = true
+
+	for player_index in range(players.size()):
+		if owner_hint >= 0 and player_index != owner_hint:
+			continue
+		if _update_player_unit_status(player_index, unit_id, normalized_status, is_alive):
+			updated = true
+
+	return updated
+
+func _update_player_unit_status(player_index: int, unit_id: String, normalized_status: String, is_alive: bool) -> bool:
+	if player_index < 0 or player_index >= players.size():
+		return false
+	var player := players[player_index] as Dictionary
+	var updated := false
+
+	var division_tree := player.get("division_tree", {}) as Dictionary
+	if not division_tree.is_empty() and _update_division_tree_unit_status_recursive(division_tree, unit_id, normalized_status, is_alive):
+		player["division_tree"] = division_tree
+		updated = true
+
+	var deployments := player.get("deployments", {}) as Dictionary
+	if _update_deployment_unit_status(deployments, unit_id, normalized_status, is_alive):
+		player["deployments"] = deployments
+		updated = true
+
+	if updated:
+		players[player_index] = player
+	return updated
+
+func _update_division_tree_unit_status_recursive(node: Dictionary, unit_id: String, normalized_status: String, is_alive: bool) -> bool:
+	var updated := false
+	if String(node.get("id", "")) == unit_id:
+		node["status"] = normalized_status
+		node["is_alive"] = is_alive
+		updated = true
+
+	var children := node.get("children", []) as Array
+	for i in range(children.size()):
+		if typeof(children[i]) != TYPE_DICTIONARY:
+			continue
+		var child := children[i] as Dictionary
+		if _update_division_tree_unit_status_recursive(child, unit_id, normalized_status, is_alive):
+			children[i] = child
+			updated = true
+	if updated:
+		node["children"] = children
+	return updated
+
+func _update_deployment_unit_status(deployments: Dictionary, unit_id: String, normalized_status: String, is_alive: bool) -> bool:
+	var updated := false
+	for key in deployments.keys():
+		var unit_variant: Variant = deployments[key]
+		if typeof(unit_variant) != TYPE_DICTIONARY:
+			continue
+		var unit := unit_variant as Dictionary
+		if String(unit.get("id", "")) != unit_id:
+			continue
+		unit["status"] = normalized_status
+		unit["is_alive"] = is_alive
+		deployments[key] = unit
+		updated = true
+	return updated

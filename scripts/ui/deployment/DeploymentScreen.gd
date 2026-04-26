@@ -382,6 +382,8 @@ func _is_deployable(unit: Dictionary) -> bool:
 	return _deployability_block_reason(unit).is_empty()
 
 func _deployability_block_reason(unit: Dictionary) -> String:
+	if not GameState.is_unit_alive(unit):
+		return "%s is dead and cannot be deployed." % _preferred_unit_name(unit)
 	var snapshot := _unit_snapshot(unit)
 	snapshot["name"] = _preferred_unit_name(unit)
 	return DeploymentValidator.placement_block_reason(snapshot, [])

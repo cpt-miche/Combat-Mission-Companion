@@ -17,6 +17,13 @@ static func placement_block_reason(unit: Dictionary, existing_units: Array[Dicti
 	var is_platoon := bool(unit.get("is_platoon", false))
 	var size_rank := int(unit.get("size_rank", -1))
 	var unit_name := String(unit.get("name", unit.get("id", "Unit")))
+	var status := String(unit.get("status", "")).to_lower()
+	var is_alive := bool(unit.get("is_alive", status != "dead"))
+
+	if not status.is_empty() and status == "dead":
+		return "%s is dead and cannot be deployed." % unit_name
+	if status.is_empty() and not is_alive:
+		return "%s is dead and cannot be deployed." % unit_name
 
 	if is_headquarters:
 		return "%s is a headquarters unit and cannot be deployed directly." % unit_name
