@@ -31,7 +31,7 @@ size_flags_vertical = 3
 theme_override_constants/separation = 12
 
 [node name="LeftPanel" type="PanelContainer" parent="RootMargin/MainHBox"]
-custom_minimum_size = Vector2(280, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 
 [node name="LeftMargin" type="MarginContainer" parent="RootMargin/MainHBox/LeftPanel"]
@@ -82,14 +82,17 @@ size_flags_vertical = 3
 script = ExtResource("2_hex")
 
 [node name="RightPanel" type="VBoxContainer" parent="RootMargin/MainHBox"]
-custom_minimum_size = Vector2(220, 0)
+custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-alignment = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+alignment = 1
 
 [node name="P2StructureLabel" type="Label" parent="RootMargin/MainHBox/RightPanel"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Opponent Structure"
+autowrap_mode = 2
 
 [node name="P2StructurePicker" type="OptionButton" parent="RootMargin/MainHBox/RightPanel"]
 unique_name_in_owner = true

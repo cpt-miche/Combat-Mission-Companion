@@ -43,20 +43,23 @@ text = "Choose an option"
 
 [node name="PlayButton" type="Button" parent="RootMargin/CenterVBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(220, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+size_flags_horizontal = 4
 text = "Play"
 
 [node name="LoadButton" type="Button" parent="RootMargin/CenterVBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(220, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+size_flags_horizontal = 4
 text = "Load"
 
 [node name="DisplayButton" type="Button" parent="RootMargin/CenterVBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(220, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+size_flags_horizontal = 4
 text = "Display Settings"
 
 [node name="StatusLabel" type="Label" parent="RootMargin/CenterVBox"]
@@ -69,61 +72,80 @@ text = ""
 [node name="NationDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
 title = "Choose Side"
-size = Vector2i(360, 120)
+size = Vector2i(460, 220)
 initial_position = 1
 ok_button_text = "Play as US"
 cancel_button_text = "Play as Germans"
 
-[node name="NationPrompt" type="Label" parent="NationDialog"]
-layout_mode = 0
+[node name="NationDialogMargin" type="MarginContainer" parent="NationDialog"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 330.0
-offset_bottom = 46.0
+offset_right = -16.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="NationPrompt" type="Label" parent="NationDialog/NationDialogMargin"]
+layout_mode = 2
+autowrap_mode = 2
 text = "Which side do you want to command?"
 
 [node name="MapDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
 title = "Map Selection"
-size = Vector2i(430, 310)
+size = Vector2i(520, 360)
 initial_position = 1
 ok_button_text = "Continue"
 cancel_button_text = "Cancel"
 
-[node name="MapDialogVBox" type="VBoxContainer" parent="MapDialog"]
-layout_mode = 0
+[node name="MapDialogMargin" type="MarginContainer" parent="MapDialog"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 404.0
-offset_bottom = 204.0
+offset_right = -16.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MapDialogVBox" type="VBoxContainer" parent="MapDialog/MapDialogMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="MapModeLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+[node name="MapModeLabel" type="Label" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 layout_mode = 2
 text = "Choose map flow"
 
-[node name="MapModeSelector" type="OptionButton" parent="MapDialog/MapDialogVBox"]
+[node name="MapModeSelector" type="OptionButton" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="SavedMapLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+[node name="SavedMapLabel" type="Label" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 layout_mode = 2
 text = "Saved map"
 
-[node name="SavedMapSelector" type="OptionButton" parent="MapDialog/MapDialogVBox"]
+[node name="SavedMapSelector" type="OptionButton" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="MapSizeLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+[node name="MapSizeLabel" type="Label" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Map size"
 
-[node name="MapSizeSelector" type="OptionButton" parent="MapDialog/MapDialogVBox"]
+[node name="MapSizeSelector" type="OptionButton" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="MapSelectionStatusLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+[node name="MapSelectionStatusLabel" type="Label" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 2
@@ -137,52 +159,62 @@ initial_position = 1
 ok_button_text = "Apply"
 cancel_button_text = "Close"
 
-[node name="DisplayDialogVBox" type="VBoxContainer" parent="DisplayDialog"]
-layout_mode = 0
+[node name="DisplayDialogMargin" type="MarginContainer" parent="DisplayDialog"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 404.0
-offset_bottom = 220.0
+offset_right = -16.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DisplayDialogVBox" type="VBoxContainer" parent="DisplayDialog/DisplayDialogMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="ResolutionLabel" type="Label" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="ResolutionLabel" type="Label" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 layout_mode = 2
 text = "Resolution preset"
 
-[node name="ResolutionSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="ResolutionSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="WindowModeToggle" type="CheckBox" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="WindowModeToggle" type="CheckBox" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Fullscreen"
 
-[node name="UiScaleModeLabel" type="Label" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="UiScaleModeLabel" type="Label" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 layout_mode = 2
 text = "UI scale mode"
 
-[node name="UiScaleModeSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="UiScaleModeSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="UiScaleValueLabel" type="Label" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="UiScaleValueLabel" type="Label" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 layout_mode = 2
 text = "Manual UI scale"
 
-[node name="UiScaleValueSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="UiScaleValueSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="DisplayActionRow" type="HBoxContainer" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="DisplayActionRow" type="HBoxContainer" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 layout_mode = 2
 
-[node name="RevertDisplayButton" type="Button" parent="DisplayDialog/DisplayDialogVBox/DisplayActionRow"]
+[node name="RevertDisplayButton" type="Button" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox/DisplayActionRow"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Revert"
 
-[node name="DisplayStatusLabel" type="Label" parent="DisplayDialog/DisplayDialogVBox"]
+[node name="DisplayStatusLabel" type="Label" parent="DisplayDialog/DisplayDialogMargin/DisplayDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 2
