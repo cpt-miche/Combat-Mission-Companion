@@ -28,10 +28,10 @@ grow_vertical = 2
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-split_offset = 280
+split_offset = 220
 
 [node name="LeftPanel" type="PanelContainer" parent="RootMargin/HSplitContainer"]
-custom_minimum_size = Vector2(270, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 
 [node name="LeftMargin" type="MarginContainer" parent="RootMargin/HSplitContainer/LeftPanel"]
@@ -58,7 +58,7 @@ text = "Unit Catalog"
 
 [node name="UnitTree" type="Tree" parent="RootMargin/HSplitContainer/LeftPanel/LeftMargin/LeftVBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 300)
+custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -115,10 +115,11 @@ size_flags_vertical = 3
 [node name="ChartHeader" type="Label" parent="RootMargin/HSplitContainer/CenterPanel/CenterMargin/CenterVBox"]
 layout_mode = 2
 text = "Organization Chart (LMB select + drag to pan, RMB remove, wheel zoom)"
+autowrap_mode = 2
 
 [node name="OrgChartView" type="Control" parent="RootMargin/HSplitContainer/CenterPanel/CenterMargin/CenterVBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 400)
+custom_minimum_size = Vector2(0, 260)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -127,7 +128,7 @@ mouse_filter = 1
 script = ExtResource("2_hm8ic")
 
 [node name="RightPanel" type="PanelContainer" parent="RootMargin/HSplitContainer"]
-custom_minimum_size = Vector2(280, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 
 [node name="RightMargin" type="MarginContainer" parent="RootMargin/HSplitContainer/RightPanel"]
@@ -171,12 +172,12 @@ text = "Historical Description"
 
 [node name="HistoricalDescription" type="RichTextLabel" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 180)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 size_flags_vertical = 3
 bbcode_enabled = true
-fit_content = true
-scroll_active = false
+fit_content = false
+scroll_active = true
 
 [node name="DeleteButton" type="Button" parent="RootMargin/HSplitContainer/RightPanel/RightMargin/RightVBox"]
 unique_name_in_owner = true
