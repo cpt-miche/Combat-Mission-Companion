@@ -52,8 +52,8 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 	var units_by_id := {}
 	var unit_ids: Array[String] = []
 	for unit in (plan.get("elements", []) as Array):
-		var as_dict := unit as Dictionary
-		var unit_id := String(as_dict.get("id", ""))
+		var as_dict: Dictionary = unit as Dictionary
+		var unit_id: String = String(as_dict.get("id", ""))
 		if unit_id.is_empty():
 			continue
 		units_by_id[unit_id] = as_dict
@@ -66,8 +66,8 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 
 	var latest_order_idx := {}
 	for i in range(orders.size()):
-		var order := orders[i]
-		var unit_id := String(order.get("unitId", order.get("elementId", "")))
+		var order: Dictionary = orders[i]
+		var unit_id: String = String(order.get("unitId", order.get("elementId", "")))
 		if unit_id.is_empty():
 			continue
 		latest_order_idx[unit_id] = i
@@ -77,7 +77,7 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 	var neighbors := {}
 	var coords := {}
 	for hex in hexes:
-		var hex_id := String(hex.get("id", ""))
+		var hex_id: String = String(hex.get("id", ""))
 		if hex_id.is_empty():
 			continue
 		hex_ids.append(hex_id)
@@ -92,19 +92,19 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 
 	var priorities := {}
 	var max_priority := 0.0
-	var hex_scores := sector_model.get("hexScores", {}) as Dictionary
+	var hex_scores: Dictionary = sector_model.get("hexScores", {}) as Dictionary
 	for hex_id in hex_scores.keys():
-		var score := hex_scores[hex_id] as Dictionary
-		var p := float(score.get("priority", 0.0))
+		var score: Dictionary = hex_scores[hex_id] as Dictionary
+		var p: float = float(score.get("priority", 0.0))
 		priorities[String(hex_id)] = p
 		max_priority = max(max_priority, p)
 
-	var frontline := _set_from_array(sector_model.get("frontlineHexes", []))
-	var rear := _set_from_array(sector_model.get("rearArea", []))
+	var frontline: Dictionary = _set_from_array(sector_model.get("frontlineHexes", []))
+	var rear: Dictionary = _set_from_array(sector_model.get("rearArea", []))
 
 	var placements := {}
 	for unit_id in unit_ids:
-		var idx := int(latest_order_idx.get(unit_id, -1))
+		var idx: int = int(latest_order_idx.get(unit_id, -1))
 		if idx >= 0:
 			placements[unit_id] = String(orders[idx].get("toHexId", orders[idx].get("hexId", "")))
 		else:
@@ -112,16 +112,16 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 
 	var attack_stacks := {}
 	for order in orders:
-		var as_order := order as Dictionary
-		var unit_id := String(as_order.get("unitId", as_order.get("elementId", "")))
+		var as_order: Dictionary = order as Dictionary
+		var unit_id: String = String(as_order.get("unitId", as_order.get("elementId", "")))
 		if unit_id.is_empty():
 			continue
-		var unit := units_by_id.get(unit_id, {}) as Dictionary
+		var unit: Dictionary = units_by_id.get(unit_id, {}) as Dictionary
 		if not COMBAT_ROLES.has(String(unit.get("role", ""))):
 			continue
 		if String(as_order.get("stance", "")).to_lower() != "attack":
 			continue
-		var to_hex := String(as_order.get("toHexId", as_order.get("hexId", "")))
+		var to_hex: String = String(as_order.get("toHexId", as_order.get("hexId", "")))
 		if to_hex.is_empty():
 			continue
 		attack_stacks[to_hex] = true
@@ -146,11 +146,11 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 static func _repair_isolated_support(state: Dictionary, warnings: Array[String]) -> bool:
 	var changed := false
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
-		var role := String(unit.get("role", ""))
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
+		var role: String = String(unit.get("role", ""))
 		if role == DeploymentTypes.ROLE_ARTILLERY_SUPPORT or not SUPPORT_ROLES.has(role):
 			continue
-		var from_hex := String(state["placements"].get(unit_id, ""))
+		var from_hex: String = String(state["placements"].get(unit_id, ""))
 		if not _is_support_isolated(unit_id, from_hex, state):
 			continue
 		var to_hex := _best_combat_stack_for_support(unit_id, state)
@@ -164,10 +164,10 @@ static func _repair_isolated_support(state: Dictionary, warnings: Array[String])
 static func _repair_exposed_artillery(state: Dictionary, warnings: Array[String]) -> bool:
 	var changed := false
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 		if String(unit.get("role", "")) != DeploymentTypes.ROLE_ARTILLERY_SUPPORT:
 			continue
-		var from_hex := String(state["placements"].get(unit_id, ""))
+		var from_hex: String = String(state["placements"].get(unit_id, ""))
 		if not _is_artillery_exposed(from_hex, state):
 			continue
 		var to_hex := _best_safe_rear_hex_for_artillery(unit_id, state)
@@ -183,16 +183,16 @@ static func _repair_reserve_clumping(state: Dictionary, warnings: Array[String])
 	var reserve_combat_ids := _reserve_combat_ids(state)
 	var reserve_by_hex := {}
 	for unit_id in reserve_combat_ids:
-		var hex_id := String(state["placements"].get(unit_id, ""))
+		var hex_id: String = String(state["placements"].get(unit_id, ""))
 		if not reserve_by_hex.has(hex_id):
 			reserve_by_hex[hex_id] = []
 		(reserve_by_hex[hex_id] as Array).append(unit_id)
 
 	for hex_id in reserve_by_hex.keys():
-		var ids := reserve_by_hex[hex_id] as Array
+		var ids: Array = reserve_by_hex[hex_id] as Array
 		ids.sort()
 		while ids.size() > 1:
-			var unit_id := String(ids.pop_back())
+			var unit_id: String = String(ids.pop_back())
 			var to_hex := _best_reserve_spread_hex(unit_id, state)
 			if to_hex.is_empty():
 				warnings.append("repair deferred: reserve clumping for %s could not be redistributed legally" % unit_id)
@@ -218,8 +218,8 @@ static func _repair_over_split_screens(state: Dictionary, warnings: Array[String
 	var changed := false
 	var weak_ids := _weak_screen_unit_ids(state)
 	for unit_id in weak_ids:
-		var from_hex := String(state["placements"].get(unit_id, ""))
-		var target := _best_adjacent_weak_merge_target(unit_id, state)
+		var from_hex: String = String(state["placements"].get(unit_id, ""))
+		var target: String = _best_adjacent_weak_merge_target(unit_id, state)
 		if target.is_empty():
 			continue
 		if _can_place_combat(target, _combat_cost(state["unitsById"][unit_id]), state):
@@ -234,11 +234,11 @@ static func _repair_over_split_screens(state: Dictionary, warnings: Array[String
 static func _repair_tank_misuse(state: Dictionary, warnings: Array[String]) -> bool:
 	var changed := false
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 		if String(unit.get("role", "")) != DeploymentTypes.ROLE_ARMOR:
 			continue
-		var from_hex := String(state["placements"].get(unit_id, ""))
-		var terrain := String(state["terrainByHex"].get(from_hex, DeploymentTypes.TERRAIN_OPEN))
+		var from_hex: String = String(state["placements"].get(unit_id, ""))
+		var terrain: String = String(state["terrainByHex"].get(from_hex, DeploymentTypes.TERRAIN_OPEN))
 		if terrain not in [DeploymentTypes.TERRAIN_ROUGH, DeploymentTypes.TERRAIN_URBAN]:
 			continue
 		var to_hex := _best_non_restrictive_hex(unit_id, state)
@@ -255,14 +255,14 @@ static func _append_unresolved_warnings(state: Dictionary, warnings: Array[Strin
 			warnings.append("unresolved: empty critical frontage remains at %s" % hex_id)
 
 	for unit_id in state["unitIds"]:
-		var role := String((state["unitsById"][unit_id] as Dictionary).get("role", ""))
-		var at_hex := String(state["placements"].get(unit_id, ""))
+		var role: String = String((state["unitsById"][unit_id] as Dictionary).get("role", ""))
+		var at_hex: String = String(state["placements"].get(unit_id, ""))
 		if role == DeploymentTypes.ROLE_ARTILLERY_SUPPORT and _is_artillery_exposed(at_hex, state):
 			warnings.append("unresolved: artillery %s still exposed at %s" % [unit_id, at_hex])
 		if role == DeploymentTypes.ROLE_RECON and _is_support_isolated(unit_id, at_hex, state):
 			warnings.append("unresolved: recon %s remains isolated at %s" % [unit_id, at_hex])
 		if role == DeploymentTypes.ROLE_ARMOR:
-			var terrain := String(state["terrainByHex"].get(at_hex, DeploymentTypes.TERRAIN_OPEN))
+			var terrain: String = String(state["terrainByHex"].get(at_hex, DeploymentTypes.TERRAIN_OPEN))
 			if terrain in [DeploymentTypes.TERRAIN_ROUGH, DeploymentTypes.TERRAIN_URBAN] and not _has_non_restrictive_hex_option(unit_id, state):
 				warnings.append("accepted: armor %s in %s terrain is unavoidable" % [unit_id, terrain])
 
@@ -273,13 +273,13 @@ static func _append_unresolved_warnings(state: Dictionary, warnings: Array[Strin
 		warnings.append("unresolved: reserve clumping persists after bounded repair passes")
 
 static func _move_unit(unit_id: String, to_hex: String, state: Dictionary, stage: String, reason: String) -> void:
-	var from_hex := String(state["placements"].get(unit_id, ""))
+	var from_hex: String = String(state["placements"].get(unit_id, ""))
 	if from_hex == to_hex or to_hex.is_empty():
 		return
 	state["placements"][unit_id] = to_hex
-	var idx := int(state["latestOrderIdx"].get(unit_id, -1))
+	var idx: int = int(state["latestOrderIdx"].get(unit_id, -1))
 	if idx >= 0:
-		var order := state["orders"][idx] as Dictionary
+		var order: Dictionary = state["orders"][idx] as Dictionary
 		order["toHexId"] = to_hex
 		order["hexId"] = to_hex
 		order["stage"] = stage
@@ -287,7 +287,7 @@ static func _move_unit(unit_id: String, to_hex: String, state: Dictionary, stage
 		state["orders"][idx] = order
 		return
 
-	var unit := state["unitsById"][unit_id] as Dictionary
+	var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 	var order := {
 		"id": "",
 		"unitId": unit_id,
@@ -309,12 +309,12 @@ static func _important_frontline_hexes(state: Dictionary) -> Array[String]:
 	var result: Array[String] = []
 	var threshold: float = max(0.6 * float(state.get("maxPriority", 0.0)), 1.0)
 	for hex_id in (state["frontline"] as Dictionary).keys():
-		var as_str := String(hex_id)
+		var as_str: String = String(hex_id)
 		if float(state["priorities"].get(as_str, 0.0)) >= threshold:
 			result.append(as_str)
 	result.sort_custom(func(a: String, b: String) -> bool:
-		var ap := float(state["priorities"].get(a, 0.0))
-		var bp := float(state["priorities"].get(b, 0.0))
+		var ap: float = float(state["priorities"].get(a, 0.0))
+		var bp: float = float(state["priorities"].get(b, 0.0))
 		if not is_equal_approx(ap, bp):
 			return ap > bp
 		return a < b
@@ -324,10 +324,10 @@ static func _important_frontline_hexes(state: Dictionary) -> Array[String]:
 static func _best_frontage_donor(target_hex: String, state: Dictionary) -> String:
 	var candidates: Array[Dictionary] = []
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 		if not COMBAT_ROLES.has(String(unit.get("role", ""))):
 			continue
-		var from_hex := String(state["placements"].get(unit_id, ""))
+		var from_hex: String = String(state["placements"].get(unit_id, ""))
 		if from_hex == target_hex:
 			continue
 		var cost := _combat_cost(unit)
@@ -335,8 +335,8 @@ static func _best_frontage_donor(target_hex: String, state: Dictionary) -> Strin
 			continue
 		if not _can_place_combat(target_hex, cost, state):
 			continue
-		var donor_priority := float(state["priorities"].get(from_hex, 0.0))
-		var target_priority := float(state["priorities"].get(target_hex, 0.0))
+		var donor_priority: float = float(state["priorities"].get(from_hex, 0.0))
+		var target_priority: float = float(state["priorities"].get(target_hex, 0.0))
 		if donor_priority > target_priority and _combat_load(from_hex, state) <= MAX_COMBAT_CAPACITY - 1:
 			continue
 		candidates.append({
@@ -356,9 +356,9 @@ static func _best_frontage_donor(target_hex: String, state: Dictionary) -> Strin
 	return String(candidates[0]["unitId"])
 
 static func _best_combat_stack_for_support(unit_id: String, state: Dictionary) -> String:
-	var from_hex := String(state["placements"].get(unit_id, ""))
-	var unit := state["unitsById"].get(unit_id, {}) as Dictionary
-	var is_anti_tank := String(unit.get("role", "")) == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT
+	var from_hex: String = String(state["placements"].get(unit_id, ""))
+	var unit: Dictionary = state["unitsById"].get(unit_id, {}) as Dictionary
+	var is_anti_tank: bool = String(unit.get("role", "")) == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT
 	var candidates: Array[Dictionary] = []
 	for hex_id in state["hexIds"]:
 		if _combat_load(hex_id, state) <= 0:
@@ -368,7 +368,7 @@ static func _best_combat_stack_for_support(unit_id: String, state: Dictionary) -
 		if not _can_place_support(hex_id, state):
 			continue
 		var distance := _hex_distance(from_hex, hex_id, state)
-		var p := float(state["priorities"].get(hex_id, 0.0))
+		var p: float = float(state["priorities"].get(hex_id, 0.0))
 		candidates.append({"hex": hex_id, "distance": distance, "priority": p})
 	if candidates.is_empty():
 		return ""
@@ -382,17 +382,17 @@ static func _best_combat_stack_for_support(unit_id: String, state: Dictionary) -
 	return String(candidates[0]["hex"])
 
 static func _best_safe_rear_hex_for_artillery(unit_id: String, state: Dictionary) -> String:
-	var from_hex := String(state["placements"].get(unit_id, ""))
+	var from_hex: String = String(state["placements"].get(unit_id, ""))
 	var candidates: Array[Dictionary] = []
 	for hex_id in (state["rear"] as Dictionary).keys():
-		var as_str := String(hex_id)
+		var as_str: String = String(hex_id)
 		if (state["frontline"] as Dictionary).has(as_str):
 			continue
 		if not _can_place_support(as_str, state):
 			continue
 		var coverage := _frontline_coverage(as_str, state)
 		var nearest_combat := _nearest_combat_distance(as_str, state)
-		var p := float(state["priorities"].get(as_str, 0.0))
+		var p: float = float(state["priorities"].get(as_str, 0.0))
 		candidates.append({
 			"hex": as_str,
 			"coverage": coverage,
@@ -416,18 +416,18 @@ static func _best_safe_rear_hex_for_artillery(unit_id: String, state: Dictionary
 	return String(candidates[0]["hex"])
 
 static func _best_reserve_spread_hex(unit_id: String, state: Dictionary) -> String:
-	var unit := state["unitsById"][unit_id] as Dictionary
+	var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 	var cost := _combat_cost(unit)
-	var from_hex := String(state["placements"].get(unit_id, ""))
+	var from_hex: String = String(state["placements"].get(unit_id, ""))
 	var candidates: Array[Dictionary] = []
 	for hex_id in (state["rear"] as Dictionary).keys():
-		var as_str := String(hex_id)
+		var as_str: String = String(hex_id)
 		if as_str == from_hex:
 			continue
 		if not _can_place_combat(as_str, cost, state):
 			continue
 		var nearby_reserve := _reserve_neighbors(as_str, state)
-		var p := float(state["priorities"].get(as_str, 0.0))
+		var p: float = float(state["priorities"].get(as_str, 0.0))
 		candidates.append({
 			"hex": as_str,
 			"reserveNeighbors": nearby_reserve,
@@ -448,11 +448,11 @@ static func _best_reserve_spread_hex(unit_id: String, state: Dictionary) -> Stri
 	return String(candidates[0]["hex"])
 
 static func _best_adjacent_weak_merge_target(unit_id: String, state: Dictionary) -> String:
-	var from_hex := String(state["placements"].get(unit_id, ""))
-	var neighbors := state["neighbors"].get(from_hex, []) as Array
+	var from_hex: String = String(state["placements"].get(unit_id, ""))
+	var neighbors: Array = state["neighbors"].get(from_hex, []) as Array
 	var candidates: Array[String] = []
 	for n in neighbors:
-		var n_hex := String(n)
+		var n_hex: String = String(n)
 		if _combat_load(n_hex, state) <= 0:
 			continue
 		if not _has_weak_screen_on_hex(n_hex, state):
@@ -467,12 +467,12 @@ static func _best_adjacent_weak_merge_target(unit_id: String, state: Dictionary)
 	return candidates[0]
 
 static func _best_non_restrictive_hex(unit_id: String, state: Dictionary) -> String:
-	var unit := state["unitsById"][unit_id] as Dictionary
+	var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 	var cost := _combat_cost(unit)
-	var from_hex := String(state["placements"].get(unit_id, ""))
+	var from_hex: String = String(state["placements"].get(unit_id, ""))
 	var candidates: Array[Dictionary] = []
 	for hex_id in state["hexIds"]:
-		var terrain := String(state["terrainByHex"].get(hex_id, DeploymentTypes.TERRAIN_OPEN))
+		var terrain: String = String(state["terrainByHex"].get(hex_id, DeploymentTypes.TERRAIN_OPEN))
 		if terrain in [DeploymentTypes.TERRAIN_ROUGH, DeploymentTypes.TERRAIN_URBAN]:
 			continue
 		if not _can_place_combat(hex_id, cost, state):
@@ -522,13 +522,13 @@ static func _nearest_combat_distance(hex_id: String, state: Dictionary) -> int:
 static func _reserve_combat_ids(state: Dictionary) -> Array[String]:
 	var ids: Array[String] = []
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 		if not COMBAT_ROLES.has(String(unit.get("role", ""))):
 			continue
-		var idx := int(state["latestOrderIdx"].get(unit_id, -1))
+		var idx: int = int(state["latestOrderIdx"].get(unit_id, -1))
 		if idx < 0:
 			continue
-		var role := String((state["orders"][idx] as Dictionary).get("role", ""))
+		var role: String = String((state["orders"][idx] as Dictionary).get("role", ""))
 		if role == "reserve":
 			ids.append(unit_id)
 	ids.sort()
@@ -537,12 +537,12 @@ static func _reserve_combat_ids(state: Dictionary) -> Array[String]:
 static func _weak_screen_unit_ids(state: Dictionary) -> Array[String]:
 	var ids: Array[String] = []
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 		if not COMBAT_ROLES.has(String(unit.get("role", ""))):
 			continue
 		if _combat_cost(unit) > 1:
 			continue
-		var hex_id := String(state["placements"].get(unit_id, ""))
+		var hex_id: String = String(state["placements"].get(unit_id, ""))
 		if not (state["frontline"] as Dictionary).has(hex_id):
 			continue
 		if _combat_load(hex_id, state) != 1:
@@ -553,7 +553,7 @@ static func _weak_screen_unit_ids(state: Dictionary) -> Array[String]:
 
 static func _has_weak_screen_on_hex(hex_id: String, state: Dictionary) -> bool:
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 		if not COMBAT_ROLES.has(String(unit.get("role", ""))):
 			continue
 		if _combat_cost(unit) > 1:
@@ -565,7 +565,7 @@ static func _has_weak_screen_on_hex(hex_id: String, state: Dictionary) -> bool:
 static func _reserve_neighbors(hex_id: String, state: Dictionary) -> int:
 	var count := 0
 	for unit_id in _reserve_combat_ids(state):
-		var at_hex := String(state["placements"].get(unit_id, ""))
+		var at_hex: String = String(state["placements"].get(unit_id, ""))
 		if _hex_distance(hex_id, at_hex, state) <= 1:
 			count += 1
 	return count
@@ -574,8 +574,8 @@ static func _has_reserve_clumping(state: Dictionary) -> bool:
 	var ids := _reserve_combat_ids(state)
 	for i in range(ids.size()):
 		for j in range(i + 1, ids.size()):
-			var a_hex := String(state["placements"].get(String(ids[i]), ""))
-			var b_hex := String(state["placements"].get(String(ids[j]), ""))
+			var a_hex: String = String(state["placements"].get(String(ids[i]), ""))
+			var b_hex: String = String(state["placements"].get(String(ids[j]), ""))
 			if _hex_distance(a_hex, b_hex, state) <= 1:
 				return true
 	return false
@@ -589,7 +589,7 @@ static func _is_overconcentrated(hex_id: String, state: Dictionary) -> bool:
 static func _combat_load(hex_id: String, state: Dictionary) -> int:
 	var load := 0
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 		if not COMBAT_ROLES.has(String(unit.get("role", ""))):
 			continue
 		if String(state["placements"].get(unit_id, "")) != hex_id:
@@ -600,7 +600,7 @@ static func _combat_load(hex_id: String, state: Dictionary) -> int:
 static func _support_load(hex_id: String, state: Dictionary) -> int:
 	var load := 0
 	for unit_id in state["unitIds"]:
-		var unit := state["unitsById"][unit_id] as Dictionary
+		var unit: Dictionary = state["unitsById"][unit_id] as Dictionary
 		if not SUPPORT_ROLES.has(String(unit.get("role", ""))):
 			continue
 		if String(state["placements"].get(unit_id, "")) != hex_id:
@@ -623,10 +623,10 @@ static func _frontline_coverage(hex_id: String, state: Dictionary) -> int:
 
 static func _combat_cost(unit: Dictionary) -> int:
 	if unit.has("prpCost"):
-		var provided := int(unit.get("prpCost", 0))
+		var provided: int = int(unit.get("prpCost", 0))
 		if provided > 0:
 			return provided
-	var size := String(unit.get("size", "company")).to_lower()
+	var size: String = String(unit.get("size", "company")).to_lower()
 	return int(SIZE_COMBAT_COST.get(size, 3))
 
 static func _hex_distance(a_id: String, b_id: String, state: Dictionary) -> int:
@@ -648,12 +648,12 @@ static func _set_from_array(values: Array) -> Dictionary:
 static func _sorted_orders(orders: Array[Dictionary]) -> Array[Dictionary]:
 	var sorted := orders.duplicate(true)
 	sorted.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var stage_a := String(a.get("stage", ""))
-		var stage_b := String(b.get("stage", ""))
+		var stage_a: String = String(a.get("stage", ""))
+		var stage_b: String = String(b.get("stage", ""))
 		if stage_a != stage_b:
 			return stage_a < stage_b
-		var unit_a := String(a.get("unitId", a.get("elementId", "")))
-		var unit_b := String(b.get("unitId", b.get("elementId", "")))
+		var unit_a: String = String(a.get("unitId", a.get("elementId", "")))
+		var unit_b: String = String(b.get("unitId", b.get("elementId", "")))
 		if unit_a != unit_b:
 			return unit_a < unit_b
 		return String(a.get("toHexId", "")) < String(b.get("toHexId", ""))

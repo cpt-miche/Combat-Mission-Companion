@@ -16,7 +16,7 @@ static func replay_trace_file(path: String) -> Dictionary:
 	return replay_trace(parsed)
 
 static func replay_trace(trace: Dictionary) -> Dictionary:
-	var phase := String(trace.get("phase", ""))
+	var phase: String = String(trace.get("phase", ""))
 	if phase != SUPPORTED_PHASE:
 		return {
 			"ok": false,
@@ -61,16 +61,16 @@ static func replay_trace(trace: Dictionary) -> Dictionary:
 	}
 
 static func _reconstruct_deployment_inputs(trace: Dictionary) -> Dictionary:
-	var outputs := trace.get("outputs", {}) as Dictionary
+	var outputs: Dictionary = trace.get("outputs", {}) as Dictionary
 	if outputs.is_empty():
 		return {"ok": false, "error": "missing_outputs"}
 
-	var plan := outputs.get("plan", {}) as Dictionary
-	var elements := plan.get("elements", []) as Array
+	var plan: Dictionary = outputs.get("plan", {}) as Dictionary
+	var elements: Array = plan.get("elements", []) as Array
 	if elements.is_empty():
 		return {"ok": false, "error": "missing_plan_elements"}
 
-	var sector_model := outputs.get("sectorModel", {}) as Dictionary
+	var sector_model: Dictionary = outputs.get("sectorModel", {}) as Dictionary
 	if sector_model.is_empty():
 		return {"ok": false, "error": "missing_sector_model"}
 
@@ -159,8 +159,8 @@ static func _normalize_events_from_trace(trace: Dictionary) -> Array[Dictionary]
 	for raw_event in (trace.get("events", []) as Array):
 		if typeof(raw_event) != TYPE_DICTIONARY:
 			continue
-		var event := raw_event as Dictionary
-		var meta := event.get("meta", {}) as Dictionary
+		var event: Dictionary = raw_event as Dictionary
+		var meta: Dictionary = event.get("meta", {}) as Dictionary
 		normalized.append({
 			"type": String(event.get("type", "")),
 			"stage": String(event.get("stage", "")),
@@ -172,7 +172,7 @@ static func _normalize_events_from_trace(trace: Dictionary) -> Array[Dictionary]
 	return normalized
 
 static func _normalize_event_for_compare(event_type: String, payload: Dictionary) -> Dictionary:
-	var meta := payload.get("meta", {}) as Dictionary
+	var meta: Dictionary = payload.get("meta", {}) as Dictionary
 	return {
 		"type": event_type,
 		"stage": String(payload.get("stage", "")),
@@ -193,8 +193,8 @@ static func _diff_events_and_orders(expected_events: Array[Dictionary], actual_e
 
 	var compare_len := mini(expected_events.size(), actual_events.size())
 	for i in range(compare_len):
-		var expected := expected_events[i]
-		var actual := actual_events[i]
+		var expected: Dictionary = expected_events[i]
+		var actual: Dictionary = actual_events[i]
 		if _event_identity(expected) != _event_identity(actual):
 			different_orders.append({
 				"index": i,
@@ -220,9 +220,9 @@ static func _diff_events_and_orders(expected_events: Array[Dictionary], actual_e
 				"actual": actual_events[i]
 			})
 
-	var expected_plan := (expected_trace.get("outputs", {}) as Dictionary).get("plan", {}) as Dictionary
-	var expected_orders := expected_plan.get("orders", []) as Array
-	var actual_orders := actual_plan.get("orders", []) as Array
+	var expected_plan: Dictionary = (expected_trace.get("outputs", {}) as Dictionary).get("plan", {}) as Dictionary
+	var expected_orders: Array = expected_plan.get("orders", []) as Array
+	var actual_orders: Array = actual_plan.get("orders", []) as Array
 	var order_compare_len := mini(expected_orders.size(), actual_orders.size())
 	for i in range(order_compare_len):
 		if _order_identity(expected_orders[i]) != _order_identity(actual_orders[i]):
@@ -272,7 +272,7 @@ static func _event_identity(event: Dictionary) -> String:
 static func _order_identity(order_variant: Variant) -> String:
 	if typeof(order_variant) != TYPE_DICTIONARY:
 		return ""
-	var order := order_variant as Dictionary
+	var order: Dictionary = order_variant as Dictionary
 	return "%s|%s|%s|%s|%s" % [
 		String(order.get("stage", "")),
 		String(order.get("unitId", order.get("elementId", ""))),
@@ -282,7 +282,7 @@ static func _order_identity(order_variant: Variant) -> String:
 	]
 
 static func _format_diff_report(diff: Dictionary) -> String:
-	var summary := diff.get("summary", {}) as Dictionary
+	var summary: Dictionary = diff.get("summary", {}) as Dictionary
 	return "missing_events=%d unexpected_events=%d changed_scores=%d different_orders=%d" % [
 		int(summary.get("missing_events", 0)),
 		int(summary.get("unexpected_events", 0)),

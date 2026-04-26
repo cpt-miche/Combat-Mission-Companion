@@ -16,7 +16,7 @@ static func replay_fixture_file(path: String) -> Dictionary:
 	return replay
 
 static func replay_fixture(fixture: Dictionary) -> Dictionary:
-	var fixture_id := String(fixture.get("id", ""))
+	var fixture_id: String = String(fixture.get("id", ""))
 	var failures: Array[String] = []
 	var warnings: Array[String] = []
 	var outputs := {}
@@ -200,8 +200,8 @@ static func _assert_donor_expectations(expected: Dictionary, outputs: Dictionary
 			for sector_id in (legal_map.get(request_id, {}) as Dictionary).keys():
 				if not donor_index.has(String(sector_id)):
 					return false
-				var expected_legal := bool((legal_map.get(request_id, {}) as Dictionary).get(sector_id, false))
-				var actual_legal := bool((donor_index[String(sector_id)] as Dictionary).get("legalForTransfer", false))
+				var expected_legal: bool = bool((legal_map.get(request_id, {}) as Dictionary).get(sector_id, false))
+				var actual_legal: bool = bool((donor_index[String(sector_id)] as Dictionary).get("legalForTransfer", false))
 				if expected_legal != actual_legal:
 					return false
 	return true
@@ -249,10 +249,10 @@ static func _assert_counterattack_expectations(expected: Dictionary, outputs: Di
 	return true
 
 static func _run_scoring_comparison(config: Dictionary) -> Dictionary:
-	var model := String(config.get("model", "enemyPressure"))
+	var model: String = String(config.get("model", "enemyPressure"))
 	var low_context: Dictionary = config.get("lowContext", {})
 	var high_context: Dictionary = config.get("highContext", {})
-	var minimum_delta := float(config.get("minimumDelta", 0.0))
+	var minimum_delta: float = float(config.get("minimumDelta", 0.0))
 	var low_score := 0.0
 	var high_score := 0.0
 	match model:
@@ -288,14 +288,14 @@ static func _assert_deterministic_sort(expected: Dictionary, outputs: Dictionary
 		return true
 	for assertion in assertions:
 		var rule: Dictionary = assertion
-		var collection_name := String(rule.get("collection", ""))
+		var collection_name: String = String(rule.get("collection", ""))
 		var expected_order: Array = rule.get("expectedOrder", [])
-		var field := String(rule.get("field", ""))
+		var field: String = String(rule.get("field", ""))
 		var collection := _resolve_collection(collection_name, outputs)
 		if collection.size() != expected_order.size():
 			return false
 		for i in range(expected_order.size()):
-			var expected_value := String(expected_order[i])
+			var expected_value: String = String(expected_order[i])
 			var actual_value := ""
 			if field.is_empty():
 				actual_value = String(collection[i])
