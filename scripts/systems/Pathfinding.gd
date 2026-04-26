@@ -72,8 +72,9 @@ static func _neighbors(hex: Vector2i) -> Array[Vector2i]:
 	]
 	var offsets: Array[Vector2i] = offsets_odd if hex.y % 2 == 1 else offsets_even
 	var results: Array[Vector2i] = []
-	var max_columns := MapGridConfig.default_columns()
-	var max_rows := MapGridConfig.default_rows()
+	var dimensions := GameState.selected_map_dimensions
+	var max_columns := maxi(dimensions.x, 1)
+	var max_rows := maxi(dimensions.y, 1)
 	for offset in offsets:
 		var candidate := hex + offset
 		if candidate.x >= 0 and candidate.x < max_columns and candidate.y >= 0 and candidate.y < max_rows:
