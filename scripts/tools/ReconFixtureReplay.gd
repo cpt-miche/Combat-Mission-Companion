@@ -156,7 +156,7 @@ static func _assert_turn_expectations(failures: Array[String], fixture_id: Strin
 			failures.append("%s/%s: missing unit intel for %s" % [fixture_id, turn_id, String(unit_id)])
 			continue
 		var wanted := expected_units.get(unit_id, {}) as Dictionary
-		_assert_known_fields(failures, fixture_id, turn_id, String(unit_id), wanted, actual_known)
+		_assert_known_fields(failures, fixture_id, turn_id, String(unit_id), wanted, actual_known as Dictionary)
 
 	for missing_unit_id in expected.get("missingUnitIntel", []):
 		if _unit_intel(result, String(missing_unit_id)) != null:
@@ -169,7 +169,7 @@ static func _assert_known_fields(failures: Array[String], fixture_id: String, tu
 		if want != got:
 			failures.append("%s/%s: unit %s field %s expected=%s got=%s" % [fixture_id, turn_id, unit_id, field_name, var_to_str(want), var_to_str(got)])
 
-static func _unit_intel(result: Dictionary, unit_id: String) -> Dictionary:
+static func _unit_intel(result: Dictionary, unit_id: String) -> Variant:
 	var by_id := result.get(ReconSystem.UNIT_INTEL_KEY, null)
 	if not (by_id is Dictionary):
 		return null
