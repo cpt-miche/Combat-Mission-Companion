@@ -68,9 +68,17 @@ static func _capture_timestamp_unix() -> int:
 
 
 func _should_drop_event(trace: Dictionary, payload: Dictionary) -> bool:
-	var event_level: int = int(payload.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
-	var trace_level: int = int(trace.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
+	var event_level: int = _normalize_debug_level(
+		int(payload.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
+	)
+	var trace_level: int = _normalize_debug_level(
+		int(trace.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
+	)
 	return trace_level < event_level
+
+
+func _normalize_debug_level(raw_level: int) -> int:
+	return clampi(raw_level, AIDebugTypes.DebugLevel.OFF, AIDebugTypes.DebugLevel.VERBOSE)
 
 
 func _normalize_event_shape(event_type: String, payload: Dictionary) -> Dictionary:
