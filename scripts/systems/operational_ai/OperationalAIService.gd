@@ -90,7 +90,7 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 	var ai_owner := _territory_owner_for_player(ai_player_index)
 	var enemy_player_index := 1 - ai_player_index
 	var enemy_owner := _territory_owner_for_player(enemy_player_index)
-	var sector_map := OperationalMapAnalyzer.analyze(GameState.territory_map, ai_owner, enemy_owner)
+	var sector_map: Array[Dictionary] = OperationalMapAnalyzer.analyze(GameState.territory_map, ai_owner, enemy_owner)
 	var units_by_hex := _units_by_hex()
 
 	var threats: Array[Dictionary] = []
@@ -116,10 +116,10 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 			enemy_adjacent_count += adjacent_enemies.size()
 			enemy_strength += float(adjacent_enemies.size())
 
-		var total_line_cells := max(1, frontline.size())
-		var pressure := clamp(float(enemy_adjacent_count) / float(total_line_cells * 3), 0.0, 1.0)
-		var readiness := clamp(float(friendly_strength) / float(max(1.0, enemy_strength + friendly_strength)), 0.0, 1.0)
-		var supply := clamp(float(rear.size()) / float(max(1, (sector.get("hexIds", []) as Array).size())), 0.0, 1.0)
+		var total_line_cells: int = max(1, frontline.size())
+		var pressure: float = clamp(float(enemy_adjacent_count) / float(total_line_cells * 3), 0.0, 1.0)
+		var readiness: float = clamp(float(friendly_strength) / float(max(1.0, enemy_strength + friendly_strength)), 0.0, 1.0)
+		var supply: float = clamp(float(rear.size()) / float(max(1, (sector.get("hexIds", []) as Array).size())), 0.0, 1.0)
 
 		sectors.append({
 			"id": sector_id,
@@ -198,7 +198,7 @@ static func _units_by_hex() -> Dictionary:
 		if typeof(unit_variant) != TYPE_DICTIONARY:
 			continue
 		var unit := unit_variant as Dictionary
-		var hex := unit.get("hex", null)
+		var hex: Variant = unit.get("hex", null)
 		if not hex is Vector2i:
 			continue
 		var hex_id := "%d,%d" % [hex.x, hex.y]
@@ -213,11 +213,11 @@ static func _units_by_hex() -> Dictionary:
 
 static func _adjacent_enemy_units(hex_id: String, enemy_player_index: int, units_by_hex: Dictionary) -> Array:
 	var results: Array = []
-	var parsed := _parse_hex_id(hex_id)
+	var parsed: Variant = _parse_hex_id(hex_id)
 	if not parsed is Vector2i:
 		return results
 	for offset in [Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)]:
-		var neighbor := parsed + offset
+		var neighbor: Vector2i = (parsed as Vector2i) + offset
 		var neighbor_id := "%d,%d" % [neighbor.x, neighbor.y]
 		if not units_by_hex.has(neighbor_id):
 			continue

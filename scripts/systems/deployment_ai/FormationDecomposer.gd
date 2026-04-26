@@ -65,7 +65,7 @@ const DEFAULT_WEIGHTS := {
 }
 
 static func decompose_formation_tree(root: Dictionary, options: Dictionary = {}) -> Dictionary:
-	var weights := DEFAULT_WEIGHTS.merged(options.get("weights", {}), true)
+	var weights: Dictionary = DEFAULT_WEIGHTS.merged(options.get("weights", {}), true)
 	var min_deploy_size := String(options.get("minDeploySize", "platoon")).strip_edges().to_lower()
 	var support_capacity_per_hex := int(options.get("supportCapacityPerHex", 3))
 	var player_index := int(options.get("playerIndex", -1))
@@ -110,23 +110,23 @@ static func formation_split_score(formation: Dictionary, options: Dictionary = {
 	var sibling_count := int(options.get("siblingCount", 1))
 	var child_count := _valid_child_count(formation)
 	var deployable_child_count := _deployable_child_count(formation, String(options.get("minDeploySize", "platoon")))
-	var split_factor := max(0, deployable_child_count - 1)
+	var split_factor: int = max(0, deployable_child_count - 1)
 
-	var frontage_need := clamp(float(context.get("frontageCoverageNeed", 0.5)), 0.0, 1.0)
-	var screen_need := clamp(float(context.get("screenNeed", 0.5)), 0.0, 1.0)
-	var strongpoint_need := clamp(float(context.get("strongpointNeed", 0.5)), 0.0, 1.0)
-	var reserve_need := clamp(float(context.get("reservePreservationNeed", 0.5)), 0.0, 1.0)
+	var frontage_need: float = clamp(float(context.get("frontageCoverageNeed", 0.5)), 0.0, 1.0)
+	var screen_need: float = clamp(float(context.get("screenNeed", 0.5)), 0.0, 1.0)
+	var strongpoint_need: float = clamp(float(context.get("strongpointNeed", 0.5)), 0.0, 1.0)
+	var reserve_need: float = clamp(float(context.get("reservePreservationNeed", 0.5)), 0.0, 1.0)
 
-	var frontage_component := frontage_need * float(weights.get("frontage", 0.0)) * float(split_factor)
-	var screen_component := max(screen_need, strongpoint_need) * float(weights.get("screenStrongpoint", 0.0)) * float(split_factor)
-	var reserve_component := reserve_need * float(weights.get("reserve", 0.0)) * float(split_factor)
+	var frontage_component: float = frontage_need * float(weights.get("frontage", 0.0)) * float(split_factor)
+	var screen_component: float = max(screen_need, strongpoint_need) * float(weights.get("screenStrongpoint", 0.0)) * float(split_factor)
+	var reserve_component: float = reserve_need * float(weights.get("reserve", 0.0)) * float(split_factor)
 
 	var cohesion_penalty := (float(depth) / 3.0) * float(weights.get("cohesionPenalty", 0.0))
-	var over_split_penalty := max(0.0, float(child_count - 3) / 2.0) * float(weights.get("overSplitPenalty", 0.0))
-	var isolation_risk := clamp(float(context.get("isolationRisk", 0.25)) + float(sibling_count - 1) * 0.08, 0.0, 1.0)
-	var isolation_penalty := isolation_risk * float(weights.get("isolationPenalty", 0.0))
+	var over_split_penalty: float = max(0.0, float(child_count - 3) / 2.0) * float(weights.get("overSplitPenalty", 0.0))
+	var isolation_risk: float = clamp(float(context.get("isolationRisk", 0.25)) + float(sibling_count - 1) * 0.08, 0.0, 1.0)
+	var isolation_penalty: float = isolation_risk * float(weights.get("isolationPenalty", 0.0))
 
-	var score := frontage_component + screen_component + reserve_component
+	var score: float = frontage_component + screen_component + reserve_component
 	score -= cohesion_penalty + over_split_penalty + isolation_penalty
 
 	return {
@@ -295,7 +295,7 @@ static func _unit_type_name_from_enum_value(unit_type_value: int) -> String:
 		UnitType.Value.HEADQUARTERS:
 			return "headquarters"
 		_:
-			return String(unit_type_value).strip_edges().to_lower().replace("_", "")
+			return str(unit_type_value).strip_edges().to_lower().replace("_", "")
 
 static func _canonical_role(role: Variant) -> String:
 	var normalized := _normalized_role(role)
@@ -322,7 +322,7 @@ static func _deployable_child_count(formation: Dictionary, min_deploy_size: Stri
 	return count
 
 static func _reason_string(action: String, score_result: Dictionary, decision: Dictionary) -> String:
-	var score := snapped(float(score_result.get("formationSplitScore", 0.0)), 0.01)
+	var score: float = snapped(float(score_result.get("formationSplitScore", 0.0)), 0.01)
 	if action == "split":
 		return "split selected: formationSplitScore=%s (canSplit=%s, legalChildren=%s)" % [
 			str(score),

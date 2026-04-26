@@ -102,13 +102,13 @@ static func score_combat_assignment(context: Dictionary, overrides: Dictionary =
 	var terrain := String(context.get("terrain", "open"))
 	var support_neighbors := int(context.get("supportNeighbors", 0))
 
-	var role_affinity := _table_lookup(section.get("roleAffinity", {}), unit_role, sector_type, 0.5)
-	var terrain_fit := _table_lookup(section.get("terrainSuitability", {}), unit_role, terrain, 0.5)
-	var proximity := clamp(1.0 - float(context.get("frontlineDistanceNormalized", 1.0)), 0.0, 1.0)
-	var objective_focus := 1.0 if bool(context.get("isObjectiveHex", false)) else 0.0
-	var pressure := clamp(float(context.get("enemyPressureNormalized", 0.0)), 0.0, 1.0)
-	var support_coverage := clamp(float(support_neighbors) / 3.0, 0.0, 1.0)
-	var support_alone := 1.0 if _is_support_role(unit_role) and support_neighbors <= 0 else 0.0
+	var role_affinity: float = _table_lookup(section.get("roleAffinity", {}), unit_role, sector_type, 0.5)
+	var terrain_fit: float = _table_lookup(section.get("terrainSuitability", {}), unit_role, terrain, 0.5)
+	var proximity: float = clamp(1.0 - float(context.get("frontlineDistanceNormalized", 1.0)), 0.0, 1.0)
+	var objective_focus: float = 1.0 if bool(context.get("isObjectiveHex", false)) else 0.0
+	var pressure: float = clamp(float(context.get("enemyPressureNormalized", 0.0)), 0.0, 1.0)
+	var support_coverage: float = clamp(float(support_neighbors) / 3.0, 0.0, 1.0)
+	var support_alone: float = 1.0 if _is_support_role(unit_role) and support_neighbors <= 0 else 0.0
 
 	var score := 0.0
 	score += role_affinity * float(weights.get("roleAffinity", 0.0))
@@ -141,11 +141,11 @@ static func score_support_attachment(context: Dictionary, overrides: Dictionary 
 	var support_role := String(context.get("supportRole", "weapons"))
 	var supported_role := String(context.get("supportedRole", "infantry"))
 
-	var role_affinity := _table_lookup(section.get("roleAffinity", {}), support_role, supported_role, 0.5)
-	var distance_fit := clamp(1.0 - float(context.get("distanceNormalized", 1.0)), 0.0, 1.0)
-	var threat_match := clamp(float(context.get("threatMatchNormalized", 0.0)), 0.0, 1.0)
-	var coverage := clamp(float(context.get("coverageNeedNormalized", 0.0)), 0.0, 1.0)
-	var support_alone := 1.0 if bool(context.get("leavesSupportAlone", false)) else 0.0
+	var role_affinity: float = _table_lookup(section.get("roleAffinity", {}), support_role, supported_role, 0.5)
+	var distance_fit: float = clamp(1.0 - float(context.get("distanceNormalized", 1.0)), 0.0, 1.0)
+	var threat_match: float = clamp(float(context.get("threatMatchNormalized", 0.0)), 0.0, 1.0)
+	var coverage: float = clamp(float(context.get("coverageNeedNormalized", 0.0)), 0.0, 1.0)
+	var support_alone: float = 1.0 if bool(context.get("leavesSupportAlone", false)) else 0.0
 
 	var score := 0.0
 	score += role_affinity * float(weights.get("roleAffinity", 0.0))
@@ -173,12 +173,12 @@ static func score_artillery_placement(context: Dictionary, overrides: Dictionary
 	var weights: Dictionary = section.get("weights", {})
 	var terrain := String(context.get("terrain", "open"))
 
-	var standoff := clamp(float(context.get("standoffDistanceFitNormalized", 0.0)), 0.0, 1.0)
-	var coverage := clamp(float(context.get("targetCoverageNormalized", 0.0)), 0.0, 1.0)
-	var terrain_fit := float(section.get("terrainSuitability", {}).get(terrain, 0.5))
-	var counter_battery_risk := clamp(float(context.get("counterBatteryRiskNormalized", 0.0)), 0.0, 1.0)
-	var road_access := clamp(float(context.get("roadAccessNormalized", 0.0)), 0.0, 1.0)
-	var support_alone := 1.0 if bool(context.get("isolatedFromMainForce", false)) else 0.0
+	var standoff: float = clamp(float(context.get("standoffDistanceFitNormalized", 0.0)), 0.0, 1.0)
+	var coverage: float = clamp(float(context.get("targetCoverageNormalized", 0.0)), 0.0, 1.0)
+	var terrain_fit: float = float(section.get("terrainSuitability", {}).get(terrain, 0.5))
+	var counter_battery_risk: float = clamp(float(context.get("counterBatteryRiskNormalized", 0.0)), 0.0, 1.0)
+	var road_access: float = clamp(float(context.get("roadAccessNormalized", 0.0)), 0.0, 1.0)
+	var support_alone: float = 1.0 if bool(context.get("isolatedFromMainForce", false)) else 0.0
 
 	var score := 0.0
 	score += standoff * float(weights.get("standoffDistance", 0.0))
@@ -208,12 +208,12 @@ static func score_reserve_placement(context: Dictionary, overrides: Dictionary =
 	var weights: Dictionary = section.get("weights", {})
 	var terrain := String(context.get("terrain", "open"))
 
-	var response_distance := clamp(float(context.get("responseDistanceFitNormalized", 0.0)), 0.0, 1.0)
-	var interior_lines := clamp(float(context.get("interiorLinesNormalized", 0.0)), 0.0, 1.0)
-	var terrain_fit := float(section.get("terrainSuitability", {}).get(terrain, 0.5))
-	var cover := clamp(float(context.get("coverNormalized", 0.0)), 0.0, 1.0)
-	var clumping := clamp(float(context.get("reserveClumpingNormalized", 0.0)), 0.0, 1.0)
-	var exposure := clamp(float(context.get("frontlineExposureNormalized", 0.0)), 0.0, 1.0)
+	var response_distance: float = clamp(float(context.get("responseDistanceFitNormalized", 0.0)), 0.0, 1.0)
+	var interior_lines: float = clamp(float(context.get("interiorLinesNormalized", 0.0)), 0.0, 1.0)
+	var terrain_fit: float = float(section.get("terrainSuitability", {}).get(terrain, 0.5))
+	var cover: float = clamp(float(context.get("coverNormalized", 0.0)), 0.0, 1.0)
+	var clumping: float = clamp(float(context.get("reserveClumpingNormalized", 0.0)), 0.0, 1.0)
+	var exposure: float = clamp(float(context.get("frontlineExposureNormalized", 0.0)), 0.0, 1.0)
 
 	var score := 0.0
 	score += response_distance * float(weights.get("responseDistance", 0.0))
@@ -273,7 +273,7 @@ static func _reason(label: String, value: float) -> String:
 static func _merge_dict(base: Dictionary, overrides: Dictionary) -> Dictionary:
 	var merged := base.duplicate(true)
 	for key in overrides.keys():
-		var incoming := overrides[key]
+		var incoming: Variant = overrides[key]
 		if merged.has(key) and merged[key] is Dictionary and incoming is Dictionary:
 			merged[key] = _merge_dict(merged[key], incoming)
 		else:

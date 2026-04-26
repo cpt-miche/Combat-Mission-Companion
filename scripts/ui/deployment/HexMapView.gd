@@ -137,13 +137,13 @@ func _find_hex(position: Vector2) -> Dictionary:
 	_ensure_geometry_cache()
 
 	var rough_row := int(round((position.y - HEX_ORIGIN.y) / HEX_VERTICAL_SPACING))
-	var row_start := max(0, rough_row - 1)
-	var row_end := min(GRID_ROWS - 1, rough_row + 1)
+	var row_start: int = max(0, rough_row - 1)
+	var row_end: int = min(GRID_ROWS - 1, rough_row + 1)
 	for row in range(row_start, row_end + 1):
-		var row_offset := HEX_HORIZONTAL_SPACING * 0.5 if row % 2 == 1 else 0.0
+		var row_offset: float = HEX_HORIZONTAL_SPACING * 0.5 if row % 2 == 1 else 0.0
 		var rough_column := int(round((position.x - HEX_ORIGIN.x - row_offset) / HEX_HORIZONTAL_SPACING))
-		var column_start := max(0, rough_column - 1)
-		var column_end := min(GRID_COLUMNS - 1, rough_column + 1)
+		var column_start: int = max(0, rough_column - 1)
+		var column_end: int = min(GRID_COLUMNS - 1, rough_column + 1)
 		for column in range(column_start, column_end + 1):
 			var axial := Vector2i(column, row)
 			var corners := _corners_for_axial(axial)

@@ -105,8 +105,8 @@ func _saved_structure_options() -> Array[Dictionary]:
 	var options: Array[Dictionary] = []
 	var template_names: PackedStringArray = SaveManager.list_division_templates()
 	for template_name in template_names:
-		var payload := SaveManager.load_division_template(template_name)
-		var root_unit := payload.get("root_unit", {})
+		var payload: Dictionary = SaveManager.load_division_template(template_name)
+		var root_unit: Variant = payload.get("root_unit", {})
 		if typeof(root_unit) != TYPE_DICTIONARY:
 			continue
 		var root_dict := root_unit as Dictionary
@@ -153,7 +153,7 @@ func _on_p2_structure_selected(index: int) -> void:
 	_apply_selected_p2_structure(index, true)
 
 func _apply_selected_p2_structure(index: int, show_status: bool) -> void:
-	var selected_tree := p2_structure_picker.get_item_metadata(index)
+	var selected_tree: Variant = p2_structure_picker.get_item_metadata(index)
 	if typeof(selected_tree) != TYPE_DICTIONARY:
 		return
 

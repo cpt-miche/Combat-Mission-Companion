@@ -311,10 +311,10 @@ static func _evaluate_threats(threats: Array, cfg: Dictionary) -> Array[Dictiona
 	var assessments: Array[Dictionary] = []
 	for item in threats:
 		var threat: Dictionary = item
-		var strength := clamp(float(threat.get("enemyStrength", 0.0)), 0.0, 1.0)
-		var proximity := clamp(float(threat.get("proximity", 0.0)), 0.0, 1.0)
-		var momentum := clamp(float(threat.get("momentum", 0.0)), 0.0, 1.0)
-		var score := (
+		var strength: float = clamp(float(threat.get("enemyStrength", 0.0)), 0.0, 1.0)
+		var proximity: float = clamp(float(threat.get("proximity", 0.0)), 0.0, 1.0)
+		var momentum: float = clamp(float(threat.get("momentum", 0.0)), 0.0, 1.0)
+		var score: float = (
 			strength * float(weights.get("enemyStrength", 0.0))
 			+ proximity * float(weights.get("proximity", 0.0))
 			+ momentum * float(weights.get("momentum", 0.0))
@@ -339,10 +339,10 @@ static func _evaluate_breakthroughs(breakthroughs: Array, cfg: Dictionary) -> Ar
 	var assessments: Array[Dictionary] = []
 	for item in breakthroughs:
 		var breakthrough: Dictionary = item
-		var opportunity := clamp(float(breakthrough.get("opportunity", 0.0)), 0.0, 1.0)
-		var readiness := clamp(float(breakthrough.get("readiness", 0.0)), 0.0, 1.0)
-		var terrain := clamp(float(breakthrough.get("terrainFit", 0.0)), 0.0, 1.0)
-		var score := (
+		var opportunity: float = clamp(float(breakthrough.get("opportunity", 0.0)), 0.0, 1.0)
+		var readiness: float = clamp(float(breakthrough.get("readiness", 0.0)), 0.0, 1.0)
+		var terrain: float = clamp(float(breakthrough.get("terrainFit", 0.0)), 0.0, 1.0)
+		var score: float = (
 			opportunity * float(weights.get("opportunity", 0.0))
 			+ readiness * float(weights.get("readiness", 0.0))
 			+ terrain * float(weights.get("terrain", 0.0))
@@ -383,12 +383,12 @@ static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionar
 		var penetration_factor := clamp(float(penetration_count) / float(prior_frontline_size), 0.0, 1.0)
 		var objective_distance := max(float(breakthrough.get("playerDistanceToObjective", 99.0)), 0.0)
 		var objective_proximity := clamp(1.0 - objective_distance / max(float(breakthrough.get("objectiveThreatRange", 6.0)), 1.0), 0.0, 1.0)
-		var road_access := clamp(max(
+		var road_access: float = clamp(max(
 			float(breakthrough.get("roadAccess", 0.0)),
 			float(breakthrough.get("highwayAccess", 0.0))
 		), 0.0, 1.0)
 		var sector_gap := clamp(float(breakthrough.get("sectorGapExposure", breakthrough.get("sectorGap", 0.0))), 0.0, 1.0)
-		var momentum := clamp(float(breakthrough.get("momentum", 0.0)), 0.0, 1.0)
+		var momentum: float = clamp(float(breakthrough.get("momentum", 0.0)), 0.0, 1.0)
 		var severity := _score_breakthrough_severity(
 			penetration_factor,
 			objective_proximity,
@@ -521,7 +521,7 @@ static func _evaluate_sectors(sectors: Array, cfg: Dictionary) -> Array[Dictiona
 	for item in sectors:
 		var sector: Dictionary = item
 		var pressure := clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
-		var readiness := clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
+		var readiness: float = clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
 		var supply := clamp(float(sector.get("supply", 0.0)), 0.0, 1.0)
 		var objective_criticality := clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
 		var defensibility := clamp(float(sector.get("defensibility", sector.get("terrainDefensibility", 0.0))), 0.0, 1.0)
@@ -531,14 +531,14 @@ static func _evaluate_sectors(sectors: Array, cfg: Dictionary) -> Array[Dictiona
 			float(sector.get("reserveSupport", 0.0)),
 			float(sector.get("supportCoverage", 0.0))
 		), 0.0, 1.0)
-		var is_quiet_sector := (
+		var is_quiet_sector: bool = (
 			pressure <= float(quiet_thresholds.get("maxPressure", 0.35))
 			and objective_criticality <= float(quiet_thresholds.get("maxObjectiveCriticality", 0.45))
 			and defensibility >= float(quiet_thresholds.get("minDefensibility", 0.55))
 			and recent_enemy_advance <= float(quiet_thresholds.get("maxRecentEnemyAdvance", 0.10))
 			and support >= float(quiet_thresholds.get("minSupport", 0.50))
 		)
-		var score := (
+		var score: float = (
 			pressure * float(weights.get("pressure", 0.0))
 			+ readiness * float(weights.get("readiness", 0.0))
 			+ supply * float(weights.get("supply", 0.0))
@@ -575,7 +575,7 @@ static func _evaluate_reserve_requests(requests: Array, cfg: Dictionary) -> Arra
 		var request: Dictionary = item
 		var urgency := clamp(float(request.get("urgency", 0.0)), 0.0, 1.0)
 		var deficit := clamp(float(request.get("deficit", 0.0)), 0.0, 1.0)
-		var score := (
+		var score: float = (
 			urgency * float(weights.get("urgency", 0.0))
 			+ deficit * float(weights.get("deficit", 0.0))
 		)
@@ -603,7 +603,7 @@ static func _evaluate_reinforcement_requests(requests: Array, cfg: Dictionary, q
 		var request: Dictionary = item
 		var urgency := clamp(float(request.get("urgency", 0.0)), 0.0, 1.0)
 		var deficit := clamp(float(request.get("deficit", 0.0)), 0.0, 1.0)
-		var score := (
+		var score: float = (
 			urgency * float(weights.get("urgency", 0.0))
 			+ deficit * float(weights.get("deficit", 0.0))
 		)
@@ -653,12 +653,12 @@ static func _evaluate_donor_candidates(request: Dictionary, quiet_sector_index: 
 		var post_transfer_score := clamp(float(donor.get("postTransferDefenseScore", pre_transfer_score - transfer_cost)), 0.0, 1.5)
 		var minimum_required := clamp(float(donor.get("minimumRequiredDefenseScore", request.get("minimumRequiredDefenseScore", pre_transfer_score * retention_default))), 0.0, 1.5)
 		var quiet_sector_gate := bool(quiet_sector_index.get(donor_sector, false))
-		var stays_above_threshold := post_transfer_score >= minimum_required
-		var legal := quiet_sector_gate and stays_above_threshold
+		var stays_above_threshold: bool = post_transfer_score >= minimum_required
+		var legal: bool = quiet_sector_gate and stays_above_threshold
 		var mobility := clamp(float(donor.get("mobility", donor.get("mobileFactor", 0.0))), 0.0, 1.0)
 		var route_length := max(float(donor.get("responseRouteLength", donor.get("routeDistance", donor.get("responseDistance", donor.get("travelTurns", 99.0))))), 0.0)
 		var route_efficiency := clamp(1.0 / (1.0 + route_length), 0.0, 1.0)
-		var rank_score := (
+		var rank_score: float = (
 			mobility * float(ranking_weights.get("mobility", 0.65))
 			+ route_efficiency * float(ranking_weights.get("routeEfficiency", 0.35))
 		)
@@ -742,7 +742,7 @@ static func _evaluate_structural_warnings(
 		var sector_id := String(sector.get("id", ""))
 		var objective_criticality := clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
 		var pressure := clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
-		var readiness := clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
+		var readiness: float = clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
 		var defensibility := clamp(float(sector.get("defensibility", sector.get("terrainDefensibility", 0.0))), 0.0, 1.0)
 		var artillery_coverage := clamp(max(
 			float(sector.get("artilleryCoverage", 0.0)),
@@ -888,7 +888,7 @@ static func _evaluate_response_intents(intents: Array, cfg: Dictionary) -> Array
 		var intent: Dictionary = item
 		var urgency := clamp(float(intent.get("urgency", 0.0)), 0.0, 1.0)
 		var feasibility := clamp(float(intent.get("feasibility", 0.0)), 0.0, 1.0)
-		var score := (
+		var score: float = (
 			urgency * float(weights.get("urgency", 0.0))
 			+ feasibility * float(weights.get("feasibility", 0.0))
 		)
