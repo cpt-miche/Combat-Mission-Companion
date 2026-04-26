@@ -368,13 +368,13 @@ func _is_deployable(unit: Dictionary) -> bool:
 
 func _deployability_block_reason(unit: Dictionary) -> String:
 	var snapshot := _unit_snapshot(unit)
-	snapshot["name"] = String(unit.get("name", unit.get("id", "Unit")))
+	snapshot["name"] = _preferred_unit_name(unit)
 	return DeploymentValidator.placement_block_reason(snapshot, [])
 
 func _unit_label(unit: Dictionary, depth: int = 0) -> String:
 	var size := _string_for_size(unit.get("size", "Unknown"))
 	var type := _string_for_type(unit.get("type", "Unit"))
-	var name := String(unit.get("name", unit.get("id", "unnamed")))
+	var name := _preferred_unit_name(unit)
 	return "%s%s - %s %s" % ["  ".repeat(max(depth, 0)), name, size.capitalize(), type.capitalize()]
 
 func _on_hex_selected(column: int, row: int) -> void:
@@ -438,19 +438,45 @@ func _deployment_key_for_unit_id(deployments: Dictionary, unit_id: String) -> St
 func _unit_snapshot(unit: Dictionary) -> Dictionary:
 	var unit_type := _string_for_type(unit.get("type", ""))
 	var unit_size := _string_for_size(unit.get("size", ""))
+	var preferred_name := _preferred_unit_name(unit)
+	var preferred_short_name := _preferred_short_name(unit, preferred_name)
 	return {
 		"id": unit.get("id", ""),
-		"name": String(unit.get("name", unit.get("id", "Unit"))),
+		"name": preferred_name,
 		"type": unit_type,
 		"size": unit_size,
 		"size_rank": _size_rank(unit_size),
-		"label": String(unit.get("name", unit.get("id", "U"))).substr(0, 2).to_upper(),
+		"label": preferred_short_name.substr(0, 2).to_upper(),
 		"is_tank": unit_type == "tank",
 		"is_headquarters": unit_type == "headquarters",
 		"is_battalion": unit_size == "battalion",
 		"is_company": unit_size == "company",
 		"is_platoon": unit_size == "platoon"
 	}
+
+func _preferred_unit_name(unit: Dictionary) -> String:
+	var name := String(unit.get("name", "")).strip_edges()
+	if not name.is_empty():
+		return name
+
+	var display_name := String(unit.get("display_name", "")).strip_edges()
+	if not display_name.is_empty():
+		return display_name
+
+	var short_name := String(unit.get("short_name", "")).strip_edges()
+	if not short_name.is_empty():
+		return short_name
+
+	var fallback_id := String(unit.get("id", "")).strip_edges()
+	if fallback_id.is_empty() or fallback_id.begins_with("unit_"):
+		return "Unnamed Unit"
+	return fallback_id
+
+func _preferred_short_name(unit: Dictionary, fallback_name: String) -> String:
+	var short_name := String(unit.get("short_name", "")).strip_edges()
+	if not short_name.is_empty():
+		return short_name
+	return fallback_name
 
 func _size_rank(size_name: String) -> int:
 	match size_name:

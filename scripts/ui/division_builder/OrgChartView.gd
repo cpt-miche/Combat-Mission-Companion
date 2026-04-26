@@ -215,7 +215,7 @@ func _draw_unit_node(unit: UnitModel, rect: Rect2, has_children: bool, is_collap
 		var label_position := toggle_rect.position + Vector2(4.0, TOGGLE_SIZE - 3.0)
 		draw_string(get_theme_default_font(), label_position, toggle_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, Color.WHITE)
 
-	var title := _display_name_from_template_id(unit.template_id)
+	var title := unit.display_name if not unit.display_name.is_empty() else _display_name_from_template_id(unit.template_id)
 	var label := "%s\n%s %s" % [title, UnitSize.display_name(unit.size), UnitType.display_name(unit.type)]
 	draw_multiline_string(
 		get_theme_default_font(),
