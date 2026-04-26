@@ -1,0 +1,77 @@
+{
+  "id": "quiet_donor_legality_checks",
+  "description": "Only quiet and legally safe donor sectors should be selected for reinforcement transfer.",
+  "operationalInput": {
+    "operationId": "op_donor_legality",
+    "turnIndex": 12,
+    "sectors": [
+      {
+        "id": "quiet_donor",
+        "pressure": 0.20,
+        "readiness": 0.40,
+        "supply": 0.40,
+        "objectiveCriticality": 0.20,
+        "defensibility": 0.90,
+        "recentEnemyAdvance": 0.05,
+        "artillerySupport": 0.70
+      },
+      {
+        "id": "loud_donor",
+        "pressure": 0.70,
+        "readiness": 0.60,
+        "supply": 0.50,
+        "objectiveCriticality": 0.70,
+        "defensibility": 0.40,
+        "recentEnemyAdvance": 0.40,
+        "artillerySupport": 0.20
+      }
+    ],
+    "reinforcementRequests": [
+      {
+        "id": "req_center",
+        "sectorId": "center",
+        "urgency": 0.8,
+        "deficit": 0.7,
+        "requestedStrength": 0.5,
+        "donorCandidates": [
+          {
+            "sectorId": "quiet_donor",
+            "preTransferDefenseScore": 1.0,
+            "transferDefenseCost": 0.2,
+            "minimumRequiredDefenseScore": 0.6,
+            "mobility": 0.8,
+            "responseRouteLength": 2
+          },
+          {
+            "sectorId": "loud_donor",
+            "preTransferDefenseScore": 1.0,
+            "transferDefenseCost": 0.1,
+            "minimumRequiredDefenseScore": 0.5,
+            "mobility": 0.9,
+            "responseRouteLength": 1
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "reinforcementPreferredSources": {
+      "req_center": ["quiet_donor"]
+    },
+    "donorLegalityBySector": {
+      "req_center": {
+        "quiet_donor": true,
+        "loud_donor": false
+      }
+    },
+    "deterministicSortAssertions": [
+      {
+        "collection": "reinforcementRequests",
+        "field": "id",
+        "expectedOrder": [
+          "req_center"
+        ]
+      }
+    ]
+  }
+}

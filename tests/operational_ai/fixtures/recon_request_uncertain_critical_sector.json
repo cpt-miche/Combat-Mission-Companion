@@ -1,0 +1,51 @@
+{
+  "id": "recon_request_uncertain_critical_sector",
+  "description": "Moderate attack opportunity in uncertain critical sector should request recon and emit recon warning.",
+  "operationalInput": {
+    "operationId": "op_recon_request",
+    "turnIndex": 9,
+    "sectors": [
+      {
+        "id": "critical_uncertain",
+        "pressure": 0.50,
+        "readiness": 0.50,
+        "supply": 0.50,
+        "objectiveCriticality": 0.85,
+        "importance": 0.90,
+        "scoutUncertainty": 0.80,
+        "reconSupport": 0.20
+      }
+    ],
+    "enemyAdjacentHexes": [
+      {
+        "id": "adj_critical_1",
+        "sectorId": "critical_uncertain",
+        "objectiveValue": 0.35,
+        "enemyWeaknessEstimate": 0.35,
+        "localFriendlyPower": 0.35,
+        "artillerySupport": 0.10,
+        "reconSupport": 0.20,
+        "terrainSuitability": 0.30,
+        "defensiveCoherenceRisk": 0.10,
+        "overextensionRisk": 0.10
+      }
+    ]
+  },
+  "expected": {
+    "recommendedActionsMustInclude": [
+      "requestRecon"
+    ],
+    "warningsMustContain": [
+      "warning=poor_recon_high_importance_uncertain_sector sector=critical_uncertain"
+    ],
+    "deterministicSortAssertions": [
+      {
+        "collection": "recommendedIntents",
+        "field": "id",
+        "expectedOrder": [
+          "advisory_attack_adj_critical_1_requestRecon"
+        ]
+      }
+    ]
+  }
+}

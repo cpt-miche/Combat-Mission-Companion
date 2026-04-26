@@ -1,0 +1,31 @@
+{
+  "id": "scout_intel_pressure_boost",
+  "description": "Higher scout uncertainty should increase enemy pressure score.",
+  "scoringComparison": {
+    "model": "enemyPressure",
+    "lowContext": {
+      "enemyCombatStrength": 0.6,
+      "enemySupportStrength": 0.6,
+      "enemyArtilleryProximity": 0.4,
+      "enemyReconProximity": 0.4,
+      "ownershipAdjacency": 0.5,
+      "routeAccess": 0.5,
+      "recentAdvances": 0.3,
+      "scoutUncertainty": 0.1
+    },
+    "highContext": {
+      "enemyCombatStrength": 0.6,
+      "enemySupportStrength": 0.6,
+      "enemyArtilleryProximity": 0.4,
+      "enemyReconProximity": 0.4,
+      "ownershipAdjacency": 0.5,
+      "routeAccess": 0.5,
+      "recentAdvances": 0.3,
+      "scoutUncertainty": 0.9
+    },
+    "minimumDelta": 0.35
+  },
+  "expected": {
+    "scoringComparisonPass": true
+  }
+}

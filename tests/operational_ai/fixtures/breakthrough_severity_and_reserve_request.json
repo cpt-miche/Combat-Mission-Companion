@@ -1,0 +1,45 @@
+{
+  "id": "breakthrough_severity_and_reserve_request",
+  "description": "Severe breakthroughs should create reserve requests and reserve response warnings.",
+  "operationalInput": {
+    "operationId": "op_breakthrough",
+    "turnIndex": 8,
+    "breakthroughs": [
+      {
+        "id": "bt_sector_north",
+        "sectorId": "north",
+        "previousHexes": ["0,0", "1,0", "2,0", "3,0"],
+        "currentHexes": ["1,0", "2,0", "3,0", "4,0", "5,0"],
+        "playerDistanceToObjective": 1,
+        "objectiveThreatRange": 6,
+        "roadAccess": 0.9,
+        "sectorGapExposure": 0.8,
+        "momentum": 0.9,
+        "requiredReserveTurns": 2,
+        "reserveCandidates": [
+          {"available": false, "etaTurns": 5}
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "breakthroughSeverityMin": {
+      "bt_sector_north": 0.65
+    },
+    "reserveNeedsMustInclude": [
+      "bt_sector_north_reserve_need"
+    ],
+    "warningsMustContain": [
+      "breakthrough=bt_sector_north sector=north no_reserve_response_within=2_turns"
+    ],
+    "deterministicSortAssertions": [
+      {
+        "collection": "reserveNeeds",
+        "field": "id",
+        "expectedOrder": [
+          "bt_sector_north_reserve_need"
+        ]
+      }
+    ]
+  }
+}
