@@ -318,7 +318,8 @@ func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 
 func _on_end_turn_pressed() -> void:
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log, {
-		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true)
+		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true),
+		"active_owner": _active_player
 	})
 	_units = result.get("units", {})
 	GameState.scout_intel_by_observer = result.get("scout_intel_by_observer", GameState.scout_intel_by_observer).duplicate(true)

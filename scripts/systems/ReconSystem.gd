@@ -248,7 +248,7 @@ static func _shift_size(size: String, delta: int) -> String:
 	var index := SIZE_ORDER.find(size)
 	if index < 0:
 		index = SIZE_ORDER.find("company")
-	var shifted := clamp(index + delta, 0, 2)
+	var shifted := clamp(index + delta, 0, SIZE_ORDER.size() - 1)
 	return String(SIZE_ORDER[int(shifted)])
 
 static func _hex_to_id(hex: Variant) -> String:

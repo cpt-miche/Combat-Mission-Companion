@@ -29,7 +29,7 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 	order_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return _initiative_score(a, units) > _initiative_score(b, units)
 	)
-	var active_owner := _resolve_active_owner(order_list, units)
+	var active_owner := _resolve_active_owner(order_list, units, int(trace_context.get("active_owner", 0)))
 	var prior_scout_intel_by_observer := trace_context.get("scout_intel_by_observer", {}) as Dictionary
 	if prior_scout_intel_by_observer == null:
 		prior_scout_intel_by_observer = {}
@@ -173,14 +173,14 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		"trace_anomalies": trace_anomalies
 	}
 
-static func _resolve_active_owner(order_list: Array[Dictionary], units: Dictionary) -> int:
+static func _resolve_active_owner(order_list: Array[Dictionary], units: Dictionary, fallback_owner: int = 0) -> int:
 	for order in order_list:
 		var unit_id := String(order.get("unit_id", ""))
 		if unit_id.is_empty() or not units.has(unit_id):
 			continue
 		var unit_state := units[unit_id] as Dictionary
 		return int(unit_state.get("owner", 0))
-	return 0
+	return fallback_owner
 
 static func _initiative_score(order: Dictionary, units: Dictionary) -> int:
 	var unit := units.get(order.get("unit_id", ""), {}) as Dictionary
