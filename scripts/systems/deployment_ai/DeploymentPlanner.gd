@@ -26,7 +26,7 @@ static func create_plan(
 	var objective_mode := String(options.get("objectiveMode", "mixed_split")).strip_edges().to_lower().replace(" ", "_")
 	var objectives: Array[Dictionary] = options.get("objectives", [])
 
-	var state := _build_state(elements, hexes, sector_model)
+	var state := _build_state(elements, hexes, sector_model, options)
 	var stage_orders: Array[Dictionary] = []
 
 	_stage_a_allocate_combat_anchors(state, objective_mode, stage_orders)
@@ -53,7 +53,7 @@ static func create_plan(
 	})
 	return DeploymentSanity.sanitize_plan(plan, hexes, sector_model)
 
-static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], sector_model: Dictionary) -> Dictionary:
+static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], sector_model: Dictionary, options: Dictionary = {}) -> Dictionary:
 	var frontline := _set_from_array(sector_model.get("frontlineHexes", []))
 	var contested := _set_from_array(sector_model.get("contestedArea", []))
 	var rear := _set_from_array(sector_model.get("rearArea", []))
@@ -75,6 +75,7 @@ static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], 
 		"stackHasAttackByHex": {},
 		"stackOrder": [],
 		"reserveAnchors": [],
+		"traceEventCallback": options.get("traceEventCallback", Callable()),
 		"units": {
 			"combat": [],
 			"support": [],
@@ -103,13 +104,16 @@ static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], 
 
 static func _stage_a_allocate_combat_anchors(state: Dictionary, objective_mode: String, orders: Array[Dictionary]) -> void:
 	var combat_units: Array = state["units"]["combat"]
+	_emit_stage_started(state, "A", {"unitCount": combat_units.size(), "objectiveMode": objective_mode})
 	if combat_units.is_empty():
+		_emit_stage_completed(state, "A", {"orderCount": 0, "objectiveMode": objective_mode})
 		return
 
 	var attack_hexes := _ranked_hexes_for_mode(state, "attack")
 	var defense_hexes := _ranked_hexes_for_mode(state, "defense")
 	var mixed_cursor_attack := 0
 	var mixed_cursor_defense := 0
+	var committed := 0
 
 	for i in range(combat_units.size()):
 		var unit: Dictionary = combat_units[i]
@@ -123,10 +127,11 @@ static func _stage_a_allocate_combat_anchors(state: Dictionary, objective_mode: 
 
 		var candidates := attack_hexes if stance == "attack" else defense_hexes
 		var start_idx := mixed_cursor_attack if stance == "attack" else mixed_cursor_defense
-		var selected := _first_legal_combat_hex(state, unit, candidates, start_idx)
+		var selected := _first_legal_combat_hex(state, unit, candidates, start_idx, "A", stance)
 		if selected.is_empty():
-			selected = _first_legal_combat_hex(state, unit, _fallback_ranked_hexes(state), 0)
+			selected = _first_legal_combat_hex(state, unit, _fallback_ranked_hexes(state), 0, "A", stance)
 		if selected.is_empty():
+			_emit_candidate_rejected(state, "A", unit, "", "combat_no_legal_hex", "Stage A: no legal combat hex available after evaluating candidate pools.", 0.0, {"stance": stance})
 			continue
 
 		if stance == "attack":
@@ -136,14 +141,22 @@ static func _stage_a_allocate_combat_anchors(state: Dictionary, objective_mode: 
 
 		var hex_id := String(selected.get("hexId", ""))
 		_commit_combat_placement(state, unit, hex_id, stance)
-		orders.append(_make_order(unit, hex_id, "A", stance, _reason_stage_a(unit, hex_id, stance, state)))
+		var stage_reason := _reason_stage_a(unit, hex_id, stance, state)
+		var order := _make_order(unit, hex_id, "A", stance, stage_reason["reason"], stage_reason["reason_code"])
+		orders.append(order)
+		_emit_order_committed(state, "A", unit, hex_id, order)
+		committed += 1
+	_emit_stage_completed(state, "A", {"orderCount": committed, "objectiveMode": objective_mode})
 
 static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]) -> void:
 	var support_units: Array = state["units"]["support"]
+	_emit_stage_started(state, "B", {"unitCount": support_units.size()})
 	if support_units.is_empty():
+		_emit_stage_completed(state, "B", {"orderCount": 0})
 		return
 
 	var stacks: Array[String] = state["stackOrder"]
+	var committed := 0
 	for unit in support_units:
 		var role := String(unit.get("role", ""))
 		var ranked_stacks := stacks.duplicate()
@@ -157,13 +170,21 @@ static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]
 
 		var placed := false
 		for hex_id in ranked_stacks:
+			var candidate_score := _support_stack_score(state, unit, hex_id)
+			_emit_candidate_scored(state, "B", unit, hex_id, candidate_score, "support_stack_score", "Stage B: scored support attachment candidate.")
 			if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT and bool(state["stackHasAttackByHex"].get(hex_id, false)):
+				_emit_candidate_rejected(state, "B", unit, hex_id, "anti_tank_attack_stack_blocked", "Stage B: anti-tank support cannot attach to attack stack.", candidate_score)
 				continue
 			if not _can_place_support(state, hex_id):
+				_emit_candidate_rejected(state, "B", unit, hex_id, "support_capacity_exceeded", "Stage B: support cap reached for stack.", candidate_score)
 				continue
 			_commit_support_placement(state, unit, hex_id)
 			var stance := "defense" if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT else String(state["stackStanceByHex"].get(hex_id, "support"))
-			orders.append(_make_order(unit, hex_id, "B", stance, _reason_stage_b(unit, hex_id, state)))
+			var stage_reason := _reason_stage_b(unit, hex_id, state)
+			var order := _make_order(unit, hex_id, "B", stance, stage_reason["reason"], stage_reason["reason_code"])
+			orders.append(order)
+			_emit_order_committed(state, "B", unit, hex_id, order)
+			committed += 1
 			placed = true
 			break
 
@@ -172,47 +193,68 @@ static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]
 
 		# If no stack can accept support, place as reserve support in rear while preserving support cap.
 		for rear_hex in _ranked_rear_hexes(state):
+			_emit_candidate_scored(state, "B", unit, rear_hex, float(state["priorities"].get(rear_hex, 0.0)), "rear_support_fallback_score", "Stage B: scored rear fallback support candidate.")
 			if not _can_place_support(state, rear_hex):
+				_emit_candidate_rejected(state, "B", unit, rear_hex, "support_capacity_exceeded", "Stage B fallback: support cap reached for rear hex.", float(state["priorities"].get(rear_hex, 0.0)))
 				continue
 			_commit_support_placement(state, unit, rear_hex)
-			orders.append(_make_order(unit, rear_hex, "B", "defense", "Stage B fallback: no legal combat stack with support capacity; attached to rear support node."))
+			var order := _make_order(unit, rear_hex, "B", "defense", "Stage B fallback: no legal combat stack with support capacity; attached to rear support node.", "support_rear_fallback")
+			orders.append(order)
+			_emit_order_committed(state, "B", unit, rear_hex, order)
+			committed += 1
 			break
+	_emit_stage_completed(state, "B", {"orderCount": committed})
 
 static func _stage_c_place_artillery(state: Dictionary, orders: Array[Dictionary]) -> void:
 	var artillery_units: Array = state["units"]["artillery"]
+	_emit_stage_started(state, "C", {"unitCount": artillery_units.size()})
 	if artillery_units.is_empty():
+		_emit_stage_completed(state, "C", {"orderCount": 0})
 		return
 
 	var ranked_rear := _ranked_rear_hexes(state)
+	var committed := 0
 	for unit in artillery_units:
 		var best_hex := ""
 		var best_score := -INF
 		for hex_id in ranked_rear:
 			if (state["frontline"] as Dictionary).has(hex_id):
+				_emit_candidate_rejected(state, "C", unit, hex_id, "frontline_artillery_forbidden", "Stage C: artillery cannot be placed on frontline hexes.", 0.0)
 				continue
 			if not _can_place_support(state, hex_id):
+				_emit_candidate_rejected(state, "C", unit, hex_id, "support_capacity_exceeded", "Stage C: support cap reached for artillery candidate.", 0.0)
 				continue
 			var coverage := _frontline_coverage_from(hex_id, state)
 			var priority := float(state["priorities"].get(hex_id, 0.0))
 			var score := coverage * 100.0 + priority
+			_emit_candidate_scored(state, "C", unit, hex_id, score, "artillery_coverage_score", "Stage C: scored artillery candidate by frontline coverage and priority.", {"coverage": coverage})
 			if score > best_score or (is_equal_approx(score, best_score) and hex_id < best_hex):
 				best_score = score
 				best_hex = hex_id
 		if best_hex.is_empty():
+			_emit_candidate_rejected(state, "C", unit, "", "artillery_no_legal_hex", "Stage C: no legal artillery placement candidate.", 0.0)
 			continue
 
 		_commit_support_placement(state, unit, best_hex)
-		orders.append(_make_order(unit, best_hex, "C", "support", _reason_stage_c(best_hex, state)))
+		var stage_reason := _reason_stage_c(best_hex, state)
+		var order := _make_order(unit, best_hex, "C", "support", stage_reason["reason"], stage_reason["reason_code"])
+		orders.append(order)
+		_emit_order_committed(state, "C", unit, best_hex, order)
+		committed += 1
+	_emit_stage_completed(state, "C", {"orderCount": committed})
 
 static func _stage_d_place_reserves(state: Dictionary, orders: Array[Dictionary]) -> void:
 	var reserve_units: Array = state["units"]["reserve"]
+	_emit_stage_started(state, "D", {"unitCount": reserve_units.size()})
 	if reserve_units.is_empty():
+		_emit_stage_completed(state, "D", {"orderCount": 0})
 		return
 
 	var candidates := _ranked_rear_hexes(state)
 	if candidates.is_empty():
 		candidates = _fallback_ranked_hexes(state)
 
+	var committed := 0
 	for unit in reserve_units:
 		var role := String(unit.get("role", ""))
 		var is_support := _is_support_role(role)
@@ -220,8 +262,10 @@ static func _stage_d_place_reserves(state: Dictionary, orders: Array[Dictionary]
 		var best_score := -INF
 		for hex_id in candidates:
 			if is_support and not _can_place_support(state, hex_id):
+				_emit_candidate_rejected(state, "D", unit, hex_id, "support_capacity_exceeded", "Stage D: reserve support candidate exceeded support cap.", 0.0, {"isSupport": true})
 				continue
 			if not is_support and not _can_place_combat(state, hex_id, _combat_cost(unit)):
+				_emit_candidate_rejected(state, "D", unit, hex_id, "combat_capacity_exceeded", "Stage D: reserve combat candidate exceeded combat cap.", 0.0, {"isSupport": false})
 				continue
 
 			var base_priority := float(state["priorities"].get(hex_id, 0.0))
@@ -229,12 +273,14 @@ static func _stage_d_place_reserves(state: Dictionary, orders: Array[Dictionary]
 			var response_bonus := 1.0 / float(distance_to_front + 1)
 			var clump_penalty := _reserve_clumping_penalty(hex_id, state)
 			var score := base_priority + response_bonus - clump_penalty
+			_emit_candidate_scored(state, "D", unit, hex_id, score, "reserve_position_score", "Stage D: scored reserve candidate for response and spacing.", {"distanceToFront": distance_to_front, "clumpPenalty": clump_penalty})
 
 			if score > best_score or (is_equal_approx(score, best_score) and hex_id < best_hex):
 				best_score = score
 				best_hex = hex_id
 
 		if best_hex.is_empty():
+			_emit_candidate_rejected(state, "D", unit, "", "reserve_no_legal_hex", "Stage D: no legal reserve candidate available.", 0.0, {"isSupport": is_support})
 			continue
 
 		if is_support:
@@ -242,7 +288,12 @@ static func _stage_d_place_reserves(state: Dictionary, orders: Array[Dictionary]
 		else:
 			_commit_combat_placement(state, unit, best_hex, "reserve")
 			(state["reserveAnchors"] as Array).append(best_hex)
-		orders.append(_make_order(unit, best_hex, "D", "reserve", _reason_stage_d(best_hex, state)))
+		var stage_reason := _reason_stage_d(best_hex, state)
+		var order := _make_order(unit, best_hex, "D", "reserve", stage_reason["reason"], stage_reason["reason_code"])
+		orders.append(order)
+		_emit_order_committed(state, "D", unit, best_hex, order)
+		committed += 1
+	_emit_stage_completed(state, "D", {"orderCount": committed})
 
 static func _ranked_hexes_for_mode(state: Dictionary, mode: String) -> Array[String]:
 	var pool := {}
@@ -294,12 +345,15 @@ static func _fallback_ranked_hexes(state: Dictionary) -> Array[String]:
 	)
 	return ranked
 
-static func _first_legal_combat_hex(state: Dictionary, unit: Dictionary, candidates: Array[String], start_index: int) -> Dictionary:
+static func _first_legal_combat_hex(state: Dictionary, unit: Dictionary, candidates: Array[String], start_index: int, stage: String, stance: String) -> Dictionary:
 	var cost := _combat_cost(unit)
 	for i in range(start_index, candidates.size()):
 		var hex_id := candidates[i]
+		var score := float(state["priorities"].get(hex_id, 0.0))
+		_emit_candidate_scored(state, stage, unit, hex_id, score, "combat_anchor_priority_score", "Stage A: scored combat anchor candidate.", {"stance": stance, "combatCost": cost})
 		if _can_place_combat(state, hex_id, cost):
 			return {"hexId": hex_id, "nextIndex": i + 1}
+		_emit_candidate_rejected(state, stage, unit, hex_id, "combat_capacity_exceeded", "Stage A: candidate exceeded combat stack cap.", score, {"stance": stance, "combatCost": cost})
 	return {}
 
 static func _commit_combat_placement(state: Dictionary, unit: Dictionary, hex_id: String, stance: String) -> void:
@@ -387,7 +441,7 @@ static func _is_support_role(role: String) -> bool:
 		DeploymentTypes.ROLE_COMMAND
 	]
 
-static func _make_order(unit: Dictionary, to_hex_id: String, stage: String, role: String, reason: String) -> Dictionary:
+static func _make_order(unit: Dictionary, to_hex_id: String, stage: String, role: String, reason: String, reason_code: String) -> Dictionary:
 	var unit_id := String(unit.get("id", ""))
 	return {
 		"id": "",
@@ -401,6 +455,7 @@ static func _make_order(unit: Dictionary, to_hex_id: String, stage: String, role
 		"stage": stage,
 		"role": role,
 		"reason": reason,
+		"reason_code": reason_code,
 		"score": _stage_weight(stage)
 	}
 
@@ -417,21 +472,75 @@ static func _stage_weight(stage: String) -> float:
 		_:
 			return 0.0
 
-static func _reason_stage_a(unit: Dictionary, hex_id: String, stance: String, state: Dictionary) -> String:
+static func _reason_stage_a(unit: Dictionary, hex_id: String, stance: String, state: Dictionary) -> Dictionary:
 	var p := float(state["priorities"].get(hex_id, 0.0))
-	return "Stage A: allocated combat anchor (%s) to priority sector %s (priority %.2f) while respecting combat cap %d." % [stance, hex_id, p, MAX_COMBAT_CAPACITY]
+	return {
+		"reason": "Stage A: allocated combat anchor (%s) to priority sector %s (priority %.2f) while respecting combat cap %d." % [stance, hex_id, p, MAX_COMBAT_CAPACITY],
+		"reason_code": "combat_anchor_allocated"
+	}
 
-static func _reason_stage_b(unit: Dictionary, hex_id: String, state: Dictionary) -> String:
+static func _reason_stage_b(unit: Dictionary, hex_id: String, state: Dictionary) -> Dictionary:
 	var support_now := int(state["supportLoad"].get(hex_id, 0))
-	return "Stage B: attached %s to combat stack at %s; support slots now %d/%d." % [String(unit.get("role", "support")), hex_id, support_now, MAX_SUPPORT_CAPACITY]
+	return {
+		"reason": "Stage B: attached %s to combat stack at %s; support slots now %d/%d." % [String(unit.get("role", "support")), hex_id, support_now, MAX_SUPPORT_CAPACITY],
+		"reason_code": "support_attached_to_stack"
+	}
 
-static func _reason_stage_c(hex_id: String, state: Dictionary) -> String:
+static func _reason_stage_c(hex_id: String, state: Dictionary) -> Dictionary:
 	var coverage := _frontline_coverage_from(hex_id, state)
-	return "Stage C: placed artillery in rear hex %s for range-%d coverage of %d frontline hexes (not frontline)." % [hex_id, ARTILLERY_RANGE, coverage]
+	return {
+		"reason": "Stage C: placed artillery in rear hex %s for range-%d coverage of %d frontline hexes (not frontline)." % [hex_id, ARTILLERY_RANGE, coverage],
+		"reason_code": "artillery_rear_coverage"
+	}
 
-static func _reason_stage_d(hex_id: String, state: Dictionary) -> String:
+static func _reason_stage_d(hex_id: String, state: Dictionary) -> Dictionary:
 	var dist := _distance_to_frontline(hex_id, state)
-	return "Stage D: assigned reserve to %s with anti-clumping spacing and response distance %d from frontline." % [hex_id, dist]
+	return {
+		"reason": "Stage D: assigned reserve to %s with anti-clumping spacing and response distance %d from frontline." % [hex_id, dist],
+		"reason_code": "reserve_positioned_response_spacing"
+	}
+
+static func _emit_stage_started(state: Dictionary, stage: String, meta: Dictionary = {}) -> void:
+	_emit_trace_event(state, "stage_started", stage, {"reason_code": "stage_started", "reason_text": "Stage %s started." % stage, "meta": meta})
+
+static func _emit_stage_completed(state: Dictionary, stage: String, meta: Dictionary = {}) -> void:
+	_emit_trace_event(state, "stage_completed", stage, {"reason_code": "stage_completed", "reason_text": "Stage %s completed." % stage, "meta": meta})
+
+static func _emit_candidate_scored(state: Dictionary, stage: String, unit: Dictionary, candidate_id: String, score: float, reason_code: String, reason_text: String, meta: Dictionary = {}) -> void:
+	var event_meta := meta.duplicate(true)
+	event_meta["unitId"] = String(unit.get("id", ""))
+	event_meta["candidateId"] = candidate_id
+	_emit_trace_event(state, "candidate_scored", stage, {"reason_code": reason_code, "reason_text": reason_text, "score": score, "meta": event_meta})
+
+static func _emit_candidate_rejected(state: Dictionary, stage: String, unit: Dictionary, candidate_id: String, reason_code: String, reason_text: String, score: float = 0.0, meta: Dictionary = {}) -> void:
+	var event_meta := meta.duplicate(true)
+	event_meta["unitId"] = String(unit.get("id", ""))
+	event_meta["candidateId"] = candidate_id
+	_emit_trace_event(state, "candidate_rejected", stage, {"reason_code": reason_code, "reason_text": reason_text, "score": score, "meta": event_meta})
+
+static func _emit_order_committed(state: Dictionary, stage: String, unit: Dictionary, hex_id: String, order: Dictionary) -> void:
+	_emit_trace_event(state, "order_committed", stage, {
+		"reason_code": String(order.get("reason_code", "")),
+		"reason_text": String(order.get("reason", "")),
+		"score": float(order.get("score", 0.0)),
+		"meta": {
+			"unitId": String(unit.get("id", "")),
+			"candidateId": hex_id,
+			"orderId": String(order.get("id", "")),
+			"role": String(order.get("role", ""))
+		}
+	})
+
+static func _emit_trace_event(state: Dictionary, event_type: String, stage: String, payload: Dictionary) -> void:
+	var callback_variant := state.get("traceEventCallback", Callable())
+	if typeof(callback_variant) != TYPE_CALLABLE:
+		return
+	var callback := callback_variant as Callable
+	if not callback.is_valid():
+		return
+	var event_payload := payload.duplicate(true)
+	event_payload["stage"] = stage
+	callback.call(event_type, event_payload)
 
 static func _extract_hex_priorities(hex_scores: Dictionary) -> Dictionary:
 	var priorities := {}
