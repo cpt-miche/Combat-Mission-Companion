@@ -317,8 +317,11 @@ func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 	return true
 
 func _on_end_turn_pressed() -> void:
-	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log)
+	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log, {
+		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true)
+	})
 	_units = result.get("units", {})
+	GameState.scout_intel_by_observer = result.get("scout_intel_by_observer", GameState.scout_intel_by_observer).duplicate(true)
 	_persist_units_to_state()
 	_execution_queue = result.get("execution_queue", [])
 	GameState.combat_log_entries = _combat_log.entries.duplicate(true)
@@ -388,6 +391,8 @@ func _load_or_initialize_units() -> void:
 				"owner": player_index,
 				"hex": Vector2i(q, r),
 				"initiative": 50,
+				"unit_type": String(unit_data.get("type", "tank" if bool(unit_data.get("is_tank", false)) else "infantry")),
+				"formation_size": String(unit_data.get("size", "company")),
 				"recon_bonus": 0 if bool(unit_data.get("is_tank", false)) else 5,
 				"concealment": 5
 			}
