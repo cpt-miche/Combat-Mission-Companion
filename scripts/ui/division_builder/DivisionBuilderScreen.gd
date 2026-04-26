@@ -21,11 +21,12 @@ var _root_unit: UnitModel
 var _selected_unit: UnitModel
 var _pending_unit_data: Dictionary = {}
 var _id_counter := 1
+var _builder_player_index := 0
 
 func _ready() -> void:
 	_build_nation_selector()
 	_build_veterancy_selector()
-	_initialize_organization()
+	_initialize_organization(_default_nation_for_builder_player(_builder_player_index))
 
 	unit_tree.cell_selected.connect(_on_unit_tree_selected)
 	add_unit_button.pressed.connect(_on_add_unit_pressed)
@@ -40,6 +41,7 @@ func _ready() -> void:
 
 	_refresh_template_selector()
 	_refresh_all()
+	_update_builder_phase_ui()
 
 func _build_nation_selector() -> void:
 	nation_selector.clear()
@@ -57,10 +59,9 @@ func _build_veterancy_selector() -> void:
 		veterancy_selector.add_item(Veterancy.display_name(level))
 		veterancy_selector.set_item_metadata(veterancy_selector.item_count - 1, level)
 
-func _initialize_organization() -> void:
-	var default_nation := GameState.selected_nation_id
+func _initialize_organization(default_nation: String = "") -> void:
 	if default_nation.is_empty():
-		default_nation = "usa"
+		default_nation = _default_nation_for_builder_player(_builder_player_index)
 	if nation_selector.item_count > 0:
 		var matching_index := 0
 		for i in range(nation_selector.item_count):
@@ -532,8 +533,14 @@ func _on_load_template_pressed() -> void:
 
 func _on_start_deployment_pressed() -> void:
 	_ensure_players_initialized()
-	GameState.players[0]["division_tree"] = _unit_to_dict(_root_unit)
-	GameState.players[0]["deployments"] = {}
+	GameState.players[_builder_player_index]["division_tree"] = _unit_to_dict(_root_unit)
+	GameState.players[_builder_player_index]["deployments"] = {}
+	if _builder_player_index == 0:
+		GameState.players[1]["controller"] = "ai"
+		GameState.players[1]["is_ai"] = true
+		_builder_player_index = 1
+		_reset_builder_for_next_player()
+		return
 	if GameState.map_flow == GameState.MapFlow.PLAY_SAVED_MAP:
 		GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
 		return
@@ -551,6 +558,38 @@ func _ensure_players_initialized() -> void:
 	for i in range(2):
 		if not GameState.players[i].has("deployments"):
 			GameState.players[i]["deployments"] = {}
+		if not GameState.players[i].has("controller"):
+			GameState.players[i]["controller"] = "human"
+
+func _reset_builder_for_next_player() -> void:
+	_id_counter = 1
+	_pending_unit_data.clear()
+	_initialize_organization(_default_nation_for_builder_player(_builder_player_index))
+	_refresh_all()
+	_update_builder_phase_ui()
+
+func _update_builder_phase_ui() -> void:
+	if _builder_player_index == 0:
+		start_deployment_button.text = "Submit Player Units"
+		return
+	start_deployment_button.text = "Submit AI Units & Continue"
+	pending_unit_label.text = "Configure AI unit structure, then submit to continue."
+
+func _default_nation_for_builder_player(player_index: int) -> String:
+	var selected_nation := String(GameState.selected_nation_id)
+	if selected_nation.is_empty():
+		selected_nation = "usa"
+	if player_index == 0:
+		return selected_nation
+	return _opposing_nation_id(selected_nation)
+
+func _opposing_nation_id(nation_id: String) -> String:
+	var normalized := nation_id.strip_edges().to_lower()
+	if normalized == "usa":
+		return "germany"
+	if normalized == "germany":
+		return "usa"
+	return nation_id
 
 func _refresh_template_selector() -> void:
 	template_selector.clear()
