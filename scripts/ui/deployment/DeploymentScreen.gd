@@ -13,6 +13,8 @@ const DeploymentAIService = preload("res://scripts/systems/deployment_ai/Deploym
 
 var _player_index := 0
 var _deployable_units: Array[Dictionary] = []
+var _selected_unit_id := ""
+var _selected_unit_metadata: Dictionary = {}
 
 func _ready() -> void:
 	_player_index = 0 if GameState.current_phase == GameState.Phase.DEPLOYMENT_P1 else 1
@@ -24,6 +26,8 @@ func _ready() -> void:
 	_refresh_phase_ui("Select a unit, then click a hex in your territory.")
 
 	hex_map_view.hex_selected.connect(_on_hex_selected)
+	unit_list.item_selected.connect(_on_unit_item_selected)
+	unit_list.item_activated.connect(_on_unit_item_activated)
 	p2_structure_picker.item_selected.connect(_on_p2_structure_selected)
 	finish_button.pressed.connect(_on_finish_deployment_pressed)
 
@@ -434,6 +438,8 @@ func _build_deployable_unit_list() -> void:
 	unit_list.clear()
 	unit_list.hide_root = true
 	_deployable_units.clear()
+	_selected_unit_id = ""
+	_selected_unit_metadata = {}
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
 	var root_item := unit_list.create_item()
@@ -471,6 +477,25 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant) -> 
 	if item.get_child_count() > 0:
 		item.set_collapsed(true)
 
+func _on_unit_item_selected() -> void:
+	var selected_item := unit_list.get_selected()
+	if selected_item == null:
+		_selected_unit_id = ""
+		_selected_unit_metadata = {}
+		return
+
+	var selected_metadata_variant: Variant = selected_item.get_metadata(0)
+	if typeof(selected_metadata_variant) != TYPE_DICTIONARY:
+		_selected_unit_id = ""
+		_selected_unit_metadata = {}
+		return
+
+	_selected_unit_metadata = (selected_metadata_variant as Dictionary).duplicate(true)
+	_selected_unit_id = String(_selected_unit_metadata.get("unit_id", ""))
+
+func _on_unit_item_activated() -> void:
+	_on_unit_item_selected()
+
 
 func _string_for_type(raw_type: Variant) -> String:
 	if typeof(raw_type) == TYPE_INT:
@@ -499,25 +524,20 @@ func _unit_label(unit: Dictionary) -> String:
 	return "%s - %s %s" % [name, size.capitalize(), type.capitalize()]
 
 func _on_hex_selected(column: int, row: int) -> void:
-	var selected_item := unit_list.get_selected()
-	if selected_item == null:
+	if _selected_unit_id.is_empty() or _selected_unit_metadata.is_empty():
 		_refresh_phase_ui("Select a unit first.")
 		return
 
-	var selected_metadata_variant: Variant = selected_item.get_metadata(0)
-	if typeof(selected_metadata_variant) != TYPE_DICTIONARY:
-		_refresh_phase_ui("Select a unit first.")
-		return
-
-	var selected_metadata := selected_metadata_variant as Dictionary
-	var unit_data := selected_metadata.get("unit", {}) as Dictionary
-	var base_block_reason := String(selected_metadata.get("base_block_reason", ""))
+	var unit_data := _selected_unit_metadata.get("unit", {}) as Dictionary
+	var base_block_reason := String(_selected_unit_metadata.get("base_block_reason", ""))
 	if not base_block_reason.is_empty():
 		_refresh_phase_ui(base_block_reason)
 		return
 
 	var unit_snapshot := _unit_snapshot(unit_data)
-	var unit_id := String(unit_snapshot.get("id", ""))
+	var unit_id := _selected_unit_id
+	if unit_id.is_empty():
+		unit_id = String(unit_snapshot.get("id", ""))
 	var territory_owner := int(GameState.territory_map.get("%d,%d" % [column, row], GameState.TerritoryOwnership.NEUTRAL))
 	if not DeploymentValidator.can_deploy_in_territory(territory_owner, _player_index):
 		_refresh_phase_ui("Deployment must be inside your territory.")
