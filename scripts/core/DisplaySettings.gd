@@ -83,6 +83,7 @@ func set_display_settings(preset_id: String, window_mode: String, ui_scale_mode:
 	var applied_ui_scale_mode := _apply_ui_scale_mode(ui_scale_mode)
 	var applied_ui_scale_value := _apply_ui_scale_value(ui_scale_value)
 	_apply_effective_ui_scale()
+	_last_known_window_size = get_window_size()
 	if persist:
 		SaveManager.save_display_settings({
 			"preset_id": applied_preset_id,
@@ -90,13 +91,7 @@ func set_display_settings(preset_id: String, window_mode: String, ui_scale_mode:
 			"ui_scale_mode": applied_ui_scale_mode,
 			"ui_scale_value": applied_ui_scale_value
 		})
-	var applied_settings := {
-		"preset_id": applied_preset_id,
-		"window_mode": applied_window_mode,
-		"ui_scale_mode": applied_ui_scale_mode,
-		"ui_scale_value": applied_ui_scale_value,
-		"effective_ui_scale": get_effective_ui_scale()
-	}
+	var applied_settings := get_current_settings()
 	runtime_display_updated.emit(applied_settings)
 	return applied_settings
 
