@@ -1,4 +1,5 @@
 extends Node
+class_name DisplaySettings
 signal runtime_display_updated(applied: Dictionary)
 
 const PRESET_720P := Vector2i(1280, 720)
@@ -61,7 +62,7 @@ func get_effective_ui_scale() -> float:
 
 func get_auto_ui_scale_for_preset(preset_id: String) -> float:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
-	var fallback := AUTO_UI_SCALE_BY_PRESET.get(DEFAULT_PRESET_ID, DEFAULT_UI_SCALE_VALUE)
+	var fallback: float = float(AUTO_UI_SCALE_BY_PRESET.get(DEFAULT_PRESET_ID, DEFAULT_UI_SCALE_VALUE))
 	return _clamp_ui_scale(float(AUTO_UI_SCALE_BY_PRESET.get(resolved_preset_id, fallback)))
 
 func get_available_presets() -> Dictionary:
