@@ -23,6 +23,7 @@ enum MapFlow {
 
 signal phase_changed(new_phase: Phase)
 const MAP_PAYLOAD_VERSION_CURRENT := 1
+const AIDebugTypes = preload("res://scripts/systems/ai_debug/AIDebugTypes.gd")
 
 var current_phase: Phase = Phase.MAIN_MENU
 var players: Array[Dictionary] = []
@@ -37,6 +38,8 @@ var active_player: int = 0
 var map_flow: MapFlow = MapFlow.NEW_MAP
 var selected_map_name: String = ""
 var deployment_ai_debug: Dictionary = {}
+var ai_debug_enabled: bool = false
+var ai_debug_level: int = AIDebugTypes.DebugLevel.OFF
 
 func set_phase(phase: Phase) -> void:
 	if current_phase == phase:
@@ -58,7 +61,20 @@ func reset() -> void:
 	map_flow = MapFlow.NEW_MAP
 	selected_map_name = ""
 	deployment_ai_debug.clear()
+	ai_debug_enabled = false
+	ai_debug_level = AIDebugTypes.DebugLevel.OFF
 	emit_signal("phase_changed", current_phase)
+
+func get_ai_debug_config() -> Dictionary:
+	return {
+		"enabled": ai_debug_enabled,
+		"level": ai_debug_level
+	}
+
+func is_ai_debug_active(required_level: int = AIDebugTypes.DebugLevel.ERROR) -> bool:
+	if not ai_debug_enabled:
+		return false
+	return ai_debug_level >= required_level
 
 func apply_map_payload(payload: Dictionary) -> void:
 	var map_payload := _extract_map_payload(payload)
