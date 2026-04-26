@@ -28,18 +28,18 @@ const ROLL_DENOMINATOR_BY_TYPE := {
 const SIZE_ORDER := ["platoon", "company", "battalion", "regiment"]
 
 static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, prior_hex_intel: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
-	var prior_unit_intel := _extract_prior_unit_intel(prior_hex_intel)
-	var next_hex_intel := _extract_prior_hex_intel(prior_hex_intel)
-	var enemy_hex_to_units := _collect_enemy_units_by_hex(units, observer_owner)
-	var adjacent_enemy_hexes := _collect_adjacent_enemy_hexes(units, observer_owner, enemy_hex_to_units)
-	var contact_unit_ids := _collect_contact_enemy_unit_ids(adjacent_enemy_hexes, enemy_hex_to_units)
-	var unit_intel_by_id := _reconcile_unit_intel(prior_unit_intel, contact_unit_ids)
+	var prior_unit_intel: Dictionary = _extract_prior_unit_intel(prior_hex_intel)
+	var next_hex_intel: Dictionary = _extract_prior_hex_intel(prior_hex_intel)
+	var enemy_hex_to_units: Dictionary = _collect_enemy_units_by_hex(units, observer_owner)
+	var adjacent_enemy_hexes: Dictionary = _collect_adjacent_enemy_hexes(units, observer_owner, enemy_hex_to_units)
+	var contact_unit_ids: Dictionary = _collect_contact_enemy_unit_ids(adjacent_enemy_hexes, enemy_hex_to_units)
+	var unit_intel_by_id: Dictionary = _reconcile_unit_intel(prior_unit_intel, contact_unit_ids)
 
 	for enemy_hex_id in adjacent_enemy_hexes.keys():
-		var intel := _ensure_hex_intel(next_hex_intel, enemy_hex_id)
+		var intel: Dictionary = _ensure_hex_intel(next_hex_intel, enemy_hex_id)
 		var adjacent_friendlies: Array = adjacent_enemy_hexes[enemy_hex_id]
 		intel["scoutLevel"] = _apply_automatic_floor(int(intel.get("scoutLevel", SCOUT_LEVEL_MIN)), adjacent_friendlies)
-		var level_gain := _roll_scout_progression(adjacent_friendlies, rng)
+		var level_gain: int = _roll_scout_progression(adjacent_friendlies, rng)
 		intel["scoutLevel"] = int(clamp(int(intel.get("scoutLevel", SCOUT_LEVEL_MIN)) + level_gain, SCOUT_LEVEL_MIN, SCOUT_LEVEL_MAX))
 		var enemy_units: Array = enemy_hex_to_units.get(enemy_hex_id, [])
 		_resolve_visible_intel(intel, enemy_units, unit_intel_by_id, rng)
@@ -59,13 +59,13 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 	return next_hex_intel
 
 static func resolve_recon(attacker: Dictionary, defender: Dictionary, modifier: int = 0, rng: RandomNumberGenerator = null) -> Dictionary:
-	var resolved_rng := rng
+	var resolved_rng: RandomNumberGenerator = rng
 	if resolved_rng == null:
 		resolved_rng = RandomNumberGenerator.new()
 		resolved_rng.randomize()
-	var base_roll := resolved_rng.randi_range(0, 100)
-	var attacker_bonus := int(attacker.get("recon_bonus", 0))
-	var defender_penalty := int(defender.get("concealment", 0))
+	var base_roll: int = resolved_rng.randi_range(0, 100)
+	var attacker_bonus: int = int(attacker.get("recon_bonus", 0))
+	var defender_penalty: int = int(defender.get("concealment", 0))
 	var total: int = int(clamp(base_roll + attacker_bonus + modifier - defender_penalty, 0, 100))
 	return {"roll": base_roll, "total": total, "band": _band_for(total)}
 
@@ -73,25 +73,25 @@ static func expected_adjacent_scout_floor(unit_type: String) -> int:
 	return int(FLOOR_BY_TYPE.get(unit_type, 0))
 
 static func _collect_enemy_units_by_hex(units: Dictionary, observer_owner: int) -> Dictionary:
-	var result := {}
+	var result: Dictionary = {}
 	for unit in units.values():
 		if not (unit is Dictionary):
 			continue
-		var unit_dict := unit as Dictionary
+		var unit_dict: Dictionary = unit as Dictionary
 		if int(unit_dict.get("owner", observer_owner)) == observer_owner:
 			continue
-		var hex_id := _hex_to_id(unit_dict.get("hex", Vector2i.ZERO))
+		var hex_id: String = _hex_to_id(unit_dict.get("hex", Vector2i.ZERO))
 		if not result.has(hex_id):
 			result[hex_id] = []
 		(result[hex_id] as Array).append(unit_dict)
 	return result
 
 static func _collect_adjacent_enemy_hexes(units: Dictionary, observer_owner: int, enemy_hex_to_units: Dictionary) -> Dictionary:
-	var adjacent_enemy_hexes := {}
+	var adjacent_enemy_hexes: Dictionary = {}
 	for unit in units.values():
 		if not (unit is Dictionary):
 			continue
-		var friendly := unit as Dictionary
+		var friendly: Dictionary = unit as Dictionary
 		if int(friendly.get("owner", -1)) != observer_owner:
 			continue
 		for enemy_hex_id in enemy_hex_to_units.keys():
@@ -104,7 +104,7 @@ static func _collect_adjacent_enemy_hexes(units: Dictionary, observer_owner: int
 
 static func _ensure_hex_intel(intel_store: Dictionary, enemy_hex_id: String) -> Dictionary:
 	if intel_store.has(enemy_hex_id) and intel_store[enemy_hex_id] is Dictionary:
-		var existing := intel_store[enemy_hex_id] as Dictionary
+		var existing: Dictionary = intel_store[enemy_hex_id] as Dictionary
 		if not existing.has("hexId"):
 			existing["hexId"] = enemy_hex_id
 		if not existing.has("knownEnemyUnits"):
@@ -115,54 +115,54 @@ static func _ensure_hex_intel(intel_store: Dictionary, enemy_hex_id: String) -> 
 	return {"hexId": enemy_hex_id, "scoutLevel": SCOUT_LEVEL_MIN, "knownEnemyUnits": []}
 
 static func _extract_prior_hex_intel(prior_hex_intel: Dictionary) -> Dictionary:
-	var next_hex_intel := {}
+	var next_hex_intel: Dictionary = {}
 	for key in prior_hex_intel.keys():
 		if String(key) == UNIT_INTEL_KEY:
 			continue
-		var value := prior_hex_intel[key]
+		var value: Variant = prior_hex_intel[key]
 		if not (value is Dictionary):
 			continue
 		next_hex_intel[key] = (value as Dictionary).duplicate(true)
 	return next_hex_intel
 
 static func _extract_prior_unit_intel(prior_hex_intel: Dictionary) -> Dictionary:
-	var prior_unit_intel := {}
-	var raw_unit_intel := prior_hex_intel.get(UNIT_INTEL_KEY, null)
+	var prior_unit_intel: Dictionary = {}
+	var raw_unit_intel: Variant = prior_hex_intel.get(UNIT_INTEL_KEY, null)
 	if raw_unit_intel is Dictionary:
 		for unit_id in (raw_unit_intel as Dictionary).keys():
-			var known := (raw_unit_intel as Dictionary).get(unit_id, null)
+			var known: Variant = (raw_unit_intel as Dictionary).get(unit_id, null)
 			if not (known is Dictionary):
 				continue
 			prior_unit_intel[String(unit_id)] = (known as Dictionary).duplicate(true)
 		return prior_unit_intel
 	for hex_id in prior_hex_intel.keys():
-		var intel := prior_hex_intel.get(hex_id, null)
+		var intel: Variant = prior_hex_intel.get(hex_id, null)
 		if not (intel is Dictionary):
 			continue
-		var known_lookup := _known_enemy_lookup((intel as Dictionary).get("knownEnemyUnits", []))
+		var known_lookup: Dictionary = _known_enemy_lookup((intel as Dictionary).get("knownEnemyUnits", []))
 		for unit_id in known_lookup.keys():
 			prior_unit_intel[String(unit_id)] = (known_lookup[unit_id] as Dictionary).duplicate(true)
 	return prior_unit_intel
 
 static func _collect_contact_enemy_unit_ids(adjacent_enemy_hexes: Dictionary, enemy_hex_to_units: Dictionary) -> Dictionary:
-	var contact_unit_ids := {}
+	var contact_unit_ids: Dictionary = {}
 	for enemy_hex_id in adjacent_enemy_hexes.keys():
-		var enemy_units := enemy_hex_to_units.get(enemy_hex_id, [])
+		var enemy_units: Array = enemy_hex_to_units.get(enemy_hex_id, [])
 		for enemy in enemy_units:
 			if not (enemy is Dictionary):
 				continue
-			var enemy_unit := enemy as Dictionary
-			var unit_id := String(enemy_unit.get("id", ""))
+			var enemy_unit: Dictionary = enemy as Dictionary
+			var unit_id: String = String(enemy_unit.get("id", ""))
 			if unit_id.is_empty():
 				continue
 			contact_unit_ids[unit_id] = true
 	return contact_unit_ids
 
 static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids: Dictionary) -> Dictionary:
-	var unit_intel_by_id := {}
+	var unit_intel_by_id: Dictionary = {}
 	for unit_id in contact_unit_ids.keys():
-		var key := String(unit_id)
-		var existing := prior_unit_intel.get(key, null)
+		var key: String = String(unit_id)
+		var existing: Variant = prior_unit_intel.get(key, null)
 		if existing is Dictionary:
 			unit_intel_by_id[key] = (existing as Dictionary).duplicate(true)
 		else:
@@ -170,20 +170,20 @@ static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids
 	return unit_intel_by_id
 
 static func _apply_automatic_floor(current_level: int, adjacent_friendlies: Array) -> int:
-	var level := current_level
+	var level: int = current_level
 	for unit in adjacent_friendlies:
 		if not (unit is Dictionary):
 			continue
-		var floor := expected_adjacent_scout_floor(_normalized_type(unit as Dictionary))
+		var floor: int = expected_adjacent_scout_floor(_normalized_type(unit as Dictionary))
 		level = maxi(level, floor)
 	return int(clamp(level, SCOUT_LEVEL_MIN, SCOUT_LEVEL_MAX))
 
 static func _roll_scout_progression(adjacent_friendlies: Array, rng: RandomNumberGenerator) -> int:
-	var gain := 0
+	var gain: int = 0
 	for unit in adjacent_friendlies:
 		if not (unit is Dictionary):
 			continue
-		var denominator := int(ROLL_DENOMINATOR_BY_TYPE.get(_normalized_type(unit as Dictionary), 0))
+		var denominator: int = int(ROLL_DENOMINATOR_BY_TYPE.get(_normalized_type(unit as Dictionary), 0))
 		if denominator <= 0:
 			continue
 		if rng.randi_range(1, denominator) == 1:
@@ -191,16 +191,16 @@ static func _roll_scout_progression(adjacent_friendlies: Array, rng: RandomNumbe
 	return gain
 
 static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, unit_intel_by_id: Dictionary, rng: RandomNumberGenerator) -> void:
-	var level := int(hex_intel.get("scoutLevel", SCOUT_LEVEL_MIN))
+	var level: int = int(hex_intel.get("scoutLevel", SCOUT_LEVEL_MIN))
 	var next_known: Array[Dictionary] = []
 	for enemy in enemy_units:
 		if not (enemy is Dictionary):
 			continue
-		var enemy_unit := enemy as Dictionary
-		var unit_id := String(enemy_unit.get("id", ""))
+		var enemy_unit: Dictionary = enemy as Dictionary
+		var unit_id: String = String(enemy_unit.get("id", ""))
 		if unit_id.is_empty():
 			continue
-		var known := _known_for_unit(unit_id, unit_intel_by_id)
+		var known: Dictionary = _known_for_unit(unit_id, unit_intel_by_id)
 		_apply_level_type_visibility(level, known, enemy_unit, rng)
 		_apply_level_size_visibility(level, known, enemy_unit, rng)
 		unit_intel_by_id[unit_id] = known.duplicate(true)
@@ -208,13 +208,13 @@ static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, un
 	hex_intel["knownEnemyUnits"] = next_known
 
 static func _known_for_unit(unit_id: String, unit_intel_by_id: Dictionary) -> Dictionary:
-	var existing := unit_intel_by_id.get(unit_id, null)
+	var existing: Variant = unit_intel_by_id.get(unit_id, null)
 	if existing is Dictionary:
 		return (existing as Dictionary).duplicate(true)
 	return _new_known_enemy(unit_id)
 
 static func _apply_level_type_visibility(level: int, known: Dictionary, enemy_unit: Dictionary, rng: RandomNumberGenerator) -> void:
-	var unit_type := _normalized_type(enemy_unit)
+	var unit_type: String = _normalized_type(enemy_unit)
 	if level <= 0:
 		return
 	if level == 1:
@@ -238,19 +238,19 @@ static func _apply_level_size_visibility(level: int, known: Dictionary, enemy_un
 		return
 	if level < 3:
 		return
-	var unit_type := _normalized_type(enemy_unit)
-	var true_size := _normalized_size(enemy_unit)
+	var unit_type: String = _normalized_type(enemy_unit)
+	var true_size: String = _normalized_size(enemy_unit)
 	if level == 3:
 		if not COMBAT_TYPES.has(unit_type):
 			return
 		if rng.randi_range(1, 4) != 1:
 			return
-		var drift_roll := rng.randi_range(1, 4)
-		var drift := -1 if drift_roll == 1 else (1 if drift_roll == 4 else 0)
+		var drift_roll: int = rng.randi_range(1, 4)
+		var drift: int = -1 if drift_roll == 1 else (1 if drift_roll == 4 else 0)
 		known["reportedSize"] = _shift_size(true_size, drift)
 	elif level >= 4:
 		if rng.randi_range(1, 8) == 1:
-			var direction := -1 if rng.randi_range(1, 2) == 1 else 1
+			var direction: int = -1 if rng.randi_range(1, 2) == 1 else 1
 			known["reportedSize"] = _shift_size(true_size, direction)
 		else:
 			known["reportedSize"] = true_size
@@ -269,15 +269,15 @@ static func _band_for(score: int) -> String:
 	return "Full Intelligence"
 
 static func _known_enemy_lookup(raw_known_units: Variant) -> Dictionary:
-	var by_id := {}
-	var known_units := raw_known_units as Array
+	var by_id: Dictionary = {}
+	var known_units: Array = raw_known_units as Array
 	if known_units == null:
 		return by_id
 	for entry in known_units:
 		if not (entry is Dictionary):
 			continue
-		var known := entry as Dictionary
-		var unit_id := String(known.get("unitId", ""))
+		var known: Dictionary = entry as Dictionary
+		var unit_id: String = String(known.get("unitId", ""))
 		if unit_id.is_empty():
 			continue
 		by_id[unit_id] = known.duplicate(true)
@@ -292,14 +292,14 @@ static func _new_known_enemy(unit_id: String) -> Dictionary:
 	}
 
 static func _normalized_type(unit: Dictionary) -> String:
-	var direct := String(unit.get("unit_type", unit.get("type", ""))).strip_edges()
+	var direct: String = String(unit.get("unit_type", unit.get("type", ""))).strip_edges()
 	if not direct.is_empty():
 		return _canonical_type(direct)
-	var is_tank := bool(unit.get("is_tank", false))
+	var is_tank: bool = bool(unit.get("is_tank", false))
 	return "tank" if is_tank else "infantry"
 
 static func _canonical_type(raw_type: String) -> String:
-	var normalized := raw_type.strip_edges().to_lower()
+	var normalized: String = raw_type.strip_edges().to_lower()
 	match normalized:
 		"anti_tank", "antitank":
 			return "antiTank"
@@ -307,26 +307,26 @@ static func _canonical_type(raw_type: String) -> String:
 			return normalized
 
 static func _normalized_size(unit: Dictionary) -> String:
-	var size := String(unit.get("formation_size", unit.get("size", "company"))).strip_edges().to_lower()
+	var size: String = String(unit.get("formation_size", unit.get("size", "company"))).strip_edges().to_lower()
 	if size in SIZE_ORDER:
 		return size
 	return "company"
 
 static func _shift_size(size: String, delta: int) -> String:
-	var index := SIZE_ORDER.find(size)
+	var index: int = SIZE_ORDER.find(size)
 	if index < 0:
 		index = SIZE_ORDER.find("company")
-	var shifted := clamp(index + delta, 0, SIZE_ORDER.size() - 1)
+	var shifted: float = clamp(index + delta, 0, SIZE_ORDER.size() - 1)
 	return String(SIZE_ORDER[int(shifted)])
 
 static func _hex_to_id(hex: Variant) -> String:
-	var as_hex := hex as Vector2i
+	var as_hex: Vector2i = hex as Vector2i
 	if as_hex == null:
 		return "0,0"
 	return "%d,%d" % [as_hex.x, as_hex.y]
 
 static func _id_to_hex(hex_id: String) -> Vector2i:
-	var split := hex_id.split(",")
+	var split: PackedStringArray = hex_id.split(",")
 	if split.size() != 2:
 		return Vector2i.ZERO
 	return Vector2i(int(split[0]), int(split[1]))
