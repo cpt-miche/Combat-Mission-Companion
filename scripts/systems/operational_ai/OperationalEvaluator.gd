@@ -39,6 +39,18 @@ const DEFAULT_WEIGHTS := {
 	"breakthroughThresholds": {
 		"reserveNeed": 0.55,
 		"reinforcementRequest": 0.75
+	},
+	"quietSectorThresholds": {
+		"maxPressure": 0.35,
+		"maxObjectiveCriticality": 0.45,
+		"minDefensibility": 0.55,
+		"maxRecentEnemyAdvance": 0.10,
+		"minSupport": 0.50
+	},
+	"donorRanking": {
+		"mobility": 0.65,
+		"routeEfficiency": 0.35,
+		"defaultDefenseRetention": 0.65
 	}
 }
 
@@ -53,10 +65,13 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	var sector_assessments := _evaluate_sectors(input.get("sectors", []), cfg)
 	var reserve_requests := _evaluate_reserve_requests(input.get("reserveRequests", []), cfg)
 	reserve_requests.append_array(breakthrough_pipeline.get("reserveNeeds", []))
-	var reinforcement_requests := _evaluate_reinforcement_requests(input.get("reinforcementRequests", []), cfg)
+	var quiet_sector_index := _build_quiet_sector_index(sector_assessments)
+	var reinforcement_pipeline := _evaluate_reinforcement_requests(input.get("reinforcementRequests", []), cfg, quiet_sector_index)
+	var reinforcement_requests: Array[Dictionary] = reinforcement_pipeline.get("assessments", [])
 	reinforcement_requests.append_array(breakthrough_pipeline.get("reinforcementRequests", []))
 	var response_intents := _evaluate_response_intents(input.get("responseIntents", []), cfg)
 	var warnings: Array[String] = breakthrough_pipeline.get("warnings", [])
+	warnings.append_array(reinforcement_pipeline.get("warnings", []))
 
 	var assessment := OperationalTypes.make_operational_assessment(
 		operation_id,
@@ -284,12 +299,28 @@ static func _string_set(values: Array) -> Dictionary:
 
 static func _evaluate_sectors(sectors: Array, cfg: Dictionary) -> Array[Dictionary]:
 	var weights: Dictionary = cfg.get("sector", {})
+	var quiet_thresholds: Dictionary = cfg.get("quietSectorThresholds", {})
 	var assessments: Array[Dictionary] = []
 	for item in sectors:
 		var sector: Dictionary = item
 		var pressure := clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
 		var readiness := clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
 		var supply := clamp(float(sector.get("supply", 0.0)), 0.0, 1.0)
+		var objective_criticality := clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
+		var defensibility := clamp(float(sector.get("defensibility", sector.get("terrainDefensibility", 0.0))), 0.0, 1.0)
+		var recent_enemy_advance := clamp(float(sector.get("recentEnemyAdvance", 0.0)), 0.0, 1.0)
+		var support := clamp(max(
+			float(sector.get("artillerySupport", 0.0)),
+			float(sector.get("reserveSupport", 0.0)),
+			float(sector.get("supportCoverage", 0.0))
+		), 0.0, 1.0)
+		var is_quiet_sector := (
+			pressure <= float(quiet_thresholds.get("maxPressure", 0.35))
+			and objective_criticality <= float(quiet_thresholds.get("maxObjectiveCriticality", 0.45))
+			and defensibility >= float(quiet_thresholds.get("minDefensibility", 0.55))
+			and recent_enemy_advance <= float(quiet_thresholds.get("maxRecentEnemyAdvance", 0.10))
+			and support >= float(quiet_thresholds.get("minSupport", 0.50))
+		)
 		var score := (
 			pressure * float(weights.get("pressure", 0.0))
 			+ readiness * float(weights.get("readiness", 0.0))
@@ -298,14 +329,25 @@ static func _evaluate_sectors(sectors: Array, cfg: Dictionary) -> Array[Dictiona
 		var reasons: Array[String] = [
 			"pressure=%.3f" % pressure,
 			"readiness=%.3f" % readiness,
-			"supply=%.3f" % supply
+			"supply=%.3f" % supply,
+			"objective_criticality=%.3f" % objective_criticality,
+			"defensibility=%.3f" % defensibility,
+			"recent_enemy_advance=%.3f" % recent_enemy_advance,
+			"support=%.3f" % support,
+			"quiet_sector=%s" % String(is_quiet_sector)
 		]
+		var details := sector.duplicate(true)
+		details["quietSector"] = is_quiet_sector
+		details["objectiveCriticality"] = objective_criticality
+		details["defensibility"] = defensibility
+		details["recentEnemyAdvance"] = recent_enemy_advance
+		details["supportCoverage"] = support
 		assessments.append(OperationalTypes.make_sector_assessment(
 			String(sector.get("id", "")),
 			score,
 			score,
 			reasons,
-			sector
+			details
 		))
 	return assessments
 
@@ -335,9 +377,11 @@ static func _evaluate_reserve_requests(requests: Array, cfg: Dictionary) -> Arra
 		))
 	return assessments
 
-static func _evaluate_reinforcement_requests(requests: Array, cfg: Dictionary) -> Array[Dictionary]:
+static func _evaluate_reinforcement_requests(requests: Array, cfg: Dictionary, quiet_sector_index: Dictionary) -> Dictionary:
 	var weights: Dictionary = cfg.get("reinforcementRequest", {})
+	var ranking_weights: Dictionary = cfg.get("donorRanking", {})
 	var assessments: Array[Dictionary] = []
+	var warnings: Array[String] = []
 	for item in requests:
 		var request: Dictionary = item
 		var urgency := clamp(float(request.get("urgency", 0.0)), 0.0, 1.0)
@@ -350,6 +394,13 @@ static func _evaluate_reinforcement_requests(requests: Array, cfg: Dictionary) -
 			"urgency=%.3f" % urgency,
 			"deficit=%.3f" % deficit
 		]
+		var donor_outcome := _evaluate_donor_candidates(request, quiet_sector_index, ranking_weights)
+		reasons.append_array(donor_outcome.get("reasons", []))
+		var details := request.duplicate(true)
+		details["preferredSources"] = donor_outcome.get("preferredSources", [])
+		details["donorCandidates"] = donor_outcome.get("donorCandidates", [])
+		if not donor_outcome.get("warning", "").is_empty():
+			warnings.append(donor_outcome.get("warning", ""))
 		assessments.append(OperationalTypes.make_reinforcement_request(
 			String(request.get("id", "")),
 			String(request.get("sectorId", "")),
@@ -357,9 +408,99 @@ static func _evaluate_reinforcement_requests(requests: Array, cfg: Dictionary) -
 			score,
 			reasons,
 			float(request.get("requestedStrength", 0.0)),
-			request
+			details
 		))
-	return assessments
+	return {
+		"assessments": assessments,
+		"warnings": warnings
+	}
+
+static func _evaluate_donor_candidates(request: Dictionary, quiet_sector_index: Dictionary, ranking_weights: Dictionary) -> Dictionary:
+	var donor_candidates: Array = request.get("donorCandidates", [])
+	var legal_ranked: Array[Dictionary] = []
+	var evaluated_candidates: Array[Dictionary] = []
+	var preferred_sources: Array[String] = []
+	var request_id := String(request.get("id", ""))
+	var request_sector := String(request.get("sectorId", ""))
+	var requested_strength := clamp(float(request.get("requestedStrength", 0.0)), 0.0, 1.5)
+	var reasons: Array[String] = []
+	var retention_default := clamp(float(ranking_weights.get("defaultDefenseRetention", 0.65)), 0.0, 1.0)
+	for item in donor_candidates:
+		var donor: Dictionary = item
+		var donor_sector := String(donor.get("sectorId", donor.get("id", "")))
+		var pre_transfer_score := clamp(float(donor.get("preTransferDefenseScore", donor.get("defenseScore", donor.get("currentDefenseScore", 0.0)))), 0.0, 1.5)
+		var transfer_cost := max(
+			float(donor.get("transferDefenseCost", donor.get("defenseContributionLost", 0.0))),
+			requested_strength * (1.0 - retention_default)
+		)
+		var post_transfer_score := clamp(float(donor.get("postTransferDefenseScore", pre_transfer_score - transfer_cost)), 0.0, 1.5)
+		var minimum_required := clamp(float(donor.get("minimumRequiredDefenseScore", request.get("minimumRequiredDefenseScore", pre_transfer_score * retention_default))), 0.0, 1.5)
+		var quiet_sector_gate := bool(quiet_sector_index.get(donor_sector, false))
+		var stays_above_threshold := post_transfer_score >= minimum_required
+		var legal := quiet_sector_gate and stays_above_threshold
+		var mobility := clamp(float(donor.get("mobility", donor.get("mobileFactor", 0.0))), 0.0, 1.0)
+		var route_length := max(float(donor.get("responseRouteLength", donor.get("routeDistance", donor.get("responseDistance", donor.get("travelTurns", 99.0))))), 0.0)
+		var route_efficiency := clamp(1.0 / (1.0 + route_length), 0.0, 1.0)
+		var rank_score := (
+			mobility * float(ranking_weights.get("mobility", 0.65))
+			+ route_efficiency * float(ranking_weights.get("routeEfficiency", 0.35))
+		)
+		var evaluated := donor.duplicate(true)
+		evaluated["postTransferDefenseScore"] = post_transfer_score
+		evaluated["minimumRequiredDefenseScore"] = minimum_required
+		evaluated["legalForTransfer"] = legal
+		evaluated["routeEfficiency"] = route_efficiency
+		evaluated["rankScore"] = rank_score
+		evaluated_candidates.append(evaluated)
+		if legal:
+			legal_ranked.append({
+				"sectorId": donor_sector,
+				"rankScore": rank_score,
+				"routeLength": route_length
+			})
+	legal_ranked.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if not is_equal_approx(float(a.get("rankScore", 0.0)), float(b.get("rankScore", 0.0))):
+			return float(a.get("rankScore", 0.0)) > float(b.get("rankScore", 0.0))
+		if not is_equal_approx(float(a.get("routeLength", 999.0)), float(b.get("routeLength", 999.0))):
+			return float(a.get("routeLength", 999.0)) < float(b.get("routeLength", 999.0))
+		return String(a.get("sectorId", "")) < String(b.get("sectorId", ""))
+	)
+	for ranked in legal_ranked:
+		preferred_sources.append(String(ranked.get("sectorId", "")))
+	preferred_sources = _unique_strings(preferred_sources)
+	reasons.append("legal_donor_candidates=%d/%d" % [preferred_sources.size(), donor_candidates.size()])
+	var warning := ""
+	if donor_candidates.size() > 0 and preferred_sources.is_empty():
+		warning = "reinforcement_request=%s sector=%s has_no_legal_donor_source" % [request_id, request_sector]
+		reasons.append("blocked_transfer=no_legal_donor_source")
+	elif preferred_sources.is_empty():
+		reasons.append("blocked_transfer=no_donor_candidates")
+	else:
+		reasons.append("preferred_sources=%s" % ",".join(preferred_sources))
+	return {
+		"preferredSources": preferred_sources,
+		"donorCandidates": evaluated_candidates,
+		"reasons": reasons,
+		"warning": warning
+	}
+
+static func _build_quiet_sector_index(sector_assessments: Array[Dictionary]) -> Dictionary:
+	var quiet_sector_index := {}
+	for assessment in sector_assessments:
+		var sector_id := String(assessment.get("id", ""))
+		var details: Dictionary = assessment.get("details", {})
+		quiet_sector_index[sector_id] = bool(details.get("quietSector", false))
+	return quiet_sector_index
+
+static func _unique_strings(items: Array[String]) -> Array[String]:
+	var deduped: Array[String] = []
+	var seen := {}
+	for item in items:
+		if seen.has(item):
+			continue
+		seen[item] = true
+		deduped.append(item)
+	return deduped
 
 static func _evaluate_response_intents(intents: Array, cfg: Dictionary) -> Array[Dictionary]:
 	var weights: Dictionary = cfg.get("responseIntent", {})
