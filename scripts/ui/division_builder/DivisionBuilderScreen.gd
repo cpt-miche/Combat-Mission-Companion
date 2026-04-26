@@ -879,7 +879,7 @@ func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.
 		if legacy_size_map.has(size_value):
 			return legacy_size_map[size_value]
 	elif typeof(raw_size) == TYPE_STRING:
-		var normalized_size := String(raw_size).to_upper()
+		var normalized_size := String(raw_size).strip_edges().to_upper()
 		var size_map := {
 			"PLATOON": UnitSize.Value.PLATOON,
 			"SECTION": UnitSize.Value.SECTION,

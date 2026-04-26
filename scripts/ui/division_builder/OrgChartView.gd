@@ -5,7 +5,7 @@ signal unit_selected(unit: UnitModel)
 signal delete_requested(unit: UnitModel)
 signal unit_move_requested(unit: UnitModel, new_parent: UnitModel)
 
-const NODE_SIZE := Vector2(160.0, 72.0)
+const NODE_SIZE := Vector2(160.0, 84.0)
 const LEVEL_SPACING := 180.0
 const SIBLING_SPACING := 36.0
 const MIN_ZOOM := 0.5
@@ -219,7 +219,7 @@ func _draw_unit_node(unit: UnitModel, rect: Rect2, has_children: bool, is_collap
 	var label := "%s\n%s %s" % [title, UnitSize.display_name(unit.size), UnitType.display_name(unit.type)]
 	draw_multiline_string(
 		get_theme_default_font(),
-		rect.position + Vector2(8.0, rect.size.y - 30.0),
+		rect.position + Vector2(8.0, rect.size.y - 36.0),
 		label,
 		HORIZONTAL_ALIGNMENT_LEFT,
 		rect.size.x - 12.0,
@@ -270,12 +270,9 @@ func _draw_nato_symbol(unit: UnitModel, rect: Rect2) -> void:
 			draw_line(Vector2(echelon_center - 10.0, echelon_y), Vector2(echelon_center + 10.0, echelon_y), Color.WHITE, 2.0)
 			draw_line(Vector2(echelon_center, echelon_y - 4.0), Vector2(echelon_center, echelon_y + 4.0), Color.WHITE, 2.0)
 		UnitSize.Value.REGIMENT:
-			draw_circle(Vector2(echelon_center - 6.0, echelon_y), 2.0, Color.WHITE)
-			draw_circle(Vector2(echelon_center + 6.0, echelon_y), 2.0, Color.WHITE)
+			draw_string(get_theme_default_font(), Vector2(echelon_center - 10.0, echelon_y + 4.0), "III", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 10, Color.WHITE)
 		UnitSize.Value.DIVISION:
-			draw_circle(Vector2(echelon_center - 8.0, echelon_y), 2.0, Color.WHITE)
-			draw_circle(Vector2(echelon_center, echelon_y), 2.0, Color.WHITE)
-			draw_circle(Vector2(echelon_center + 8.0, echelon_y), 2.0, Color.WHITE)
+			draw_string(get_theme_default_font(), Vector2(echelon_center - 8.0, echelon_y + 4.0), "XX", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 10, Color.WHITE)
 		UnitSize.Value.ARMY:
 			draw_line(Vector2(echelon_center - 12.0, echelon_y), Vector2(echelon_center + 12.0, echelon_y), Color.WHITE, 2.0)
 			draw_line(Vector2(echelon_center - 8.0, echelon_y - 4.0), Vector2(echelon_center - 8.0, echelon_y + 4.0), Color.WHITE, 2.0)
