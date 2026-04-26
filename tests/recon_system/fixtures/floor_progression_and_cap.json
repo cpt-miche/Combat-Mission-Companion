@@ -1,0 +1,84 @@
+{
+  "id": "floor_progression_and_cap",
+  "fixtureVersion": 1,
+  "observerOwner": 1,
+  "turns": [
+    {
+      "id": "combat_floor_is_one",
+      "seed": 101,
+      "priorIntelOverride": {
+        "2,1": {"hexId": "2,1", "scoutLevel": 0, "knownEnemyUnits": []}
+      },
+      "units": [
+        {"id": "obs_inf", "owner": 1, "unit_type": "infantry", "size": "company", "hex": [1, 1]},
+        {"id": "enemy_1", "owner": 2, "unit_type": "infantry", "size": "company", "hex": [2, 1]}
+      ],
+      "expected": {
+        "hexLevelMin": {"2,1": 1},
+        "hexLevelMax": {"2,1": 2}
+      }
+    },
+    {
+      "id": "recon_floor_is_three",
+      "seed": 202,
+      "priorIntelOverride": {
+        "2,1": {"hexId": "2,1", "scoutLevel": 0, "knownEnemyUnits": []}
+      },
+      "units": [
+        {"id": "obs_recon", "owner": 1, "unit_type": "recon", "size": "platoon", "hex": [1, 1]},
+        {"id": "enemy_1", "owner": 2, "unit_type": "infantry", "size": "company", "hex": [2, 1]}
+      ],
+      "expected": {
+        "hexLevelMin": {"2,1": 3},
+        "hexLevelMax": {"2,1": 4}
+      }
+    },
+    {
+      "id": "cap_at_four",
+      "seed": 303,
+      "priorIntelOverride": {
+        "2,1": {"hexId": "2,1", "scoutLevel": 4, "knownEnemyUnits": []}
+      },
+      "units": [
+        {"id": "obs_recon_a", "owner": 1, "unit_type": "recon", "size": "platoon", "hex": [1, 1]},
+        {"id": "obs_recon_b", "owner": 1, "unit_type": "recon", "size": "platoon", "hex": [1, 2]},
+        {"id": "obs_inf", "owner": 1, "unit_type": "infantry", "size": "company", "hex": [2, 2]},
+        {"id": "enemy_1", "owner": 2, "unit_type": "tank", "size": "battalion", "hex": [2, 1]}
+      ],
+      "expected": {
+        "hexLevels": {"2,1": 4}
+      }
+    }
+  ],
+  "progressionChecks": [
+    {
+      "seed": 404,
+      "minGain": 2,
+      "adjacentFriendlies": [
+        {"id": "r1", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
+        {"id": "r2", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
+        {"id": "r3", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
+        {"id": "r4", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
+        {"id": "r5", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
+        {"id": "r6", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
+        {"id": "c1", "owner": 1, "unit_type": "infantry", "hex": [1, 1]},
+        {"id": "c2", "owner": 1, "unit_type": "tank", "hex": [1, 1]}
+      ]
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "seed": 404,
+      "runs": 5,
+      "observerOwner": 1,
+      "priorIntel": {
+        "2,1": {"hexId": "2,1", "scoutLevel": 0, "knownEnemyUnits": []}
+      },
+      "units": [
+        {"id": "obs_recon", "owner": 1, "unit_type": "recon", "size": "platoon", "hex": [1, 1]},
+        {"id": "obs_inf", "owner": 1, "unit_type": "infantry", "size": "company", "hex": [1, 2]},
+        {"id": "enemy_1", "owner": 2, "unit_type": "tank", "size": "company", "hex": [2, 1]}
+      ]
+    }
+  ]
+}
