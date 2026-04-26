@@ -52,7 +52,7 @@ func _start_new_division_builder_for(nation_id: String, selected_mode: int, sele
 	GameState.map_flow = selected_mode
 	GameState.selected_map_name = ""
 	if selected_mode == GameState.MapFlow.NEW_MAP:
-		GameState.selected_map_dimensions = selected_dimensions
+		GameState.set_runtime_map_dimensions(selected_dimensions.x, selected_dimensions.y)
 		GameState.terrain_map.clear()
 		GameState.territory_map.clear()
 		GameState.set_phase(GameState.Phase.DIVISION_BUILDER)
