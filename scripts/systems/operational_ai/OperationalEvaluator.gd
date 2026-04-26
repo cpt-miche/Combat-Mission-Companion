@@ -90,6 +90,12 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	)
 	var warnings: Array[String] = breakthrough_pipeline.get("warnings", [])
 	warnings.append_array(reinforcement_pipeline.get("warnings", []))
+	warnings.append_array(_evaluate_structural_warnings(
+		input,
+		sector_assessments,
+		opportunity_pipeline.get("counterattackOpportunities", []),
+		cfg
+	))
 
 	var assessment := OperationalTypes.make_operational_assessment(
 		operation_id,
@@ -107,7 +113,7 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	assessment["attackOpportunities"] = _sort_scored(opportunity_pipeline.get("attackOpportunities", []))
 	assessment["counterattackOpportunities"] = _sort_scored(opportunity_pipeline.get("counterattackOpportunities", []))
 	assessment["recommendedIntents"] = _sort_scored(recommended_intents)
-	assessment["warnings"] = warnings
+	assessment["warnings"] = _dedupe_sorted_strings(warnings)
 	return assessment
 
 static func _evaluate_enemy_adjacent_opportunities(candidate_hexes: Array, cfg: Dictionary) -> Dictionary:
@@ -694,6 +700,166 @@ static func _unique_strings(items: Array[String]) -> Array[String]:
 		seen[item] = true
 		deduped.append(item)
 	return deduped
+
+static func _dedupe_sorted_strings(items: Array[String]) -> Array[String]:
+	var deduped := _unique_strings(items)
+	deduped.sort()
+	return deduped
+
+static func _evaluate_structural_warnings(
+	input: Dictionary,
+	sector_assessments: Array[Dictionary],
+	counterattack_opportunities: Array[Dictionary],
+	cfg: Dictionary
+) -> Array[String]:
+	var warnings: Array[String] = []
+	var thresholds: Dictionary = cfg.get("opportunityThresholds", {})
+	var counterattack_threshold := float(thresholds.get("counterattack", 0.72))
+	var sectors: Array = input.get("sectors", [])
+	var breakthroughs: Array = input.get("breakthroughs", [])
+	for item in sectors:
+		var sector: Dictionary = item
+		var sector_id := String(sector.get("id", ""))
+		var objective_criticality := clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
+		var pressure := clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
+		var readiness := clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
+		var defensibility := clamp(float(sector.get("defensibility", sector.get("terrainDefensibility", 0.0))), 0.0, 1.0)
+		var artillery_coverage := clamp(max(
+			float(sector.get("artilleryCoverage", 0.0)),
+			float(sector.get("artillerySupport", 0.0))
+		), 0.0, 1.0)
+		var recon_support := clamp(float(sector.get("reconSupport", sector.get("reconCoverage", 0.0))), 0.0, 1.0)
+		var uncertainty := clamp(float(sector.get("scoutUncertainty", sector.get("uncertainty", 0.0))), 0.0, 1.0)
+		var importance := clamp(max(
+			float(sector.get("importance", 0.0)),
+			objective_criticality
+		), 0.0, 1.0)
+		var danger := clamp(max(
+			float(sector.get("danger", 0.0)),
+			pressure,
+			float(sector.get("enemyPressure", 0.0))
+		), 0.0, 1.0)
+		if _is_defend_sector(sector) and objective_criticality >= 0.70 and (pressure >= 0.65 or readiness <= 0.35 or defensibility <= 0.35):
+			warnings.append("warning=exposed_defend_objective sector=%s" % sector_id)
+		if _is_frontline_sector(sector) and _is_understrength_frontline_sector(sector):
+			warnings.append("warning=understrength_frontline_sector sector=%s" % sector_id)
+		if danger >= 0.70 and artillery_coverage <= 0.10:
+			warnings.append("warning=no_artillery_coverage_high_danger_sector sector=%s" % sector_id)
+		if importance >= 0.70 and uncertainty >= 0.60 and recon_support <= 0.35:
+			warnings.append("warning=poor_recon_high_importance_uncertain_sector sector=%s" % sector_id)
+		if _has_coherent_line_gap_path_to_rear(sector):
+			warnings.append("warning=coherent_line_gap_path_to_rear sector=%s" % sector_id)
+	for item in breakthroughs:
+		var breakthrough: Dictionary = item
+		if _has_coherent_line_gap_path_to_rear(breakthrough):
+			warnings.append("warning=coherent_line_gap_path_to_rear sector=%s" % String(breakthrough.get("sectorId", breakthrough.get("id", ""))))
+	if _has_reserve_clumping_in_input(input):
+		warnings.append("warning=reserve_clumping")
+	for opportunity in counterattack_opportunities:
+		var confidence := clamp(float(opportunity.get("urgency", opportunity.get("score", 0.0))), 0.0, 1.0)
+		if confidence < counterattack_threshold:
+			continue
+		if _counterattack_exposes_defend_objective(opportunity):
+			warnings.append("warning=counterattack_exposes_defend_objective opportunity=%s" % String(opportunity.get("id", "")))
+	return _dedupe_sorted_strings(warnings)
+
+static func _is_defend_sector(sector: Dictionary) -> bool:
+	var objective_mode := String(sector.get("objectiveMode", sector.get("objectiveType", sector.get("mission", "")))).to_lower()
+	return objective_mode.find("defend") >= 0 or bool(sector.get("defendObjective", false))
+
+static func _is_frontline_sector(sector: Dictionary) -> bool:
+	if bool(sector.get("frontline", false)) or bool(sector.get("isFrontline", false)) or bool(sector.get("frontlineSector", false)):
+		return true
+	return String(sector.get("type", sector.get("sectorType", ""))).to_lower() == "frontline"
+
+static func _is_understrength_frontline_sector(sector: Dictionary) -> bool:
+	var ratio := float(sector.get("strengthRatio", sector.get("friendlyToEnemyRatio", sector.get("combatRatio", -1.0))))
+	if ratio >= 0.0:
+		ratio = clamp(ratio, 0.0, 3.0)
+	if ratio >= 0.0 and ratio < 0.75:
+		return true
+	var friendly := max(float(sector.get("friendlyStrength", sector.get("friendlyCombatPower", 0.0))), 0.0)
+	var enemy := max(float(sector.get("enemyStrength", sector.get("enemyCombatPower", 0.0))), 0.0)
+	return enemy > 0.0 and friendly < enemy * 0.85
+
+static func _has_coherent_line_gap_path_to_rear(item: Dictionary) -> bool:
+	if bool(item.get("coherentLineGapPathToRear", false)):
+		return true
+	var coherence_risk := clamp(float(item.get("coherenceRisk", item.get("defensiveCoherenceRisk", 0.0))), 0.0, 1.0)
+	var rear_path_risk := clamp(float(item.get("rearPathRisk", item.get("pathToRearRisk", 0.0))), 0.0, 1.0)
+	return coherence_risk >= 0.70 and rear_path_risk >= 0.70
+
+static func _has_reserve_clumping_in_input(input: Dictionary) -> bool:
+	var reserve_positions: Array[Dictionary] = []
+	for collection_key in ["reserveUnits", "reservePositions"]:
+		var collection: Array = input.get(collection_key, [])
+		for item in collection:
+			var entry: Dictionary = item
+			if not _is_reserve_combat_entry(entry):
+				continue
+			var axial := _extract_axial(entry)
+			if axial.x == 9999:
+				continue
+			reserve_positions.append({
+				"id": String(entry.get("id", entry.get("unitId", ""))),
+				"q": axial.x,
+				"r": axial.y
+			})
+	var metadata: Dictionary = input.get("metadata", {})
+	var metadata_positions: Array = metadata.get("reservePositions", [])
+	for item in metadata_positions:
+		var entry: Dictionary = item
+		if not _is_reserve_combat_entry(entry):
+			continue
+		var axial := _extract_axial(entry)
+		if axial.x == 9999:
+			continue
+		reserve_positions.append({
+			"id": String(entry.get("id", entry.get("unitId", ""))),
+			"q": axial.x,
+			"r": axial.y
+		})
+	if reserve_positions.size() <= 1:
+		return bool(input.get("reserveClumping", false)) or float(input.get("reserveClumpingScore", 0.0)) >= 0.70
+	for i in range(reserve_positions.size()):
+		for j in range(i + 1, reserve_positions.size()):
+			var a: Dictionary = reserve_positions[i]
+			var b: Dictionary = reserve_positions[j]
+			if _axial_distance(int(a.get("q", 0)), int(a.get("r", 0)), int(b.get("q", 0)), int(b.get("r", 0))) <= 1:
+				return true
+	return false
+
+static func _is_reserve_combat_entry(entry: Dictionary) -> bool:
+	var role := String(entry.get("role", "")).to_lower()
+	if role == "reserve":
+		return true
+	if bool(entry.get("isReserve", false)) or bool(entry.get("reserve", false)):
+		return true
+	return false
+
+static func _extract_axial(entry: Dictionary) -> Vector2i:
+	if entry.has("q") and entry.has("r"):
+		return Vector2i(int(entry.get("q", 0)), int(entry.get("r", 0)))
+	if entry.has("x") and entry.has("y"):
+		return Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
+	var hex: Dictionary = entry.get("hex", {})
+	if hex.has("q") and hex.has("r"):
+		return Vector2i(int(hex.get("q", 0)), int(hex.get("r", 0)))
+	return Vector2i(9999, 9999)
+
+static func _axial_distance(aq: int, ar: int, bq: int, br: int) -> int:
+	return int((abs(aq - bq) + abs(aq + ar - bq - br) + abs(ar - br)) / 2)
+
+static func _counterattack_exposes_defend_objective(opportunity: Dictionary) -> bool:
+	var details: Dictionary = opportunity.get("details", {})
+	if bool(details.get("exposesDefendObjective", false)):
+		return true
+	var normalized: Dictionary = details.get("normalizedFactors", {})
+	var coherence_risk := clamp(float(normalized.get("defensiveCoherenceRisk", details.get("defensiveCoherenceRisk", 0.0))), 0.0, 1.0)
+	var overextension := clamp(float(normalized.get("overextensionRisk", details.get("overextensionRisk", 0.0))), 0.0, 1.0)
+	var objective_value := clamp(float(normalized.get("objectiveValue", details.get("objectiveValue", 0.0))), 0.0, 1.0)
+	var defend_tag := bool(details.get("defendObjective", false)) or String(details.get("objectiveType", details.get("objectiveMode", ""))).to_lower().find("defend") >= 0
+	return coherence_risk >= 0.65 and overextension >= 0.55 and (defend_tag or objective_value >= 0.75)
 
 static func _evaluate_response_intents(intents: Array, cfg: Dictionary) -> Array[Dictionary]:
 	var weights: Dictionary = cfg.get("responseIntent", {})
