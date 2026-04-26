@@ -2,6 +2,7 @@ extends Control
 
 @onready var play_button: Button = %PlayButton
 @onready var load_button: Button = %LoadButton
+@onready var display_button: Button = %DisplayButton
 @onready var status_label: Label = %StatusLabel
 @onready var nation_dialog: ConfirmationDialog = %NationDialog
 @onready var map_dialog: ConfirmationDialog = %MapDialog
@@ -10,16 +11,35 @@ extends Control
 @onready var map_size_label: Label = %MapSizeLabel
 @onready var map_size_selector: OptionButton = %MapSizeSelector
 @onready var map_selection_status_label: Label = %MapSelectionStatusLabel
+@onready var display_dialog: ConfirmationDialog = %DisplayDialog
+@onready var resolution_selector: OptionButton = %ResolutionSelector
+@onready var window_mode_toggle: CheckBox = %WindowModeToggle
+@onready var revert_display_button: Button = %RevertDisplayButton
+@onready var display_status_label: Label = %DisplayStatusLabel
 
 var _pending_nation_id := "usa"
+var _last_applied_display_settings := {
+	"preset_id": DisplaySettings.DEFAULT_PRESET_ID,
+	"window_mode": DisplaySettings.DEFAULT_WINDOW_MODE
+}
+var _pre_apply_display_settings := {
+	"preset_id": DisplaySettings.DEFAULT_PRESET_ID,
+	"window_mode": DisplaySettings.DEFAULT_WINDOW_MODE
+}
 
 func _ready() -> void:
 	play_button.pressed.connect(_on_play_pressed)
 	load_button.pressed.connect(_on_load_pressed)
+	display_button.pressed.connect(_on_display_pressed)
 	nation_dialog.confirmed.connect(_on_play_as_usa)
 	nation_dialog.canceled.connect(_on_play_as_germany)
 	map_dialog.confirmed.connect(_on_map_selection_confirmed)
 	map_mode_selector.item_selected.connect(_on_map_mode_selected)
+	display_dialog.confirmed.connect(_on_apply_display_settings_pressed)
+	display_dialog.canceled.connect(_on_display_dialog_closed)
+	revert_display_button.pressed.connect(_on_revert_display_pressed)
+	_configure_display_controls()
+	_refresh_display_state_from_runtime()
 
 func _on_play_pressed() -> void:
 	nation_dialog.popup_centered()
@@ -167,3 +187,86 @@ func _deserialize_units(serialized_units: Dictionary) -> Dictionary:
 		unit["is_alive"] = bool(unit.get("is_alive", normalized_status != "dead"))
 		deserialized[unit_id] = unit
 	return deserialized
+
+func _configure_display_controls() -> void:
+	resolution_selector.clear()
+	var preset_options := [
+		{"label": "1280x720 (720p)", "id": DisplaySettings.PRESET_ID_720P},
+		{"label": "1920x1080 (1080p)", "id": DisplaySettings.PRESET_ID_1080P},
+		{"label": "2560x1440 (1440p)", "id": DisplaySettings.PRESET_ID_1440P}
+	]
+	for option in preset_options:
+		resolution_selector.add_item(String(option["label"]))
+		resolution_selector.set_item_metadata(resolution_selector.item_count - 1, String(option["id"]))
+
+func _refresh_display_state_from_runtime() -> void:
+	_last_applied_display_settings = {
+		"preset_id": DisplaySettings.get_selected_preset_id(),
+		"window_mode": DisplaySettings.get_selected_window_mode()
+	}
+	_pre_apply_display_settings = _last_applied_display_settings.duplicate(true)
+	_select_resolution_in_ui(String(_last_applied_display_settings.get("preset_id", DisplaySettings.DEFAULT_PRESET_ID)))
+	var mode := String(_last_applied_display_settings.get("window_mode", DisplaySettings.DEFAULT_WINDOW_MODE))
+	window_mode_toggle.button_pressed = mode == DisplaySettings.WINDOW_MODE_FULLSCREEN
+	revert_display_button.disabled = true
+	display_status_label.text = ""
+
+func _on_display_pressed() -> void:
+	_refresh_display_state_from_runtime()
+	display_dialog.popup_centered()
+
+func _on_apply_display_settings_pressed() -> void:
+	var requested_preset_id := _selected_resolution_preset_id()
+	var requested_mode := _selected_window_mode_from_ui()
+	_pre_apply_display_settings = _last_applied_display_settings.duplicate(true)
+	var applied := DisplaySettings.set_display_settings(requested_preset_id, requested_mode, true)
+	var applied_preset_id := String(applied.get("preset_id", DisplaySettings.DEFAULT_PRESET_ID))
+	var applied_mode := String(applied.get("window_mode", DisplaySettings.DEFAULT_WINDOW_MODE))
+	var fallback_used := applied_preset_id != requested_preset_id or applied_mode != requested_mode
+	_last_applied_display_settings = {
+		"preset_id": applied_preset_id,
+		"window_mode": applied_mode
+	}
+	_select_resolution_in_ui(applied_preset_id)
+	window_mode_toggle.button_pressed = applied_mode == DisplaySettings.WINDOW_MODE_FULLSCREEN
+	revert_display_button.disabled = false
+	if fallback_used:
+		display_status_label.text = "Applied with fallback: %s, %s mode." % [applied_preset_id.to_upper(), applied_mode]
+	else:
+		display_status_label.text = "Display settings applied."
+
+func _on_revert_display_pressed() -> void:
+	var previous_preset := String(_pre_apply_display_settings.get("preset_id", DisplaySettings.DEFAULT_PRESET_ID))
+	var previous_mode := String(_pre_apply_display_settings.get("window_mode", DisplaySettings.DEFAULT_WINDOW_MODE))
+	var applied := DisplaySettings.set_display_settings(previous_preset, previous_mode, true)
+	_last_applied_display_settings = {
+		"preset_id": String(applied.get("preset_id", DisplaySettings.DEFAULT_PRESET_ID)),
+		"window_mode": String(applied.get("window_mode", DisplaySettings.DEFAULT_WINDOW_MODE))
+	}
+	_select_resolution_in_ui(String(applied.get("preset_id", DisplaySettings.DEFAULT_PRESET_ID)))
+	window_mode_toggle.button_pressed = String(applied.get("window_mode", DisplaySettings.DEFAULT_WINDOW_MODE)) == DisplaySettings.WINDOW_MODE_FULLSCREEN
+	display_status_label.text = "Reverted to last applied settings."
+	revert_display_button.disabled = true
+
+func _on_display_dialog_closed() -> void:
+	display_status_label.text = ""
+	revert_display_button.disabled = true
+
+func _selected_resolution_preset_id() -> String:
+	if resolution_selector.item_count == 0:
+		return DisplaySettings.DEFAULT_PRESET_ID
+	var selected_index := clampi(resolution_selector.selected, 0, resolution_selector.item_count - 1)
+	return String(resolution_selector.get_item_metadata(selected_index))
+
+func _selected_window_mode_from_ui() -> String:
+	if window_mode_toggle.button_pressed:
+		return DisplaySettings.WINDOW_MODE_FULLSCREEN
+	return DisplaySettings.WINDOW_MODE_WINDOWED
+
+func _select_resolution_in_ui(preset_id: String) -> void:
+	for idx in resolution_selector.item_count:
+		if String(resolution_selector.get_item_metadata(idx)) == preset_id:
+			resolution_selector.select(idx)
+			return
+	if resolution_selector.item_count > 0:
+		resolution_selector.select(0)

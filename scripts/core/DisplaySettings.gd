@@ -8,6 +8,9 @@ const PRESET_ID_720P := "720p"
 const PRESET_ID_1080P := "1080p"
 const PRESET_ID_1440P := "1440p"
 const DEFAULT_PRESET_ID := PRESET_ID_1080P
+const WINDOW_MODE_WINDOWED := "windowed"
+const WINDOW_MODE_FULLSCREEN := "fullscreen"
+const DEFAULT_WINDOW_MODE := WINDOW_MODE_WINDOWED
 
 const PRESETS := {
 	PRESET_ID_720P: PRESET_720P,
@@ -16,6 +19,7 @@ const PRESETS := {
 }
 
 var _selected_preset_id := DEFAULT_PRESET_ID
+var _selected_window_mode := DEFAULT_WINDOW_MODE
 
 func get_preset_size(preset_id: String) -> Vector2i:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
@@ -24,6 +28,9 @@ func get_preset_size(preset_id: String) -> Vector2i:
 func get_selected_preset_id() -> String:
 	return _selected_preset_id
 
+func get_selected_window_mode() -> String:
+	return _selected_window_mode
+
 func get_available_presets() -> Dictionary:
 	return PRESETS.duplicate(true)
 
@@ -31,15 +38,29 @@ func get_window_size() -> Vector2i:
 	return DisplayServer.window_get_size()
 
 func set_selected_preset_id(preset_id: String, persist := true) -> String:
+	var applied := set_display_settings(preset_id, _selected_window_mode, persist)
+	return String(applied.get("preset_id", DEFAULT_PRESET_ID))
+
+func set_display_settings(preset_id: String, window_mode: String, persist := true) -> Dictionary:
 	var applied_preset_id := _apply_preset_id(preset_id)
+	var applied_window_mode := _apply_window_mode(window_mode)
 	if persist:
-		SaveManager.save_display_settings({"preset_id": applied_preset_id})
-	return applied_preset_id
+		SaveManager.save_display_settings({
+			"preset_id": applied_preset_id,
+			"window_mode": applied_window_mode
+		})
+	return {
+		"preset_id": applied_preset_id,
+		"window_mode": applied_window_mode
+	}
 
 func load_and_apply() -> String:
 	var settings := SaveManager.load_display_settings()
 	var stored_preset_id := String(settings.get("preset_id", DEFAULT_PRESET_ID))
-	return _apply_preset_id(stored_preset_id)
+	var stored_window_mode := String(settings.get("window_mode", DEFAULT_WINDOW_MODE))
+	_apply_preset_id(stored_preset_id)
+	_apply_window_mode(stored_window_mode)
+	return _selected_preset_id
 
 func _apply_preset_id(preset_id: String) -> String:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
@@ -51,6 +72,21 @@ func _apply_preset_id(preset_id: String) -> String:
 	_selected_preset_id = resolved_preset_id
 
 	return _selected_preset_id
+
+func _apply_window_mode(window_mode: String) -> String:
+	var resolved_mode := _resolve_window_mode(window_mode)
+	var server_mode := DisplayServer.WINDOW_MODE_WINDOWED
+	if resolved_mode == WINDOW_MODE_FULLSCREEN:
+		server_mode = DisplayServer.WINDOW_MODE_FULLSCREEN
+	DisplayServer.window_set_mode(server_mode)
+	_selected_window_mode = resolved_mode
+	return _selected_window_mode
+
+func _resolve_window_mode(window_mode: String) -> String:
+	var normalized_mode := window_mode.strip_edges().to_lower()
+	if normalized_mode == WINDOW_MODE_FULLSCREEN:
+		return WINDOW_MODE_FULLSCREEN
+	return WINDOW_MODE_WINDOWED
 
 func _resolve_preset_id(preset_id: String) -> String:
 	if PRESETS.has(preset_id):
