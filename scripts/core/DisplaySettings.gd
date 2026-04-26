@@ -1,4 +1,5 @@
 extends Node
+signal runtime_display_updated(applied: Dictionary)
 
 const PRESET_720P := Vector2i(1280, 720)
 const PRESET_1080P := Vector2i(1920, 1080)
@@ -34,6 +35,8 @@ var _selected_preset_id := DEFAULT_PRESET_ID
 var _selected_window_mode := DEFAULT_WINDOW_MODE
 var _selected_ui_scale_mode := DEFAULT_UI_SCALE_MODE
 var _selected_ui_scale_value := DEFAULT_UI_SCALE_VALUE
+var _connected_root_window: Window
+var _last_known_window_size := Vector2i.ZERO
 
 func get_preset_size(preset_id: String) -> Vector2i:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
@@ -87,13 +90,15 @@ func set_display_settings(preset_id: String, window_mode: String, ui_scale_mode:
 			"ui_scale_mode": applied_ui_scale_mode,
 			"ui_scale_value": applied_ui_scale_value
 		})
-	return {
+	var applied_settings := {
 		"preset_id": applied_preset_id,
 		"window_mode": applied_window_mode,
 		"ui_scale_mode": applied_ui_scale_mode,
 		"ui_scale_value": applied_ui_scale_value,
 		"effective_ui_scale": get_effective_ui_scale()
 	}
+	runtime_display_updated.emit(applied_settings)
+	return applied_settings
 
 func load_and_apply() -> String:
 	var settings := SaveManager.load_display_settings()
@@ -106,7 +111,36 @@ func load_and_apply() -> String:
 	_apply_ui_scale_mode(stored_ui_scale_mode)
 	_apply_ui_scale_value(stored_ui_scale_value)
 	_apply_effective_ui_scale()
+	_last_known_window_size = get_window_size()
+	runtime_display_updated.emit(get_current_settings())
 	return _selected_preset_id
+
+func connect_runtime_resize_notifications(root_window: Window) -> void:
+	if root_window == null:
+		return
+	if is_instance_valid(_connected_root_window) and _connected_root_window.size_changed.is_connected(_on_root_window_size_changed):
+		_connected_root_window.size_changed.disconnect(_on_root_window_size_changed)
+	_connected_root_window = root_window
+	if not _connected_root_window.size_changed.is_connected(_on_root_window_size_changed):
+		_connected_root_window.size_changed.connect(_on_root_window_size_changed)
+	_last_known_window_size = _connected_root_window.size
+
+func reapply_runtime_settings() -> Dictionary:
+	_apply_effective_ui_scale()
+	_last_known_window_size = get_window_size()
+	var applied_settings := get_current_settings()
+	runtime_display_updated.emit(applied_settings)
+	return applied_settings
+
+func get_current_settings() -> Dictionary:
+	return {
+		"preset_id": _selected_preset_id,
+		"window_mode": _selected_window_mode,
+		"ui_scale_mode": _selected_ui_scale_mode,
+		"ui_scale_value": _selected_ui_scale_value,
+		"effective_ui_scale": get_effective_ui_scale(),
+		"window_size": get_window_size()
+	}
 
 func _apply_preset_id(preset_id: String) -> String:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
@@ -147,6 +181,13 @@ func _apply_effective_ui_scale() -> void:
 	if root_window == null:
 		return
 	root_window.content_scale_factor = get_effective_ui_scale()
+
+func _on_root_window_size_changed() -> void:
+	var current_size := get_window_size()
+	if current_size == _last_known_window_size:
+		return
+	_last_known_window_size = current_size
+	reapply_runtime_settings()
 
 func _resolve_window_mode(window_mode: String) -> String:
 	var normalized_mode := window_mode.strip_edges().to_lower()
