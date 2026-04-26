@@ -51,7 +51,7 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Deployment"
 
-[node name="UnitList" type="ItemList" parent="RootMargin/MainHBox/LeftPanel/LeftMargin/LeftVBox"]
+[node name="UnitList" type="Tree" parent="RootMargin/MainHBox/LeftPanel/LeftMargin/LeftVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3

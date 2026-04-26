@@ -4,7 +4,7 @@ const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValida
 const DeploymentAIService = preload("res://scripts/systems/deployment_ai/DeploymentAIService.gd")
 
 @onready var phase_label: Label = %PhaseLabel
-@onready var unit_list: ItemList = %UnitList
+@onready var unit_list: Tree = %UnitList
 @onready var status_label: Label = %StatusLabel
 @onready var hex_map_view: DeploymentHexMapView = %HexMapView
 @onready var p2_structure_label: Label = %P2StructureLabel
@@ -18,6 +18,8 @@ func _ready() -> void:
 	_player_index = 0 if GameState.current_phase == GameState.Phase.DEPLOYMENT_P1 else 1
 	_ensure_players_initialized()
 	_populate_p2_structure_picker()
+	unit_list.columns = 1
+	unit_list.hide_root = true
 	_build_deployable_unit_list()
 	_refresh_phase_ui("Select a unit, then click a hex in your territory.")
 
@@ -433,37 +435,37 @@ func _build_deployable_unit_list() -> void:
 	_deployable_units.clear()
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
-	var flattened: Array[Dictionary] = []
-	_flatten_units(division_tree, flattened, 0)
+	var root_item := unit_list.create_item()
+	_build_deployable_unit_tree_items(root_item, division_tree)
 
-	for entry in flattened:
-		var unit_data := entry.get("unit", {}) as Dictionary
-		var depth := int(entry.get("depth", 0))
-		var block_reason := _deployability_block_reason(unit_data)
-		var display_label := _unit_label(unit_data, depth)
-		if not block_reason.is_empty():
-			display_label += "  [Not deployable: %s]" % block_reason
-
-		unit_list.add_item(display_label)
-		var item_index := unit_list.item_count - 1
-		unit_list.set_item_metadata(item_index, {
-			"unit": unit_data,
-			"base_block_reason": block_reason
-		})
-		unit_list.set_item_disabled(item_index, not block_reason.is_empty())
-		_deployable_units.append(unit_data)
-
-func _flatten_units(node: Variant, output: Array[Dictionary], depth: int) -> void:
+func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant) -> void:
 	if typeof(node) != TYPE_DICTIONARY:
 		return
-	var unit := node as Dictionary
-	if not unit.is_empty():
-		output.append({
-			"unit": unit,
-			"depth": depth
-		})
-	for child in unit.get("children", []):
-		_flatten_units(child, output, depth + 1)
+
+	var unit_data := node as Dictionary
+	if unit_data.is_empty():
+		return
+
+	var item := unit_list.create_item(parent_item)
+	var block_reason := _deployability_block_reason(unit_data)
+	var display_label := _unit_label(unit_data)
+	if not block_reason.is_empty():
+		display_label += "  [Not deployable: %s]" % block_reason
+	item.set_text(0, display_label)
+	item.set_selectable(0, block_reason.is_empty())
+	item.set_metadata(0, {
+		"unit": unit_data,
+		"base_block_reason": block_reason,
+		"unit_id": String(unit_data.get("id", ""))
+	})
+	_deployable_units.append(unit_data)
+
+	var children_variant: Variant = unit_data.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return
+
+	for child in children_variant:
+		_build_deployable_unit_tree_items(item, child)
 
 
 func _string_for_type(raw_type: Variant) -> String:
@@ -493,12 +495,17 @@ func _unit_label(unit: Dictionary, depth: int = 0) -> String:
 	return "%s%s - %s %s" % ["  ".repeat(max(depth, 0)), name, size.capitalize(), type.capitalize()]
 
 func _on_hex_selected(column: int, row: int) -> void:
-	var selected := unit_list.get_selected_items()
-	if selected.is_empty():
+	var selected_item := unit_list.get_selected()
+	if selected_item == null:
 		_refresh_phase_ui("Select a unit first.")
 		return
 
-	var selected_metadata := unit_list.get_item_metadata(selected[0]) as Dictionary
+	var selected_metadata_variant: Variant = selected_item.get_metadata(0)
+	if typeof(selected_metadata_variant) != TYPE_DICTIONARY:
+		_refresh_phase_ui("Select a unit first.")
+		return
+
+	var selected_metadata := selected_metadata_variant as Dictionary
 	var unit_data := selected_metadata.get("unit", {}) as Dictionary
 	var base_block_reason := String(selected_metadata.get("base_block_reason", ""))
 	if not base_block_reason.is_empty():
