@@ -58,9 +58,8 @@ func _ready() -> void:
 	_refresh_ui()
 
 func _apply_selected_grid_dimensions() -> void:
-	var dimensions := GameState.selected_map_dimensions
-	GRID_COLUMNS = maxi(dimensions.x, 1)
-	GRID_ROWS = maxi(dimensions.y, 1)
+	GRID_COLUMNS = maxi(GameState.map_columns, 1)
+	GRID_ROWS = maxi(GameState.map_rows, 1)
 	hex_map_view.GRID_COLUMNS = GRID_COLUMNS
 	hex_map_view.GRID_ROWS = GRID_ROWS
 
@@ -212,6 +211,7 @@ func _sync_game_state_terrain_data() -> void:
 	GameState.terrain_map = hex_map_view.export_terrain_map()
 
 func _build_map_payload(map_name: String) -> Dictionary:
+	_apply_selected_grid_dimensions()
 	return {
 		"version": GameState.MAP_PAYLOAD_VERSION_CURRENT,
 		"name": map_name,
@@ -266,6 +266,8 @@ func _on_delete_map_pressed() -> void:
 
 func _apply_map_payload(payload: Dictionary) -> void:
 	GameState.apply_map_payload(payload)
+	_apply_selected_grid_dimensions()
+	hex_map_view.clear_all()
 	hex_map_view.import_terrain_map(GameState.terrain_map.duplicate(true))
 	_territory_map = GameState.territory_map.duplicate(true)
 	hex_map_view.set_territory_paint_mode(_is_territory_mode(), int(_ownership_for_mode()), _territory_map)

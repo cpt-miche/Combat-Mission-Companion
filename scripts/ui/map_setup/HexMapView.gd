@@ -59,9 +59,7 @@ var _last_geometry_signature := ""
 @onready var file_dialog: FileDialog = FileDialog.new()
 
 func _ready() -> void:
-	var dimensions := GameState.selected_map_dimensions
-	GRID_COLUMNS = maxi(dimensions.x, 1)
-	GRID_ROWS = maxi(dimensions.y, 1)
+	_sync_runtime_grid_dimensions()
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(file_dialog)
@@ -80,6 +78,7 @@ func set_selected_terrain(terrain: String) -> void:
 	selected_terrain = TerrainCatalog.normalize_terrain_id(terrain)
 
 func clear_all() -> void:
+	_sync_runtime_grid_dimensions()
 	_populate_default_hexes()
 	_has_last_brush_axial = false
 	queue_redraw()
@@ -96,6 +95,7 @@ func set_territory_paint_mode(enabled: bool, owner: int, territory_map: Dictiona
 	queue_redraw()
 
 func export_terrain_map() -> Dictionary:
+	_sync_runtime_grid_dimensions()
 	_ensure_geometry_cache()
 	var terrain_map := {}
 	for packed_axial in _map_axials_packed:
@@ -108,6 +108,7 @@ func export_terrain_map() -> Dictionary:
 	return terrain_map
 
 func import_terrain_map(serialized_map: Dictionary) -> void:
+	_sync_runtime_grid_dimensions()
 	_populate_default_hexes(false)
 	for coordinate in serialized_map.keys():
 		var coordinate_text := String(coordinate)
@@ -385,6 +386,7 @@ func _setup_base_cache_viewport() -> void:
 	_base_viewport.add_child(_base_layer)
 
 func _sync_geometry_state() -> void:
+	_sync_runtime_grid_dimensions()
 	var signature := "%d|%d|%.4f" % [GRID_COLUMNS, GRID_ROWS, hex_size]
 	if signature == _last_geometry_signature:
 		return
@@ -631,3 +633,12 @@ func _view_transform() -> Transform2D:
 func _screen_to_world(screen_pos: Vector2, sample_zoom: float = -1.0) -> Vector2:
 	var active_zoom := zoom if sample_zoom < 0.0 else sample_zoom
 	return (screen_pos - pan_offset) / active_zoom
+
+func _sync_runtime_grid_dimensions() -> void:
+	var runtime_columns := maxi(GameState.map_columns, 1)
+	var runtime_rows := maxi(GameState.map_rows, 1)
+	if GRID_COLUMNS == runtime_columns and GRID_ROWS == runtime_rows:
+		return
+	GRID_COLUMNS = runtime_columns
+	GRID_ROWS = runtime_rows
+	_mark_geometry_dirty()

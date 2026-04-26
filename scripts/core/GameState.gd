@@ -38,6 +38,8 @@ var active_player: int = 0
 var map_flow: MapFlow = MapFlow.NEW_MAP
 var selected_map_name: String = ""
 var selected_map_dimensions: Vector2i = Vector2i(MapGridConfig.default_columns(), MapGridConfig.default_rows())
+var map_columns: int = MapGridConfig.default_columns()
+var map_rows: int = MapGridConfig.default_rows()
 var deployment_ai_debug: Dictionary = {}
 var operational_ai_debug: Dictionary = {}
 var operational_ai_state: Dictionary = {}
@@ -65,6 +67,8 @@ func reset() -> void:
 	map_flow = MapFlow.NEW_MAP
 	selected_map_name = ""
 	selected_map_dimensions = Vector2i(MapGridConfig.default_columns(), MapGridConfig.default_rows())
+	map_columns = MapGridConfig.default_columns()
+	map_rows = MapGridConfig.default_rows()
 	deployment_ai_debug.clear()
 	operational_ai_debug.clear()
 	operational_ai_state.clear()
@@ -89,8 +93,14 @@ func apply_map_payload(payload: Dictionary) -> void:
 	if not validate_map_payload(map_payload):
 		push_warning("Map payload failed validation. Falling back to defaults.")
 	var migrated_payload := _migrate_map_payload(map_payload)
+	_apply_grid_payload(migrated_payload.get("grid", {}))
 	terrain_map = _sanitize_terrain_map(migrated_payload.get("terrain", {}))
 	territory_map = _sanitize_territory_map(migrated_payload.get("territory", {}))
+
+func set_runtime_map_dimensions(columns: int, rows: int) -> void:
+	map_columns = maxi(columns, 1)
+	map_rows = maxi(rows, 1)
+	selected_map_dimensions = Vector2i(map_columns, map_rows)
 
 func validate_map_payload(payload: Dictionary) -> bool:
 	if payload.is_empty():
@@ -132,6 +142,14 @@ func _run_map_migration(from_version: int, payload: Dictionary) -> Dictionary:
 			return payload.duplicate(true)
 		_:
 			return payload.duplicate(true)
+
+func _apply_grid_payload(raw_grid: Variant) -> void:
+	var grid := raw_grid as Dictionary
+	if grid == null:
+		return
+	var columns := int(grid.get("columns", map_columns))
+	var rows := int(grid.get("rows", map_rows))
+	set_runtime_map_dimensions(columns, rows)
 
 func _sanitize_terrain_map(raw_terrain: Variant) -> Dictionary:
 	var sanitized := {}
