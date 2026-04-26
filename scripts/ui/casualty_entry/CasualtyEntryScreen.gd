@@ -24,14 +24,18 @@ func _build_own_tree() -> void:
 		parent.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
 		parent.set_editable(0, true)
 		parent.set_checked(0, false)
+		parent.set_metadata(0, String(entry.get("unit_id", "")))
 		for child in entry.get("children", []):
 			if typeof(child) != TYPE_DICTIONARY:
 				continue
 			var child_item := own_tree.create_item(parent)
-			child_item.set_text(0, "%s losses: %d" % [String(child.get("unit_id", "Child")), int(child.get("losses", 0))])
+			var segment := String(child.get("segment", "")).strip_edges()
+			var segment_label := " %s" % segment if not segment.is_empty() else ""
+			child_item.set_text(0, "%s%s losses: %d" % [String(child.get("unit_id", "Child")), segment_label, int(child.get("losses", 0))])
 			child_item.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
 			child_item.set_editable(0, true)
 			child_item.set_checked(0, false)
+			child_item.set_metadata(0, String(child.get("unit_id", "")))
 
 	own_tree.check_propagated_to_item.connect(_on_tree_check_propagated)
 
@@ -61,5 +65,29 @@ func _build_enemy_list() -> void:
 		enemy_list.add_child(checkbox)
 
 func _on_submit_pressed() -> void:
+	var confirmed_unit_ids := _confirmed_own_casualty_unit_ids()
+	for unit_id in confirmed_unit_ids:
+		GameState.mark_unit_status(unit_id, "dead")
 	GameState.pending_casualties = {}
 	GameState.set_phase(GameState.Phase.GAMEPLAY)
+
+func _confirmed_own_casualty_unit_ids() -> Array[String]:
+	var confirmed_ids: Array[String] = []
+	var root := own_tree.get_root()
+	if root == null:
+		return confirmed_ids
+	var unique_ids := {}
+	_collect_checked_unit_ids(root, unique_ids)
+	for key in unique_ids.keys():
+		confirmed_ids.append(String(key))
+	return confirmed_ids
+
+func _collect_checked_unit_ids(item: TreeItem, output: Dictionary) -> void:
+	if item == null:
+		return
+	if item.get_parent() != null and item.is_checked(0):
+		var unit_id := String(item.get_metadata(0))
+		if not unit_id.is_empty():
+			output[unit_id] = true
+	for i in range(item.get_child_count()):
+		_collect_checked_unit_ids(item.get_child(i), output)

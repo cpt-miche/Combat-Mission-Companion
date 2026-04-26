@@ -225,6 +225,8 @@ func _draw() -> void:
 
 	for unit_id in _units.keys():
 		var unit := _units[unit_id] as Dictionary
+		if not GameState.is_unit_alive(unit):
+			continue
 		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
 		var center := _world_to_screen(_hex_center(hex.x, hex.y))
 		if not visible_rect.has_point(center):
@@ -294,6 +296,8 @@ func _draw_unit_marker(marker: Dictionary) -> void:
 func _pick_friendly_unit_at(screen_position: Vector2) -> String:
 	for unit_id in _units.keys():
 		var unit := _units[unit_id] as Dictionary
+		if not GameState.is_unit_alive(unit):
+			continue
 		if int(unit.get("owner", -1)) != _active_player:
 			continue
 		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
@@ -304,6 +308,9 @@ func _pick_friendly_unit_at(screen_position: Vector2) -> String:
 
 func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 	if unit_id.is_empty() or not _units.has(unit_id):
+		return false
+	if not GameState.is_unit_alive(_units[unit_id] as Dictionary):
+		info_label.text = "%s is dead and cannot receive orders." % unit_id
 		return false
 	var start_hex := (_units[unit_id] as Dictionary).get("hex", Vector2i.ZERO) as Vector2i
 	var blocked := _blocked_cells(unit_id)
@@ -317,6 +324,7 @@ func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 	return true
 
 func _on_end_turn_pressed() -> void:
+	_orders = _prune_orders_for_dead_units(_orders)
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log, {
 		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true),
 		"active_owner": _active_player
@@ -340,6 +348,17 @@ func _on_end_turn_pressed() -> void:
 		return
 	animation_timer.start()
 	end_turn_button.disabled = true
+
+func _prune_orders_for_dead_units(orders: Dictionary) -> Dictionary:
+	var next_orders := orders.duplicate(true)
+	for unit_id in orders.keys():
+		if not _units.has(unit_id):
+			next_orders.erase(unit_id)
+			continue
+		var unit := _units[unit_id] as Dictionary
+		if not GameState.is_unit_alive(unit):
+			next_orders.erase(unit_id)
+	return next_orders
 
 func _on_animation_step() -> void:
 	if _execution_queue.is_empty():
@@ -386,6 +405,8 @@ func _load_or_initialize_units() -> void:
 			var q := int(split[0])
 			var r := int(split[1])
 			var unit_data := deployments[key] as Dictionary
+			if not GameState.is_unit_alive(unit_data):
+				continue
 			var id := String(unit_data.get("id", "P%d_U_%d_%d" % [player_index + 1, q, r]))
 			generated[id] = {
 				"id": id,
@@ -486,7 +507,10 @@ func _blocked_cells(selected_unit_id: String) -> Dictionary:
 	for unit_id in _units.keys():
 		if String(unit_id) == selected_unit_id:
 			continue
-		var hex := (_units[unit_id] as Dictionary).get("hex", Vector2i.ZERO) as Vector2i
+		var unit := _units[unit_id] as Dictionary
+		if not GameState.is_unit_alive(unit):
+			continue
+		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
 		blocked["%d,%d" % [hex.x, hex.y]] = true
 	return blocked
 
@@ -502,6 +526,8 @@ func _delete_path_at(hex: Vector2i) -> bool:
 func _unit_at_hex(hex: Vector2i, owner: int) -> String:
 	for unit_id in _units.keys():
 		var unit := _units[unit_id] as Dictionary
+		if not GameState.is_unit_alive(unit):
+			continue
 		if int(unit.get("owner", -1)) != owner:
 			continue
 		if unit.get("hex", Vector2i.ZERO) == hex:
