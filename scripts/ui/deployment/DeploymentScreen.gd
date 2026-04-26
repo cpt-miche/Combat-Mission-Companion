@@ -38,10 +38,8 @@ func _ensure_players_initialized() -> void:
 		var player := GameState.players[i]
 		if not player.has("division_tree"):
 			player["division_tree"] = {}
-		if i == 0 and (player.get("division_tree", {}) as Dictionary).is_empty():
-			player["division_tree"] = _default_division_tree(i)
-		elif i == 1 and (player.get("division_tree", {}) as Dictionary).is_empty():
-			player["division_tree"] = _default_division_tree(i)
+		if (player.get("division_tree", {}) as Dictionary).is_empty():
+			player["division_tree"] = _best_default_structure_for_player(i)
 		if not GameState.players[i].has("deployments"):
 			GameState.players[i]["deployments"] = {}
 		GameState.players[i] = player
@@ -100,6 +98,21 @@ func _catalog_structure_options() -> Array[Dictionary]:
 			"tree": _division_tree_from_catalog_template(template)
 		})
 	return options
+
+func _best_default_structure_for_player(player_index: int) -> Dictionary:
+	var catalog_options := _catalog_structure_options()
+	for option in catalog_options:
+		if typeof(option) != TYPE_DICTIONARY:
+			continue
+		var option_dict := option as Dictionary
+		var tree_variant: Variant = option_dict.get("tree", {})
+		if typeof(tree_variant) != TYPE_DICTIONARY:
+			continue
+		var tree := tree_variant as Dictionary
+		if tree.is_empty():
+			continue
+		return tree.duplicate(true)
+	return _default_division_tree(player_index)
 
 func _saved_structure_options() -> Array[Dictionary]:
 	var options: Array[Dictionary] = []
