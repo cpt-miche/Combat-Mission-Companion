@@ -212,12 +212,12 @@ static func _observer_intel_for_player(ai_player_index: int, ai_owner: int) -> D
 	var by_observer: Dictionary = GameState.scout_intel_by_observer
 	if by_observer == null:
 		return {}
-	var owner_key := str(ai_owner)
-	if by_observer.has(owner_key) and by_observer[owner_key] is Dictionary:
-		return (by_observer[owner_key] as Dictionary).duplicate(true)
 	var player_key := str(ai_player_index)
 	if by_observer.has(player_key) and by_observer[player_key] is Dictionary:
 		return (by_observer[player_key] as Dictionary).duplicate(true)
+	var owner_key := str(ai_owner)
+	if by_observer.has(owner_key) and by_observer[owner_key] is Dictionary:
+		return (by_observer[owner_key] as Dictionary).duplicate(true)
 	return {}
 
 static func _adjacent_enemy_hex_ids(hex_id: String, enemy_player_index: int, units_by_hex: Dictionary) -> Array[String]:
