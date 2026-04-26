@@ -13,23 +13,23 @@ const REQUIRED_CHILD_MIX_BY_ECHELON_AND_TYPE := {
 		}
 	},
 	UnitSize.Value.REGIMENT: {
-		_ANY_TYPE_KEY: {
+		UnitType.Value.INFANTRY: {
 			UnitType.Value.INFANTRY: 2,
 			UnitType.Value.ARTILLERY: 1,
 		}
 	},
 	UnitSize.Value.BATTALION: {
-		_ANY_TYPE_KEY: {
+		UnitType.Value.INFANTRY: {
 			UnitType.Value.INFANTRY: 2,
 		}
 	},
 	UnitSize.Value.COMPANY: {
-		_ANY_TYPE_KEY: {
+		UnitType.Value.INFANTRY: {
 			UnitType.Value.INFANTRY: 2,
 		}
 	},
 	UnitSize.Value.PLATOON: {
-		_ANY_TYPE_KEY: {
+		UnitType.Value.INFANTRY: {
 			UnitType.Value.INFANTRY: 1,
 		}
 	},
