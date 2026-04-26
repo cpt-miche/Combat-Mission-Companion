@@ -191,12 +191,12 @@ static func _derive_recommended_intents(
 	var intents: Array[Dictionary] = []
 	var thresholds: Dictionary = cfg.get("opportunityThresholds", {})
 	for opportunity in counterattack_opportunities:
-		var confidence := clamp(float(opportunity.get("urgency", 0.0)), 0.0, 1.0)
+		var confidence: float = clamp(float(opportunity.get("urgency", 0.0)), 0.0, 1.0)
 		if confidence < float(thresholds.get("counterattack", 0.72)):
 			continue
 		intents.append(_make_advisory_intent(opportunity, "counterattack", confidence, "high_counterattack_confidence"))
 	for opportunity in attack_opportunities:
-		var confidence := clamp(float(opportunity.get("urgency", 0.0)), 0.0, 1.0)
+		var confidence: float = clamp(float(opportunity.get("urgency", 0.0)), 0.0, 1.0)
 		if confidence >= float(thresholds.get("attack", 0.67)):
 			intents.append(_make_advisory_intent(opportunity, "moveReserve", confidence, "high_attack_confidence"))
 			intents.append(_make_advisory_intent(opportunity, "shiftArtillerySupport", confidence, "high_attack_confidence"))
@@ -204,7 +204,7 @@ static func _derive_recommended_intents(
 			intents.append(_make_advisory_intent(opportunity, "requestRecon", confidence, "moderate_attack_confidence"))
 	for assessment in sector_assessments:
 		var sector_id := String(assessment.get("sectorId", assessment.get("id", "")))
-		var urgency := clamp(float(assessment.get("urgency", assessment.get("score", 0.0))), 0.0, 1.0)
+		var urgency: float = clamp(float(assessment.get("urgency", assessment.get("score", 0.0))), 0.0, 1.0)
 		var details: Dictionary = assessment.get("details", {})
 		var quiet := bool(details.get("quietSector", false))
 		if quiet and urgency <= float(thresholds.get("delay", 0.48)):
@@ -248,7 +248,7 @@ static func _derive_recommended_intents(
 				{"source": "sectorAssessment"}
 			))
 	for breakthrough in breakthrough_hexes:
-		var severity := clamp(float(breakthrough.get("urgency", breakthrough.get("score", 0.0))), 0.0, 1.0)
+		var severity: float = clamp(float(breakthrough.get("urgency", breakthrough.get("score", 0.0))), 0.0, 1.0)
 		if severity < float(thresholds.get("withdraw", 0.68)):
 			continue
 		intents.append(OperationalTypes.make_response_intent(
@@ -365,8 +365,8 @@ static func _evaluate_breakthroughs(breakthroughs: Array, cfg: Dictionary) -> Ar
 static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionary) -> Dictionary:
 	var severity_weights: Dictionary = cfg.get("breakthroughSeverity", {})
 	var thresholds: Dictionary = cfg.get("breakthroughThresholds", {})
-	var reserve_threshold := clamp(float(thresholds.get("reserveNeed", 0.55)), 0.0, 1.0)
-	var reinforcement_threshold := clamp(float(thresholds.get("reinforcementRequest", 0.75)), 0.0, 1.0)
+	var reserve_threshold: float = clamp(float(thresholds.get("reserveNeed", 0.55)), 0.0, 1.0)
+	var reinforcement_threshold: float = clamp(float(thresholds.get("reinforcementRequest", 0.75)), 0.0, 1.0)
 	var breakthrough_hexes: Array[Dictionary] = []
 	var reserve_needs: Array[Dictionary] = []
 	var reinforcement_requests: Array[Dictionary] = []
@@ -379,15 +379,15 @@ static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionar
 		for hex_id in current_hexes.keys():
 			if not previous_hexes.has(hex_id):
 				penetration_count += 1
-		var prior_frontline_size := max(previous_hexes.size(), 1)
-		var penetration_factor := clamp(float(penetration_count) / float(prior_frontline_size), 0.0, 1.0)
-		var objective_distance := max(float(breakthrough.get("playerDistanceToObjective", 99.0)), 0.0)
-		var objective_proximity := clamp(1.0 - objective_distance / max(float(breakthrough.get("objectiveThreatRange", 6.0)), 1.0), 0.0, 1.0)
+		var prior_frontline_size: int = max(previous_hexes.size(), 1)
+		var penetration_factor: float = clamp(float(penetration_count) / float(prior_frontline_size), 0.0, 1.0)
+		var objective_distance: float = max(float(breakthrough.get("playerDistanceToObjective", 99.0)), 0.0)
+		var objective_proximity: float = clamp(1.0 - objective_distance / max(float(breakthrough.get("objectiveThreatRange", 6.0)), 1.0), 0.0, 1.0)
 		var road_access: float = clamp(max(
 			float(breakthrough.get("roadAccess", 0.0)),
 			float(breakthrough.get("highwayAccess", 0.0))
 		), 0.0, 1.0)
-		var sector_gap := clamp(float(breakthrough.get("sectorGapExposure", breakthrough.get("sectorGap", 0.0))), 0.0, 1.0)
+		var sector_gap: float = clamp(float(breakthrough.get("sectorGapExposure", breakthrough.get("sectorGap", 0.0))), 0.0, 1.0)
 		var momentum: float = clamp(float(breakthrough.get("momentum", 0.0)), 0.0, 1.0)
 		var severity := _score_breakthrough_severity(
 			penetration_factor,
@@ -421,7 +421,7 @@ static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionar
 			var reserve_id := "%s_reserve_need" % breakthrough_id
 			var reserve_reasons := reasons.duplicate()
 			reserve_reasons.append("trigger=breakthrough_severity>=%.2f" % reserve_threshold)
-			var requested_strength := clamp(severity * float(breakthrough.get("reserveStrengthScale", 1.0)), 0.1, 1.0)
+			var requested_strength: float = clamp(severity * float(breakthrough.get("reserveStrengthScale", 1.0)), 0.1, 1.0)
 			reserve_needs.append(OperationalTypes.make_reserve_request(
 				reserve_id,
 				sector_id,
@@ -435,7 +435,7 @@ static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionar
 			var reinf_id := "%s_reinforcement_request" % breakthrough_id
 			var reinf_reasons := reasons.duplicate()
 			reinf_reasons.append("trigger=breakthrough_severity>=%.2f" % reinforcement_threshold)
-			var reinf_strength := clamp(severity * float(breakthrough.get("reinforcementStrengthScale", 1.25)), 0.1, 1.25)
+			var reinf_strength: float = clamp(severity * float(breakthrough.get("reinforcementStrengthScale", 1.25)), 0.1, 1.25)
 			reinforcement_requests.append(OperationalTypes.make_reinforcement_request(
 				reinf_id,
 				sector_id,
@@ -520,13 +520,13 @@ static func _evaluate_sectors(sectors: Array, cfg: Dictionary) -> Array[Dictiona
 	var assessments: Array[Dictionary] = []
 	for item in sectors:
 		var sector: Dictionary = item
-		var pressure := clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
+		var pressure: float = clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
 		var readiness: float = clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
-		var supply := clamp(float(sector.get("supply", 0.0)), 0.0, 1.0)
-		var objective_criticality := clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
-		var defensibility := clamp(float(sector.get("defensibility", sector.get("terrainDefensibility", 0.0))), 0.0, 1.0)
-		var recent_enemy_advance := clamp(float(sector.get("recentEnemyAdvance", 0.0)), 0.0, 1.0)
-		var support := clamp(max(
+		var supply: float = clamp(float(sector.get("supply", 0.0)), 0.0, 1.0)
+		var objective_criticality: float = clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
+		var defensibility: float = clamp(float(sector.get("defensibility", sector.get("terrainDefensibility", 0.0))), 0.0, 1.0)
+		var recent_enemy_advance: float = clamp(float(sector.get("recentEnemyAdvance", 0.0)), 0.0, 1.0)
+		var support: float = clamp(max(
 			float(sector.get("artillerySupport", 0.0)),
 			float(sector.get("reserveSupport", 0.0)),
 			float(sector.get("supportCoverage", 0.0))
@@ -551,7 +551,7 @@ static func _evaluate_sectors(sectors: Array, cfg: Dictionary) -> Array[Dictiona
 			"defensibility=%.3f" % defensibility,
 			"recent_enemy_advance=%.3f" % recent_enemy_advance,
 			"support=%.3f" % support,
-			"quiet_sector=%s" % String(is_quiet_sector)
+			"quiet_sector=%s" % str(is_quiet_sector)
 		]
 		var details := sector.duplicate(true)
 		details["quietSector"] = is_quiet_sector
@@ -573,8 +573,8 @@ static func _evaluate_reserve_requests(requests: Array, cfg: Dictionary) -> Arra
 	var assessments: Array[Dictionary] = []
 	for item in requests:
 		var request: Dictionary = item
-		var urgency := clamp(float(request.get("urgency", 0.0)), 0.0, 1.0)
-		var deficit := clamp(float(request.get("deficit", 0.0)), 0.0, 1.0)
+		var urgency: float = clamp(float(request.get("urgency", 0.0)), 0.0, 1.0)
+		var deficit: float = clamp(float(request.get("deficit", 0.0)), 0.0, 1.0)
 		var score: float = (
 			urgency * float(weights.get("urgency", 0.0))
 			+ deficit * float(weights.get("deficit", 0.0))
@@ -601,8 +601,8 @@ static func _evaluate_reinforcement_requests(requests: Array, cfg: Dictionary, q
 	var warnings: Array[String] = []
 	for item in requests:
 		var request: Dictionary = item
-		var urgency := clamp(float(request.get("urgency", 0.0)), 0.0, 1.0)
-		var deficit := clamp(float(request.get("deficit", 0.0)), 0.0, 1.0)
+		var urgency: float = clamp(float(request.get("urgency", 0.0)), 0.0, 1.0)
+		var deficit: float = clamp(float(request.get("deficit", 0.0)), 0.0, 1.0)
 		var score: float = (
 			urgency * float(weights.get("urgency", 0.0))
 			+ deficit * float(weights.get("deficit", 0.0))
@@ -639,25 +639,25 @@ static func _evaluate_donor_candidates(request: Dictionary, quiet_sector_index: 
 	var preferred_sources: Array[String] = []
 	var request_id := String(request.get("id", ""))
 	var request_sector := String(request.get("sectorId", ""))
-	var requested_strength := clamp(float(request.get("requestedStrength", 0.0)), 0.0, 1.5)
+	var requested_strength: float = clamp(float(request.get("requestedStrength", 0.0)), 0.0, 1.5)
 	var reasons: Array[String] = []
-	var retention_default := clamp(float(ranking_weights.get("defaultDefenseRetention", 0.65)), 0.0, 1.0)
+	var retention_default: float = clamp(float(ranking_weights.get("defaultDefenseRetention", 0.65)), 0.0, 1.0)
 	for item in donor_candidates:
 		var donor: Dictionary = item
 		var donor_sector := String(donor.get("sectorId", donor.get("id", "")))
-		var pre_transfer_score := clamp(float(donor.get("preTransferDefenseScore", donor.get("defenseScore", donor.get("currentDefenseScore", 0.0)))), 0.0, 1.5)
-		var transfer_cost := max(
+		var pre_transfer_score: float = clamp(float(donor.get("preTransferDefenseScore", donor.get("defenseScore", donor.get("currentDefenseScore", 0.0)))), 0.0, 1.5)
+		var transfer_cost: float = max(
 			float(donor.get("transferDefenseCost", donor.get("defenseContributionLost", 0.0))),
 			requested_strength * (1.0 - retention_default)
 		)
-		var post_transfer_score := clamp(float(donor.get("postTransferDefenseScore", pre_transfer_score - transfer_cost)), 0.0, 1.5)
-		var minimum_required := clamp(float(donor.get("minimumRequiredDefenseScore", request.get("minimumRequiredDefenseScore", pre_transfer_score * retention_default))), 0.0, 1.5)
+		var post_transfer_score: float = clamp(float(donor.get("postTransferDefenseScore", pre_transfer_score - transfer_cost)), 0.0, 1.5)
+		var minimum_required: float = clamp(float(donor.get("minimumRequiredDefenseScore", request.get("minimumRequiredDefenseScore", pre_transfer_score * retention_default))), 0.0, 1.5)
 		var quiet_sector_gate := bool(quiet_sector_index.get(donor_sector, false))
 		var stays_above_threshold: bool = post_transfer_score >= minimum_required
 		var legal: bool = quiet_sector_gate and stays_above_threshold
-		var mobility := clamp(float(donor.get("mobility", donor.get("mobileFactor", 0.0))), 0.0, 1.0)
-		var route_length := max(float(donor.get("responseRouteLength", donor.get("routeDistance", donor.get("responseDistance", donor.get("travelTurns", 99.0))))), 0.0)
-		var route_efficiency := clamp(1.0 / (1.0 + route_length), 0.0, 1.0)
+		var mobility: float = clamp(float(donor.get("mobility", donor.get("mobileFactor", 0.0))), 0.0, 1.0)
+		var route_length: float = max(float(donor.get("responseRouteLength", donor.get("routeDistance", donor.get("responseDistance", donor.get("travelTurns", 99.0))))), 0.0)
+		var route_efficiency: float = clamp(1.0 / (1.0 + route_length), 0.0, 1.0)
 		var rank_score: float = (
 			mobility * float(ranking_weights.get("mobility", 0.65))
 			+ route_efficiency * float(ranking_weights.get("routeEfficiency", 0.35))
@@ -740,21 +740,21 @@ static func _evaluate_structural_warnings(
 	for item in sectors:
 		var sector: Dictionary = item
 		var sector_id := String(sector.get("id", ""))
-		var objective_criticality := clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
-		var pressure := clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
+		var objective_criticality: float = clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
+		var pressure: float = clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
 		var readiness: float = clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
-		var defensibility := clamp(float(sector.get("defensibility", sector.get("terrainDefensibility", 0.0))), 0.0, 1.0)
-		var artillery_coverage := clamp(max(
+		var defensibility: float = clamp(float(sector.get("defensibility", sector.get("terrainDefensibility", 0.0))), 0.0, 1.0)
+		var artillery_coverage: float = clamp(max(
 			float(sector.get("artilleryCoverage", 0.0)),
 			float(sector.get("artillerySupport", 0.0))
 		), 0.0, 1.0)
-		var recon_support := clamp(float(sector.get("reconSupport", sector.get("reconCoverage", 0.0))), 0.0, 1.0)
-		var uncertainty := clamp(float(sector.get("scoutUncertainty", sector.get("uncertainty", 0.0))), 0.0, 1.0)
-		var importance := clamp(max(
+		var recon_support: float = clamp(float(sector.get("reconSupport", sector.get("reconCoverage", 0.0))), 0.0, 1.0)
+		var uncertainty: float = clamp(float(sector.get("scoutUncertainty", sector.get("uncertainty", 0.0))), 0.0, 1.0)
+		var importance: float = clamp(max(
 			float(sector.get("importance", 0.0)),
 			objective_criticality
 		), 0.0, 1.0)
-		var danger := clamp(max(
+		var danger: float = clamp(max(
 			float(sector.get("danger", 0.0)),
 			pressure,
 			float(sector.get("enemyPressure", 0.0))
@@ -798,15 +798,15 @@ static func _is_understrength_frontline_sector(sector: Dictionary) -> bool:
 		ratio = clamp(ratio, 0.0, 3.0)
 	if ratio >= 0.0 and ratio < 0.75:
 		return true
-	var friendly := max(float(sector.get("friendlyStrength", sector.get("friendlyCombatPower", 0.0))), 0.0)
-	var enemy := max(float(sector.get("enemyStrength", sector.get("enemyCombatPower", 0.0))), 0.0)
+	var friendly: float = max(float(sector.get("friendlyStrength", sector.get("friendlyCombatPower", 0.0))), 0.0)
+	var enemy: float = max(float(sector.get("enemyStrength", sector.get("enemyCombatPower", 0.0))), 0.0)
 	return enemy > 0.0 and friendly < enemy * 0.85
 
 static func _has_coherent_line_gap_path_to_rear(item: Dictionary) -> bool:
 	if bool(item.get("coherentLineGapPathToRear", false)):
 		return true
-	var coherence_risk := clamp(float(item.get("coherenceRisk", item.get("defensiveCoherenceRisk", 0.0))), 0.0, 1.0)
-	var rear_path_risk := clamp(float(item.get("rearPathRisk", item.get("pathToRearRisk", 0.0))), 0.0, 1.0)
+	var coherence_risk: float = clamp(float(item.get("coherenceRisk", item.get("defensiveCoherenceRisk", 0.0))), 0.0, 1.0)
+	var rear_path_risk: float = clamp(float(item.get("rearPathRisk", item.get("pathToRearRisk", 0.0))), 0.0, 1.0)
 	return coherence_risk >= 0.70 and rear_path_risk >= 0.70
 
 static func _has_reserve_clumping_in_input(input: Dictionary) -> bool:
@@ -875,9 +875,9 @@ static func _counterattack_exposes_defend_objective(opportunity: Dictionary) -> 
 	if bool(details.get("exposesDefendObjective", false)):
 		return true
 	var normalized: Dictionary = details.get("normalizedFactors", {})
-	var coherence_risk := clamp(float(normalized.get("defensiveCoherenceRisk", details.get("defensiveCoherenceRisk", 0.0))), 0.0, 1.0)
-	var overextension := clamp(float(normalized.get("overextensionRisk", details.get("overextensionRisk", 0.0))), 0.0, 1.0)
-	var objective_value := clamp(float(normalized.get("objectiveValue", details.get("objectiveValue", 0.0))), 0.0, 1.0)
+	var coherence_risk: float = clamp(float(normalized.get("defensiveCoherenceRisk", details.get("defensiveCoherenceRisk", 0.0))), 0.0, 1.0)
+	var overextension: float = clamp(float(normalized.get("overextensionRisk", details.get("overextensionRisk", 0.0))), 0.0, 1.0)
+	var objective_value: float = clamp(float(normalized.get("objectiveValue", details.get("objectiveValue", 0.0))), 0.0, 1.0)
 	var defend_tag := bool(details.get("defendObjective", false)) or String(details.get("objectiveType", details.get("objectiveMode", ""))).to_lower().find("defend") >= 0
 	return coherence_risk >= 0.65 and overextension >= 0.55 and (defend_tag or objective_value >= 0.75)
 
@@ -886,8 +886,8 @@ static func _evaluate_response_intents(intents: Array, cfg: Dictionary) -> Array
 	var assessments: Array[Dictionary] = []
 	for item in intents:
 		var intent: Dictionary = item
-		var urgency := clamp(float(intent.get("urgency", 0.0)), 0.0, 1.0)
-		var feasibility := clamp(float(intent.get("feasibility", 0.0)), 0.0, 1.0)
+		var urgency: float = clamp(float(intent.get("urgency", 0.0)), 0.0, 1.0)
+		var feasibility: float = clamp(float(intent.get("feasibility", 0.0)), 0.0, 1.0)
 		var score: float = (
 			urgency * float(weights.get("urgency", 0.0))
 			+ feasibility * float(weights.get("feasibility", 0.0))
