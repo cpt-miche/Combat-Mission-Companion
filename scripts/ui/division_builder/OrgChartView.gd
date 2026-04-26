@@ -30,6 +30,8 @@ const DRAG_THRESHOLD := 8.0
 func set_organization(root: UnitModel, selected: UnitModel) -> void:
 	root_unit = root
 	selected_unit = selected
+	_collapsed_by_unit_id.clear()
+	_toggle_hitboxes.clear()
 	queue_redraw()
 
 func set_selected_unit(unit: UnitModel) -> void:
