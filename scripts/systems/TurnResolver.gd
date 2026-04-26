@@ -198,6 +198,8 @@ static func _is_enemy_adjacent(hex: Vector2i, owner: int, units: Dictionary) -> 
 	for unit in units.values():
 		if typeof(unit) != TYPE_DICTIONARY:
 			continue
+		if not GameState.is_unit_alive(unit):
+			continue
 		if int(unit.get("owner", owner)) == owner:
 			continue
 		if Pathfinding.are_adjacent(hex, unit.get("hex", Vector2i.ZERO)):
