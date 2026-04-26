@@ -4,6 +4,7 @@ const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
 
 const SCOUT_LEVEL_MIN := 0
 const SCOUT_LEVEL_MAX := 4
+const UNIT_INTEL_KEY := "__unitIntelById"
 
 const COMBAT_TYPES := {"infantry": true, "tank": true, "mechanized": true, "motorized": true}
 const SUPPORT_TYPES := {"recon": true, "antiTank": true, "weapons": true, "artillery": true}
@@ -27,9 +28,12 @@ const ROLL_DENOMINATOR_BY_TYPE := {
 const SIZE_ORDER := ["platoon", "company", "battalion", "regiment"]
 
 static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, prior_hex_intel: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
-	var next_hex_intel := prior_hex_intel.duplicate(true)
+	var prior_unit_intel := _extract_prior_unit_intel(prior_hex_intel)
+	var next_hex_intel := _extract_prior_hex_intel(prior_hex_intel)
 	var enemy_hex_to_units := _collect_enemy_units_by_hex(units, observer_owner)
 	var adjacent_enemy_hexes := _collect_adjacent_enemy_hexes(units, observer_owner, enemy_hex_to_units)
+	var contact_unit_ids := _collect_contact_enemy_unit_ids(adjacent_enemy_hexes, enemy_hex_to_units)
+	var unit_intel_by_id := _reconcile_unit_intel(prior_unit_intel, contact_unit_ids)
 
 	for enemy_hex_id in adjacent_enemy_hexes.keys():
 		var intel := _ensure_hex_intel(next_hex_intel, enemy_hex_id)
@@ -38,10 +42,12 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 		var level_gain := _roll_scout_progression(adjacent_friendlies, rng)
 		intel["scoutLevel"] = int(clamp(int(intel.get("scoutLevel", SCOUT_LEVEL_MIN)) + level_gain, SCOUT_LEVEL_MIN, SCOUT_LEVEL_MAX))
 		var enemy_units: Array = enemy_hex_to_units.get(enemy_hex_id, [])
-		_resolve_visible_intel(intel, enemy_units, rng)
+		_resolve_visible_intel(intel, enemy_units, unit_intel_by_id, rng)
 		next_hex_intel[enemy_hex_id] = intel
 
 	for enemy_hex_id in next_hex_intel.keys():
+		if String(enemy_hex_id) == UNIT_INTEL_KEY:
+			continue
 		if adjacent_enemy_hexes.has(enemy_hex_id):
 			continue
 		var stale_intel: Dictionary = next_hex_intel[enemy_hex_id]
@@ -49,6 +55,7 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 		stale_intel["scoutLevel"] = SCOUT_LEVEL_MIN
 		next_hex_intel[enemy_hex_id] = stale_intel
 
+	next_hex_intel[UNIT_INTEL_KEY] = unit_intel_by_id
 	return next_hex_intel
 
 static func resolve_recon(attacker: Dictionary, defender: Dictionary, modifier: int = 0, rng: RandomNumberGenerator = null) -> Dictionary:
@@ -107,6 +114,61 @@ static func _ensure_hex_intel(intel_store: Dictionary, enemy_hex_id: String) -> 
 		return existing
 	return {"hexId": enemy_hex_id, "scoutLevel": SCOUT_LEVEL_MIN, "knownEnemyUnits": []}
 
+static func _extract_prior_hex_intel(prior_hex_intel: Dictionary) -> Dictionary:
+	var next_hex_intel := {}
+	for key in prior_hex_intel.keys():
+		if String(key) == UNIT_INTEL_KEY:
+			continue
+		var value := prior_hex_intel[key]
+		if not (value is Dictionary):
+			continue
+		next_hex_intel[key] = (value as Dictionary).duplicate(true)
+	return next_hex_intel
+
+static func _extract_prior_unit_intel(prior_hex_intel: Dictionary) -> Dictionary:
+	var prior_unit_intel := {}
+	var raw_unit_intel := prior_hex_intel.get(UNIT_INTEL_KEY, null)
+	if raw_unit_intel is Dictionary:
+		for unit_id in (raw_unit_intel as Dictionary).keys():
+			var known := (raw_unit_intel as Dictionary).get(unit_id, null)
+			if not (known is Dictionary):
+				continue
+			prior_unit_intel[String(unit_id)] = (known as Dictionary).duplicate(true)
+		return prior_unit_intel
+	for hex_id in prior_hex_intel.keys():
+		var intel := prior_hex_intel.get(hex_id, null)
+		if not (intel is Dictionary):
+			continue
+		var known_lookup := _known_enemy_lookup((intel as Dictionary).get("knownEnemyUnits", []))
+		for unit_id in known_lookup.keys():
+			prior_unit_intel[String(unit_id)] = (known_lookup[unit_id] as Dictionary).duplicate(true)
+	return prior_unit_intel
+
+static func _collect_contact_enemy_unit_ids(adjacent_enemy_hexes: Dictionary, enemy_hex_to_units: Dictionary) -> Dictionary:
+	var contact_unit_ids := {}
+	for enemy_hex_id in adjacent_enemy_hexes.keys():
+		var enemy_units := enemy_hex_to_units.get(enemy_hex_id, [])
+		for enemy in enemy_units:
+			if not (enemy is Dictionary):
+				continue
+			var enemy_unit := enemy as Dictionary
+			var unit_id := String(enemy_unit.get("id", ""))
+			if unit_id.is_empty():
+				continue
+			contact_unit_ids[unit_id] = true
+	return contact_unit_ids
+
+static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids: Dictionary) -> Dictionary:
+	var unit_intel_by_id := {}
+	for unit_id in contact_unit_ids.keys():
+		var key := String(unit_id)
+		var existing := prior_unit_intel.get(key, null)
+		if existing is Dictionary:
+			unit_intel_by_id[key] = (existing as Dictionary).duplicate(true)
+		else:
+			unit_intel_by_id[key] = _new_known_enemy(key)
+	return unit_intel_by_id
+
 static func _apply_automatic_floor(current_level: int, adjacent_friendlies: Array) -> int:
 	var level := current_level
 	for unit in adjacent_friendlies:
@@ -128,9 +190,8 @@ static func _roll_scout_progression(adjacent_friendlies: Array, rng: RandomNumbe
 			gain += 1
 	return gain
 
-static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, rng: RandomNumberGenerator) -> void:
+static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, unit_intel_by_id: Dictionary, rng: RandomNumberGenerator) -> void:
 	var level := int(hex_intel.get("scoutLevel", SCOUT_LEVEL_MIN))
-	var known_by_unit_id := _known_enemy_lookup(hex_intel.get("knownEnemyUnits", []))
 	var next_known: Array[Dictionary] = []
 	for enemy in enemy_units:
 		if not (enemy is Dictionary):
@@ -139,11 +200,18 @@ static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, rn
 		var unit_id := String(enemy_unit.get("id", ""))
 		if unit_id.is_empty():
 			continue
-		var known := known_by_unit_id.get(unit_id, _new_known_enemy(unit_id))
+		var known := _known_for_unit(unit_id, unit_intel_by_id)
 		_apply_level_type_visibility(level, known, enemy_unit, rng)
 		_apply_level_size_visibility(level, known, enemy_unit, rng)
+		unit_intel_by_id[unit_id] = known.duplicate(true)
 		next_known.append(known)
 	hex_intel["knownEnemyUnits"] = next_known
+
+static func _known_for_unit(unit_id: String, unit_intel_by_id: Dictionary) -> Dictionary:
+	var existing := unit_intel_by_id.get(unit_id, null)
+	if existing is Dictionary:
+		return (existing as Dictionary).duplicate(true)
+	return _new_known_enemy(unit_id)
 
 static func _apply_level_type_visibility(level: int, known: Dictionary, enemy_unit: Dictionary, rng: RandomNumberGenerator) -> void:
 	var unit_type := _normalized_type(enemy_unit)
