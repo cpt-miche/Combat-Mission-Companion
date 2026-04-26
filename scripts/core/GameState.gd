@@ -38,6 +38,9 @@ var active_player: int = 0
 var map_flow: MapFlow = MapFlow.NEW_MAP
 var selected_map_name: String = ""
 var deployment_ai_debug: Dictionary = {}
+var operational_ai_debug: Dictionary = {}
+var operational_ai_state: Dictionary = {}
+var operational_ai_enabled: bool = false
 var ai_debug_enabled: bool = false
 var ai_debug_level: int = AIDebugTypes.DebugLevel.OFF
 
@@ -61,6 +64,9 @@ func reset() -> void:
 	map_flow = MapFlow.NEW_MAP
 	selected_map_name = ""
 	deployment_ai_debug.clear()
+	operational_ai_debug.clear()
+	operational_ai_state.clear()
+	operational_ai_enabled = false
 	ai_debug_enabled = false
 	ai_debug_level = AIDebugTypes.DebugLevel.OFF
 	emit_signal("phase_changed", current_phase)
