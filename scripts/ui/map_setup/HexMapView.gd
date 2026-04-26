@@ -59,6 +59,9 @@ var _last_geometry_signature := ""
 @onready var file_dialog: FileDialog = FileDialog.new()
 
 func _ready() -> void:
+	var dimensions := GameState.selected_map_dimensions
+	GRID_COLUMNS = maxi(dimensions.x, 1)
+	GRID_ROWS = maxi(dimensions.y, 1)
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(file_dialog)

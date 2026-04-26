@@ -40,6 +40,9 @@ var _base_viewport: SubViewport
 var _base_layer: BaseCacheLayer
 
 func _ready() -> void:
+	var dimensions := GameState.selected_map_dimensions
+	GRID_COLUMNS = maxi(dimensions.x, 1)
+	GRID_ROWS = maxi(dimensions.y, 1)
 	clip_contents = true
 	_setup_base_cache_viewport()
 	_mark_geometry_dirty()

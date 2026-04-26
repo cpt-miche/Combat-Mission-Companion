@@ -79,7 +79,7 @@ text = "Which side do you want to command?"
 [node name="MapDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
 title = "Map Selection"
-size = Vector2i(430, 250)
+size = Vector2i(430, 310)
 initial_position = 1
 ok_button_text = "Continue"
 cancel_button_text = "Cancel"
@@ -105,6 +105,15 @@ layout_mode = 2
 text = "Saved map"
 
 [node name="SavedMapSelector" type="OptionButton" parent="MapDialog/MapDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MapSizeLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Map size"
+
+[node name="MapSizeSelector" type="OptionButton" parent="MapDialog/MapDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 

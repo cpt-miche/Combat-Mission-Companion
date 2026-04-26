@@ -35,6 +35,7 @@ var _terrain_buttons: Dictionary[String, BaseButton] = {}
 var _selected_terrain_id: String = TerrainCatalog.default_terrain_id()
 
 func _ready() -> void:
+	_apply_selected_grid_dimensions()
 	_build_palette()
 	_build_terrain_legend()
 	clear_all_button.pressed.connect(hex_map_view.clear_all)
@@ -55,6 +56,13 @@ func _ready() -> void:
 	_refresh_saved_maps()
 	_configure_mode_buttons()
 	_refresh_ui()
+
+func _apply_selected_grid_dimensions() -> void:
+	var dimensions := GameState.selected_map_dimensions
+	GRID_COLUMNS = maxi(dimensions.x, 1)
+	GRID_ROWS = maxi(dimensions.y, 1)
+	hex_map_view.GRID_COLUMNS = GRID_COLUMNS
+	hex_map_view.GRID_ROWS = GRID_ROWS
 
 func _build_palette() -> void:
 	_terrain_buttons.clear()

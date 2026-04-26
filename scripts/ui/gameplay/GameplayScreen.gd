@@ -46,6 +46,9 @@ var _drag_mouse_pos := Vector2.ZERO
 var _hovered_hex := Vector2i(-9999, -9999)
 
 func _ready() -> void:
+	var dimensions := GameState.selected_map_dimensions
+	GRID_COLUMNS = maxi(dimensions.x, 1)
+	GRID_ROWS = maxi(dimensions.y, 1)
 	_active_player = clampi(GameState.active_player, 0, 1)
 	_load_or_initialize_units()
 	_rebuild_hex_polygon_cache()
