@@ -213,7 +213,7 @@ static func scoring_config(overrides: Dictionary = {}) -> Dictionary:
 static func weights_for_posture(posture: String, base_config: Dictionary = {}) -> Dictionary:
 	var normalized_posture := _normalize_posture(posture)
 	var posture_overrides: Dictionary = POSTURE_PROFILES.get(normalized_posture, {})
-	var merged := _deep_merge(base_config, posture_overrides)
+	var merged := _deep_merge(posture_overrides, base_config)
 	if normalized_posture == "balanced":
 		return merged
 	var adjusted_components := _collect_adjusted_components(posture_overrides)
