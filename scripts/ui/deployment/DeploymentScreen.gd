@@ -182,35 +182,83 @@ func _default_division_tree(player_index: int) -> Dictionary:
 				"name": "%s Infantry Battalion" % side_label,
 				"type": "infantry",
 				"size": "battalion",
-				"children": []
+				"children": [
+					{
+						"id": "%s_infantry_co_1" % side_label,
+						"name": "%s Infantry Company A" % side_label,
+						"type": "infantry",
+						"size": "company",
+						"children": [
+							{
+								"id": "%s_infantry_co_1_plt_1" % side_label,
+								"name": "%s 1st Platoon" % side_label,
+								"type": "infantry",
+								"size": "platoon",
+								"children": []
+							},
+							{
+								"id": "%s_infantry_co_1_plt_2" % side_label,
+								"name": "%s 2nd Platoon" % side_label,
+								"type": "infantry",
+								"size": "platoon",
+								"children": []
+							}
+						]
+					},
+					{
+						"id": "%s_infantry_co_2" % side_label,
+						"name": "%s Infantry Company B" % side_label,
+						"type": "infantry",
+						"size": "company",
+						"children": [
+							{
+								"id": "%s_infantry_co_2_plt_1" % side_label,
+								"name": "%s 3rd Platoon" % side_label,
+								"type": "infantry",
+								"size": "platoon",
+								"children": []
+							}
+						]
+					}
+				]
 			},
 			{
 				"id": "%s_tank_bn" % side_label,
 				"name": "%s Tank Battalion" % side_label,
 				"type": "tank",
 				"size": "battalion",
-				"children": []
+				"children": [
+					{
+						"id": "%s_tank_co_1" % side_label,
+						"name": "%s Tank Company" % side_label,
+						"type": "tank",
+						"size": "company",
+						"children": []
+					}
+				]
 			},
 			{
-				"id": "%s_support_co" % side_label,
-				"name": "%s Support Company" % side_label,
+				"id": "%s_support_bn" % side_label,
+				"name": "%s Support Battalion" % side_label,
 				"type": "engineer",
-				"size": "company",
-				"children": []
-			},
-			{
-				"id": "%s_infantry_co_1" % side_label,
-				"name": "%s Infantry Company A" % side_label,
-				"type": "infantry",
-				"size": "company",
-				"children": []
-			},
-			{
-				"id": "%s_infantry_co_2" % side_label,
-				"name": "%s Infantry Company B" % side_label,
-				"type": "infantry",
-				"size": "company",
-				"children": []
+				"size": "battalion",
+				"children": [
+					{
+						"id": "%s_support_co" % side_label,
+						"name": "%s Support Company" % side_label,
+						"type": "engineer",
+						"size": "company",
+						"children": [
+							{
+								"id": "%s_support_co_plt_1" % side_label,
+								"name": "%s Engineer Platoon" % side_label,
+								"type": "engineer",
+								"size": "platoon",
+								"children": []
+							}
+						]
+					}
+				]
 			}
 		]
 	}
