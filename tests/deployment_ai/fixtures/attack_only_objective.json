@@ -2,33 +2,116 @@
   "id": "attack_only_objective",
   "description": "Attack-only objective mode should prioritize attack stances for combat anchors.",
   "elements": [
-    {"id": "u_inf_1", "playerId": 1, "role": "infantry", "size": "company"},
-    {"id": "u_inf_2", "playerId": 1, "role": "infantry", "size": "company"},
-    {"id": "u_armor_1", "playerId": 1, "role": "armor", "size": "company"}
+    {
+      "id": "u_inf_1",
+      "playerId": 1,
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_inf_2",
+      "playerId": 1,
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_armor_1",
+      "playerId": 1,
+      "role": "armor",
+      "size": "company"
+    }
   ],
   "hexes": [
-    {"id": "0,0", "q": 0, "r": 0, "terrain": "open"},
-    {"id": "1,0", "q": 1, "r": 0, "terrain": "road"},
-    {"id": "2,0", "q": 2, "r": 0, "terrain": "open"},
-    {"id": "0,1", "q": 0, "r": 1, "terrain": "rough"},
-    {"id": "1,1", "q": 1, "r": 1, "terrain": "open"}
+    {
+      "id": "0,0",
+      "q": 0,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "1,0",
+      "q": 1,
+      "r": 0,
+      "terrain": "road"
+    },
+    {
+      "id": "2,0",
+      "q": 2,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "0,1",
+      "q": 0,
+      "r": 1,
+      "terrain": "rough"
+    },
+    {
+      "id": "1,1",
+      "q": 1,
+      "r": 1,
+      "terrain": "open"
+    }
   ],
   "sectorModel": {
-    "frontlineHexes": ["1,0", "2,0"],
-    "contestedArea": ["0,0", "1,0", "2,0"],
-    "rearArea": ["0,1", "1,1"],
+    "frontlineHexes": [
+      "1,0",
+      "2,0"
+    ],
+    "contestedArea": [
+      "0,0",
+      "1,0",
+      "2,0"
+    ],
+    "rearArea": [
+      "0,1",
+      "1,1"
+    ],
     "hexScores": {
-      "2,0": {"priority": 8.0},
-      "1,0": {"priority": 7.0},
-      "0,0": {"priority": 5.0},
-      "1,1": {"priority": 3.0},
-      "0,1": {"priority": 2.0}
+      "2,0": {
+        "priority": 8.0
+      },
+      "1,0": {
+        "priority": 7.0
+      },
+      "0,0": {
+        "priority": 5.0
+      },
+      "1,1": {
+        "priority": 3.0
+      },
+      "0,1": {
+        "priority": 2.0
+      }
     }
   },
-  "options": {"objectiveMode": "attack-only"},
+  "options": {
+    "objectiveMode": "attack-only"
+  },
   "expected": {
     "minAttackStanceOrders": 2,
     "allowDefenseStanceOrders": false,
-    "acceptance": "attack-only mode preserves aggressive stance allocation"
+    "acceptance": "attack-only mode preserves aggressive stance allocation",
+    "eventAssertions": {
+      "must_include_reason_codes": [
+        "stage_started",
+        "stage_completed",
+        "combat_anchor_allocated"
+      ],
+      "must_include_event_types": [
+        "order_committed"
+      ],
+      "stage_sequence": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "S"
+      ]
+    },
+    "orderAssertions": {
+      "must_start_with_stage": "A",
+      "stable_sort_key": "stage_then_unit_then_hex"
+    }
   }
 }

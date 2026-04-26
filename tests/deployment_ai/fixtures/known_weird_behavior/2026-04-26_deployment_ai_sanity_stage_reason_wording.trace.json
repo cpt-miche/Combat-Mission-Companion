@@ -1,0 +1,16 @@
+{
+  "regression_case_id": "sanity_stage_reason_wording_v1",
+  "phase": "deployment_ai",
+  "known_weird_behavior": "Sanity-stage repair reason text can vary while keeping stage/reason_code stable.",
+  "expected_to_match": [
+    "events",
+    "orders"
+  ],
+  "allowed_drift": [
+    {
+      "field": "events[].reason_text",
+      "rationale": "Wording is not canonicalized yet; use reason_code and stage for regression checks."
+    }
+  ],
+  "trace_stub": true
+}

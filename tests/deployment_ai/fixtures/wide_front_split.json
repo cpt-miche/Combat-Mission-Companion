@@ -2,36 +2,134 @@
   "id": "wide_front_split",
   "description": "Wide front should distribute combat anchors across distinct frontline or contested hexes.",
   "elements": [
-    {"id": "u_inf_1", "playerId": 1, "role": "infantry", "size": "company"},
-    {"id": "u_inf_2", "playerId": 1, "role": "infantry", "size": "company"},
-    {"id": "u_inf_3", "playerId": 1, "role": "infantry", "size": "company"},
-    {"id": "u_armor_1", "playerId": 1, "role": "armor", "size": "company"}
+    {
+      "id": "u_inf_1",
+      "playerId": 1,
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_inf_2",
+      "playerId": 1,
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_inf_3",
+      "playerId": 1,
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_armor_1",
+      "playerId": 1,
+      "role": "armor",
+      "size": "company"
+    }
   ],
   "hexes": [
-    {"id": "0,0", "q": 0, "r": 0, "terrain": "open"},
-    {"id": "1,0", "q": 1, "r": 0, "terrain": "road"},
-    {"id": "2,0", "q": 2, "r": 0, "terrain": "open"},
-    {"id": "3,0", "q": 3, "r": 0, "terrain": "open"},
-    {"id": "4,0", "q": 4, "r": 0, "terrain": "open"},
-    {"id": "2,1", "q": 2, "r": 1, "terrain": "rough"}
+    {
+      "id": "0,0",
+      "q": 0,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "1,0",
+      "q": 1,
+      "r": 0,
+      "terrain": "road"
+    },
+    {
+      "id": "2,0",
+      "q": 2,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "3,0",
+      "q": 3,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "4,0",
+      "q": 4,
+      "r": 0,
+      "terrain": "open"
+    },
+    {
+      "id": "2,1",
+      "q": 2,
+      "r": 1,
+      "terrain": "rough"
+    }
   ],
   "sectorModel": {
-    "frontlineHexes": ["1,0", "2,0", "3,0", "4,0"],
-    "contestedArea": ["0,0", "1,0", "2,0", "3,0", "4,0"],
-    "rearArea": ["2,1"],
+    "frontlineHexes": [
+      "1,0",
+      "2,0",
+      "3,0",
+      "4,0"
+    ],
+    "contestedArea": [
+      "0,0",
+      "1,0",
+      "2,0",
+      "3,0",
+      "4,0"
+    ],
+    "rearArea": [
+      "2,1"
+    ],
     "hexScores": {
-      "4,0": {"priority": 9.0},
-      "3,0": {"priority": 8.8},
-      "2,0": {"priority": 8.5},
-      "1,0": {"priority": 8.1},
-      "0,0": {"priority": 5.0},
-      "2,1": {"priority": 3.0}
+      "4,0": {
+        "priority": 9.0
+      },
+      "3,0": {
+        "priority": 8.8
+      },
+      "2,0": {
+        "priority": 8.5
+      },
+      "1,0": {
+        "priority": 8.1
+      },
+      "0,0": {
+        "priority": 5.0
+      },
+      "2,1": {
+        "priority": 3.0
+      }
     }
   },
-  "options": {"objectiveMode": "mixed_split"},
+  "options": {
+    "objectiveMode": "mixed_split"
+  },
   "expected": {
     "minDistinctCombatHexes": 3,
     "frontlineCoverageRequired": true,
-    "acceptance": "combat force is not over-concentrated on one hex"
+    "acceptance": "combat force is not over-concentrated on one hex",
+    "eventAssertions": {
+      "must_include_reason_codes": [
+        "stage_started",
+        "stage_completed",
+        "combat_anchor_allocated"
+      ],
+      "must_include_event_types": [
+        "order_committed"
+      ],
+      "stage_sequence": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "S"
+      ]
+    },
+    "orderAssertions": {
+      "must_start_with_stage": "A",
+      "stable_sort_key": "stage_then_unit_then_hex"
+    }
   }
 }
