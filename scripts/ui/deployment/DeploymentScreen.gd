@@ -38,10 +38,8 @@ func _ensure_players_initialized() -> void:
 		var player := GameState.players[i]
 		if not player.has("division_tree"):
 			player["division_tree"] = {}
-		if i == 0 and (player.get("division_tree", {}) as Dictionary).is_empty():
-			player["division_tree"] = _default_division_tree(i)
-		elif i == 1 and (player.get("division_tree", {}) as Dictionary).is_empty():
-			player["division_tree"] = _default_division_tree(i)
+		if (player.get("division_tree", {}) as Dictionary).is_empty():
+			player["division_tree"] = _best_default_structure_for_player(i)
 		if not GameState.players[i].has("deployments"):
 			GameState.players[i]["deployments"] = {}
 		GameState.players[i] = player
@@ -67,7 +65,7 @@ func _populate_p2_structure_picker() -> void:
 	for i in range(options.size()):
 		var option := options[i]
 		var option_label := String(option.get("label", "Option %d" % i))
-		var option_tree := (option.get("tree", {}) as Dictionary).duplicate(true)
+		var option_tree := _namespace_division_tree_ids((option.get("tree", {}) as Dictionary), 1)
 		p2_structure_picker.add_item(option_label)
 		p2_structure_picker.set_item_metadata(i, option_tree)
 		if not current_tree.is_empty() and option_tree.hash() == current_tree.hash():
@@ -100,6 +98,45 @@ func _catalog_structure_options() -> Array[Dictionary]:
 			"tree": _division_tree_from_catalog_template(template)
 		})
 	return options
+
+func _best_default_structure_for_player(player_index: int) -> Dictionary:
+	var catalog_options := _catalog_structure_options()
+	for option in catalog_options:
+		if typeof(option) != TYPE_DICTIONARY:
+			continue
+		var option_dict := option as Dictionary
+		var tree_variant: Variant = option_dict.get("tree", {})
+		if typeof(tree_variant) != TYPE_DICTIONARY:
+			continue
+		var tree := tree_variant as Dictionary
+		if tree.is_empty():
+			continue
+		return _namespace_division_tree_ids(tree, player_index)
+	return _default_division_tree(player_index)
+
+func _namespace_division_tree_ids(tree: Dictionary, player_index: int) -> Dictionary:
+	var prefixed_tree := tree.duplicate(true)
+	var player_prefix := "P%d" % (player_index + 1)
+	_namespace_division_tree_ids_in_place(prefixed_tree, player_prefix)
+	return prefixed_tree
+
+func _namespace_division_tree_ids_in_place(node: Dictionary, player_prefix: String) -> void:
+	var existing_id := String(node.get("id", ""))
+	var id_prefix := "%s__" % player_prefix
+	if not existing_id.is_empty() and not existing_id.begins_with(id_prefix):
+		node["id"] = "%s%s" % [id_prefix, existing_id]
+
+	var children_variant: Variant = node.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return
+	var children := children_variant as Array
+	for i in range(children.size()):
+		if typeof(children[i]) != TYPE_DICTIONARY:
+			continue
+		var child_node := (children[i] as Dictionary).duplicate(true)
+		_namespace_division_tree_ids_in_place(child_node, player_prefix)
+		children[i] = child_node
+	node["children"] = children
 
 func _saved_structure_options() -> Array[Dictionary]:
 	var options: Array[Dictionary] = []
