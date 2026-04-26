@@ -350,14 +350,16 @@ func _refresh_ui_scale_controls_state() -> void:
 func _validate_hit_targets_for_scene() -> String:
 	var interactive_controls: Array = []
 	_collect_interactive_controls(get_tree().root, interactive_controls)
+	var effective_ui_scale := DisplaySettings.get_effective_ui_scale()
 	var undersized_count := 0
 	for control in interactive_controls:
 		var minimum_size := (control as Control).get_combined_minimum_size()
-		if minimum_size.y < 44.0:
+		var rendered_height := minimum_size.y * effective_ui_scale
+		if rendered_height < 44.0:
 			undersized_count += 1
 	if undersized_count == 0:
 		return ""
-	return "Warning: %d control(s) are below a 44px minimum hit target." % undersized_count
+	return "Warning: %d control(s) are below a 44px minimum hit target at %.0f%% UI scale." % [undersized_count, effective_ui_scale * 100.0]
 
 func _collect_interactive_controls(node: Node, output: Array) -> void:
 	if node is BaseButton or node is OptionButton:
