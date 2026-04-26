@@ -367,10 +367,11 @@ func _insert_subtree_with_validation(parent: UnitModel, candidate: UnitModel) ->
 			"error": "Invalid parent or candidate."
 		}
 
-	if not OrganizationValidator.can_add_child(parent, candidate):
+	var add_result := OrganizationValidator.can_add_child_detailed(parent, candidate)
+	if not bool(add_result.get("ok", false)):
 		return {
 			"ok": false,
-			"error": "%s cannot contain %s" % [_unit_label(parent), _unit_label(candidate)]
+			"error": String(add_result.get("error", "%s cannot contain %s." % [_unit_label(parent), _unit_label(candidate)]))
 		}
 
 	parent.children.append(candidate)
@@ -428,8 +429,9 @@ func _move_unit(unit: UnitModel, new_parent: UnitModel) -> void:
 	if current_parent == new_parent:
 		return
 
-	if not OrganizationValidator.can_add_child(new_parent, unit):
-		pending_unit_label.text = "Cannot move: %s cannot contain %s." % [_unit_label(new_parent), _unit_label(unit)]
+	var move_result := OrganizationValidator.can_add_child_detailed(new_parent, unit)
+	if not bool(move_result.get("ok", false)):
+		pending_unit_label.text = "Cannot move: %s" % String(move_result.get("error", "%s cannot contain %s." % [_unit_label(new_parent), _unit_label(unit)]))
 		return
 
 	current_parent.children.erase(unit)
@@ -562,6 +564,11 @@ func _on_load_template_pressed() -> void:
 	pending_unit_label.text = "Template loaded: %s" % template_name
 
 func _on_start_deployment_pressed() -> void:
+	var organization_validation := OrganizationValidator.validate_subtree(_root_unit)
+	if not bool(organization_validation.get("ok", false)):
+		pending_unit_label.text = "Cannot start deployment: %s" % String(organization_validation.get("error", "Organization validation failed."))
+		return
+
 	_ensure_players_initialized()
 	GameState.players[_builder_player_index]["division_tree"] = _unit_to_dict(_root_unit)
 	GameState.players[_builder_player_index]["deployments"] = {}
