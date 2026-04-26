@@ -3,6 +3,11 @@ extends Node
 const CURRENT_GAME_SAVE_PATH := "user://current_game.save"
 const DIVISION_TEMPLATES_DIR := "user://division_templates"
 const MAPS_DIR := "user://maps"
+const AI_DEBUG_DIR := "user://ai_debug"
+const AI_TRACE_FILE_PREFIX := "ai_trace_"
+const AI_TRACE_INDEX_PATH := "%s/index.json" % AI_DEBUG_DIR
+const AI_TRACE_MAX_TOTAL_BYTES := 20 * 1024 * 1024
+const AI_TRACE_DEFAULT_MAX_FILES := 100
 
 func _ensure_templates_dir() -> void:
 	if DirAccess.dir_exists_absolute(DIVISION_TEMPLATES_DIR):
@@ -13,6 +18,11 @@ func _ensure_maps_dir() -> void:
 	if DirAccess.dir_exists_absolute(MAPS_DIR):
 		return
 	DirAccess.make_dir_recursive_absolute(MAPS_DIR)
+
+func _ensure_ai_debug_dir() -> void:
+	if DirAccess.dir_exists_absolute(AI_DEBUG_DIR):
+		return
+	DirAccess.make_dir_recursive_absolute(AI_DEBUG_DIR)
 
 func _safe_file_name(raw_name: String) -> String:
 	var safe_name := raw_name.strip_edges().replace(" ", "_")
@@ -46,6 +56,51 @@ func _read_json(path: String) -> Dictionary:
 		return {}
 
 	return parsed as Dictionary
+
+func _load_ai_trace_index() -> Dictionary:
+	var index := _read_json(AI_TRACE_INDEX_PATH)
+	if index.is_empty():
+		return {
+			"version": 1,
+			"traces": []
+		}
+	if typeof(index.get("traces", [])) != TYPE_ARRAY:
+		index["traces"] = []
+	if not index.has("version"):
+		index["version"] = 1
+	return index
+
+func _save_ai_trace_index(index: Dictionary) -> bool:
+	return _write_json(AI_TRACE_INDEX_PATH, index)
+
+func _get_file_size_bytes(path: String) -> int:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return 0
+	return int(file.get_length())
+
+func _build_ai_trace_metadata(trace: Dictionary, trace_file: String, timestamp: int) -> Dictionary:
+	var metadata := {
+		"file": trace_file,
+		"timestamp": timestamp,
+		"trace_id": String(trace.get("trace_id", "")),
+		"turn": int(trace.get("turn", -1)),
+		"player": String(trace.get("player", "")),
+		"phase": String(trace.get("phase", "")),
+		"debug_level": String(trace.get("debug_level", "")),
+		"size_bytes": 0
+	}
+	metadata["size_bytes"] = _get_file_size_bytes("%s/%s" % [AI_DEBUG_DIR, trace_file])
+	return metadata
+
+func _remove_ai_trace_file(trace_file: String) -> void:
+	if trace_file.is_empty() or trace_file == "index.json":
+		return
+	if not trace_file.begins_with(AI_TRACE_FILE_PREFIX) or not trace_file.ends_with(".json"):
+		return
+	var full_path := "%s/%s" % [AI_DEBUG_DIR, trace_file]
+	if FileAccess.file_exists(full_path):
+		DirAccess.remove_absolute(full_path)
 
 func autosave(payload: Dictionary) -> bool:
 	return save_current_game(payload)
@@ -132,3 +187,103 @@ func delete_map(map_name: String) -> bool:
 	if not FileAccess.file_exists(full_path):
 		return false
 	return DirAccess.remove_absolute(full_path) == OK
+
+func save_ai_trace(trace: Dictionary) -> bool:
+	_ensure_ai_debug_dir()
+	var timestamp := int(Time.get_unix_time_from_system())
+	var trace_id := _safe_file_name(String(trace.get("trace_id", "")))
+	if trace_id.is_empty():
+		trace_id = str(Time.get_ticks_msec() % 1000000)
+	var trace_file := "%s%d_%s.json" % [AI_TRACE_FILE_PREFIX, timestamp, trace_id]
+	var full_path := "%s/%s" % [AI_DEBUG_DIR, trace_file]
+	var dedupe_index := 1
+	while FileAccess.file_exists(full_path):
+		trace_file = "%s%d_%s_%d.json" % [AI_TRACE_FILE_PREFIX, timestamp, trace_id, dedupe_index]
+		full_path = "%s/%s" % [AI_DEBUG_DIR, trace_file]
+		dedupe_index += 1
+	if not _write_json(full_path, trace):
+		return false
+
+	var index := _load_ai_trace_index()
+	var traces: Array = index.get("traces", [])
+	traces.append(_build_ai_trace_metadata(trace, trace_file, timestamp))
+	index["traces"] = traces
+	if not _save_ai_trace_index(index):
+		_remove_ai_trace_file(trace_file)
+		return false
+
+	var retention_count := int(trace.get("retention_max_files", AI_TRACE_DEFAULT_MAX_FILES))
+	prune_ai_traces(retention_count)
+	return true
+
+func list_ai_traces() -> PackedStringArray:
+	_ensure_ai_debug_dir()
+	var result := PackedStringArray()
+	var index := _load_ai_trace_index()
+	var traces: Array = index.get("traces", [])
+	for meta in traces:
+		if typeof(meta) != TYPE_DICTIONARY:
+			continue
+		var trace_file := String((meta as Dictionary).get("file", ""))
+		if trace_file.is_empty():
+			continue
+		var full_path := "%s/%s" % [AI_DEBUG_DIR, trace_file]
+		if FileAccess.file_exists(full_path):
+			result.append(trace_file)
+	result.sort()
+	var descending := PackedStringArray()
+	for i in range(result.size() - 1, -1, -1):
+		descending.append(result[i])
+	return descending
+
+func load_ai_trace(trace_file: String) -> Dictionary:
+	_ensure_ai_debug_dir()
+	var safe_file := _safe_file_name(trace_file)
+	if safe_file.is_empty() or safe_file == "index.json":
+		return {}
+	if not safe_file.begins_with(AI_TRACE_FILE_PREFIX) or not safe_file.ends_with(".json"):
+		return {}
+	return _read_json("%s/%s" % [AI_DEBUG_DIR, safe_file])
+
+func prune_ai_traces(max_files: int) -> void:
+	_ensure_ai_debug_dir()
+	var retention_count := maxi(max_files, 0)
+	var index := _load_ai_trace_index()
+	var traces: Array = index.get("traces", [])
+	var filtered: Array = []
+	for meta in traces:
+		if typeof(meta) != TYPE_DICTIONARY:
+			continue
+		var entry := (meta as Dictionary)
+		var trace_file := String(entry.get("file", ""))
+		if trace_file.is_empty():
+			continue
+		var full_path := "%s/%s" % [AI_DEBUG_DIR, trace_file]
+		if not FileAccess.file_exists(full_path):
+			continue
+		entry["size_bytes"] = _get_file_size_bytes(full_path)
+		filtered.append(entry)
+
+	filtered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("timestamp", 0)) > int(b.get("timestamp", 0))
+	)
+
+	var to_remove: Array = []
+	while filtered.size() > retention_count:
+		to_remove.append(filtered.pop_back())
+
+	var total_size := 0
+	for entry in filtered:
+		total_size += int((entry as Dictionary).get("size_bytes", 0))
+	while total_size > AI_TRACE_MAX_TOTAL_BYTES and not filtered.is_empty():
+		var removed := filtered.pop_back() as Dictionary
+		total_size -= int(removed.get("size_bytes", 0))
+		to_remove.append(removed)
+
+	for meta in to_remove:
+		if typeof(meta) != TYPE_DICTIONARY:
+			continue
+		_remove_ai_trace_file(String((meta as Dictionary).get("file", "")))
+
+	index["traces"] = filtered
+	_save_ai_trace_index(index)
