@@ -120,8 +120,8 @@ static func _evaluate_enemy_adjacent_opportunities(candidate_hexes: Array, cfg: 
 		var counterattack_score := OperationalScoringModel.score_counterattack_opportunity(normalized, cfg)
 		var candidate_id := String(candidate.get("id", candidate.get("hexId", "enemy_adjacent_%d" % index)))
 		var sector_id := String(candidate.get("sectorId", ""))
-		var attack_urgency := _score_to_confidence(float(attack_score.get("score", 0.0)))
-		var counterattack_urgency := _score_to_confidence(float(counterattack_score.get("score", 0.0)))
+		var attack_urgency := _score_to_confidence(float(attack_score.get("score", 0.0)), cfg)
+		var counterattack_urgency := _score_to_confidence(float(counterattack_score.get("score", 0.0)), cfg)
 		var attack_details := candidate.duplicate(true)
 		attack_details["normalizedFactors"] = normalized
 		attack_details["rawScore"] = float(attack_score.get("rawScore", 0.0))
@@ -163,8 +163,13 @@ static func _normalize_candidate_hex(candidate: Dictionary) -> Dictionary:
 		"overextensionRisk": clamp(float(candidate.get("overextensionRisk", 0.0)), 0.0, 1.0)
 	}
 
-static func _score_to_confidence(score: float) -> float:
-	return clamp((score + 4.0) / 8.0, 0.0, 1.0)
+static func _score_to_confidence(score: float, cfg: Dictionary = {}) -> float:
+	var score_range: Dictionary = cfg.get("shared", {}).get("scoreRange", {})
+	var min_score := float(score_range.get("min", -4.0))
+	var max_score := float(score_range.get("max", 4.0))
+	if max_score <= min_score:
+		return 0.0
+	return clamp((score - min_score) / (max_score - min_score), 0.0, 1.0)
 
 static func _derive_recommended_intents(
 	attack_opportunities: Array[Dictionary],
@@ -262,7 +267,13 @@ static func _dedupe_intents(intents: Array[Dictionary]) -> Array[Dictionary]:
 	var deduped: Array[Dictionary] = []
 	var seen := {}
 	for intent in intents:
-		var key := "%s|%s" % [String(intent.get("sectorId", "")), String(intent.get("action", ""))]
+		var sector_id := String(intent.get("sectorId", ""))
+		var action := String(intent.get("action", ""))
+		var fallback_identity := ""
+		if sector_id.is_empty():
+			var details: Dictionary = intent.get("details", {})
+			fallback_identity = String(details.get("opportunityId", intent.get("id", "")))
+		var key := "%s|%s|%s" % [sector_id, action, fallback_identity]
 		if seen.has(key):
 			continue
 		seen[key] = true
