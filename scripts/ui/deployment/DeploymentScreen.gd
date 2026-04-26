@@ -169,6 +169,7 @@ func _division_tree_from_catalog_template(template_data: Dictionary, variant_ind
 		"name": tree_name,
 		"type": String(template_data.get("type", "INFANTRY")).to_lower(),
 		"size": String(template_data.get("size", "COMPANY")).to_lower(),
+		"status": String(template_data.get("status", "alive")).to_lower(),
 		"children": []
 	}
 
@@ -213,24 +214,28 @@ func _default_division_tree(player_index: int) -> Dictionary:
 		"name": "%s HQ" % side_label,
 		"type": "headquarters",
 		"size": "army",
+		"status": "alive",
 		"children": [
 			{
 				"id": "%s_infantry_bn" % side_label,
 				"name": "%s Infantry Battalion" % side_label,
 				"type": "infantry",
 				"size": "battalion",
+				"status": "alive",
 				"children": [
 					{
 						"id": "%s_infantry_co_1" % side_label,
 						"name": "%s Infantry Company A" % side_label,
 						"type": "infantry",
 						"size": "company",
+						"status": "alive",
 						"children": [
 							{
 								"id": "%s_infantry_co_1_plt_1" % side_label,
 								"name": "%s 1st Platoon" % side_label,
 								"type": "infantry",
 								"size": "platoon",
+								"status": "alive",
 								"children": []
 							},
 							{
@@ -238,6 +243,7 @@ func _default_division_tree(player_index: int) -> Dictionary:
 								"name": "%s 2nd Platoon" % side_label,
 								"type": "infantry",
 								"size": "platoon",
+								"status": "alive",
 								"children": []
 							}
 						]
@@ -247,12 +253,14 @@ func _default_division_tree(player_index: int) -> Dictionary:
 						"name": "%s Infantry Company B" % side_label,
 						"type": "infantry",
 						"size": "company",
+						"status": "alive",
 						"children": [
 							{
 								"id": "%s_infantry_co_2_plt_1" % side_label,
 								"name": "%s 3rd Platoon" % side_label,
 								"type": "infantry",
 								"size": "platoon",
+								"status": "alive",
 								"children": []
 							}
 						]
@@ -264,18 +272,21 @@ func _default_division_tree(player_index: int) -> Dictionary:
 				"name": "%s Tank Battalion" % side_label,
 				"type": "tank",
 				"size": "battalion",
+				"status": "alive",
 				"children": [
 					{
 						"id": "%s_tank_co_1" % side_label,
 						"name": "%s Tank Company" % side_label,
 						"type": "tank",
 						"size": "company",
+						"status": "alive",
 						"children": [
 							{
 								"id": "%s_tank_co_1_plt_1" % side_label,
 								"name": "%s Tank Platoon" % side_label,
 								"type": "tank",
 								"size": "platoon",
+								"status": "alive",
 								"children": []
 							}
 						]
@@ -287,18 +298,21 @@ func _default_division_tree(player_index: int) -> Dictionary:
 				"name": "%s Support Battalion" % side_label,
 				"type": "engineer",
 				"size": "battalion",
+				"status": "alive",
 				"children": [
 					{
 						"id": "%s_support_co" % side_label,
 						"name": "%s Support Company" % side_label,
 						"type": "engineer",
 						"size": "company",
+						"status": "alive",
 						"children": [
 							{
 								"id": "%s_support_co_plt_1" % side_label,
 								"name": "%s Engineer Platoon" % side_label,
 								"type": "engineer",
 								"size": "platoon",
+								"status": "alive",
 								"children": []
 							},
 							{
@@ -306,6 +320,7 @@ func _default_division_tree(player_index: int) -> Dictionary:
 								"name": "%s Weapons Platoon" % side_label,
 								"type": "artillery",
 								"size": "platoon",
+								"status": "alive",
 								"children": []
 							}
 						]
@@ -445,6 +460,8 @@ func _unit_snapshot(unit: Dictionary) -> Dictionary:
 		"name": preferred_name,
 		"type": unit_type,
 		"size": unit_size,
+		"status": String(unit.get("status", "alive")).to_lower(),
+		"is_alive": bool(unit.get("is_alive", String(unit.get("status", "alive")).to_lower() != "dead")),
 		"size_rank": _size_rank(unit_size),
 		"label": preferred_short_name.substr(0, 2).to_upper(),
 		"is_tank": unit_type == "tank",

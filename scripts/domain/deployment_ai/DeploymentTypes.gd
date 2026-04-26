@@ -71,7 +71,9 @@ static func make_formation(
 	unit_type: String,
 	size: String,
 	parent_id: String,
-	child_ids: Array[String]
+	child_ids: Array[String],
+	status: String = "alive",
+	is_alive: bool = true
 ) -> Dictionary:
 	return {
 		"id": formation_id,
@@ -79,7 +81,9 @@ static func make_formation(
 		"type": unit_type,
 		"size": size,
 		"parentId": parent_id,
-		"childIds": child_ids
+		"childIds": child_ids,
+		"status": status,
+		"isAlive": is_alive
 	}
 
 static func make_deployable_element(
@@ -89,7 +93,9 @@ static func make_deployable_element(
 	role: String,
 	size: String,
 	formation_id: String,
-	hex_id: String
+	hex_id: String,
+	status: String = "alive",
+	is_alive: bool = true
 ) -> Dictionary:
 	return {
 		"id": element_id,
@@ -98,7 +104,9 @@ static func make_deployable_element(
 		"role": role,
 		"size": size,
 		"formationId": formation_id,
-		"hexId": hex_id
+		"hexId": hex_id,
+		"status": status,
+		"isAlive": is_alive
 	}
 
 static func make_ai_objective(

@@ -84,6 +84,7 @@ func _create_unit(template_id: String, nation: String, unit_type: UnitType.Value
 	unit.type = unit_type
 	unit.size = unit_size
 	unit.veterancy = Veterancy.Value.REGULAR
+	unit.status = "alive"
 	unit.children = []
 	return unit
 
@@ -649,6 +650,8 @@ func _unit_to_dict(unit: UnitModel) -> Dictionary:
 		"type": int(unit.type),
 		"size": _serialize_unit_size(unit.size),
 		"veterancy": int(unit.veterancy),
+		"status": String(unit.status).to_lower(),
+		"is_alive": String(unit.status).to_lower() != "dead",
 		"children": serialized_children
 	}
 
@@ -690,6 +693,11 @@ func _dict_to_unit(data: Variant) -> UnitModel:
 		size_context["_legacy_size_index"] = true
 	unit.size = _parse_unit_size(raw_size, size_context)
 	unit.veterancy = int(raw.get("veterancy", Veterancy.Value.REGULAR))
+	var raw_status := String(raw.get("status", ""))
+	if raw_status.is_empty():
+		unit.status = "alive" if bool(raw.get("is_alive", true)) else "dead"
+	else:
+		unit.status = raw_status.to_lower()
 	unit.children = []
 	for child_data in raw.get("children", []):
 		var child := _dict_to_unit(child_data)

@@ -394,6 +394,8 @@ func _load_or_initialize_units() -> void:
 				"initiative": 50,
 				"unit_type": String(unit_data.get("type", "tank" if bool(unit_data.get("is_tank", false)) else "infantry")),
 				"formation_size": String(unit_data.get("size", "company")),
+				"status": String(unit_data.get("status", "alive")).to_lower(),
+				"is_alive": bool(unit_data.get("is_alive", String(unit_data.get("status", "alive")).to_lower() != "dead")),
 				"recon_bonus": 0 if bool(unit_data.get("is_tank", false)) else 5,
 				"concealment": 5
 			}
