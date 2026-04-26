@@ -44,22 +44,33 @@ func load_and_apply() -> String:
 func _apply_preset_id(preset_id: String) -> String:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
 	var target_size: Vector2i = PRESETS.get(resolved_preset_id, PRESET_1080P)
+	var effective_size := _fit_size_to_usable_rect(target_size)
 
-	DisplayServer.window_set_size(target_size)
-	_center_window(target_size)
+	DisplayServer.window_set_size(effective_size)
+	_center_window(effective_size)
 	_selected_preset_id = resolved_preset_id
 
 	return _selected_preset_id
 
 func _resolve_preset_id(preset_id: String) -> String:
-	if not PRESETS.has(preset_id):
+	if PRESETS.has(preset_id):
+		var preset_size: Vector2i = PRESETS.get(preset_id, PRESET_1080P)
+		if _is_resolution_available(preset_size):
+			return preset_id
+
+	return _get_fallback_preset_id()
+
+func _get_fallback_preset_id() -> String:
+	var default_size: Vector2i = PRESETS.get(DEFAULT_PRESET_ID, PRESET_1080P)
+	if _is_resolution_available(default_size):
 		return DEFAULT_PRESET_ID
 
-	var preset_size: Vector2i = PRESETS.get(preset_id, PRESET_1080P)
-	if not _is_resolution_available(preset_size):
-		return DEFAULT_PRESET_ID
+	for candidate_id in [PRESET_ID_720P, PRESET_ID_1080P, PRESET_ID_1440P]:
+		var candidate_size: Vector2i = PRESETS.get(candidate_id, PRESET_1080P)
+		if _is_resolution_available(candidate_size):
+			return candidate_id
 
-	return preset_id
+	return PRESET_ID_720P
 
 func _is_resolution_available(size: Vector2i) -> bool:
 	var screen_index := DisplayServer.window_get_current_screen()
@@ -75,3 +86,13 @@ func _center_window(size: Vector2i) -> void:
 		return
 	var centered_position := usable_rect.position + (usable_rect.size - size) / 2
 	DisplayServer.window_set_position(centered_position)
+
+func _fit_size_to_usable_rect(size: Vector2i) -> Vector2i:
+	var screen_index := DisplayServer.window_get_current_screen()
+	var usable_rect := DisplayServer.screen_get_usable_rect(screen_index)
+	if usable_rect.size.x <= 0 or usable_rect.size.y <= 0:
+		return size
+	return Vector2i(
+		min(size.x, usable_rect.size.x),
+		min(size.y, usable_rect.size.y)
+	)
