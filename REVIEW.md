@@ -26,3 +26,10 @@
 
 Use these assumptions for new screens and Control layout anchoring so additional visible area behaves predictably across aspect ratios.
 
+## QA Pass Criteria (Concise)
+- Test at **1280×720**, **1920×1080**, and **2560×1440**.
+- Validate no clipped text, hidden actions, or overflowing dialogs.
+- Validate readability and interaction comfort (button size, spacing, font legibility).
+- Validate transitions across all major phases/screens.
+- Run a resize smoke test in one session: switch between presets and perform manual window resizing.
+- Record known issues and create follow-up tickets for any screen that fails criteria.
