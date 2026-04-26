@@ -69,8 +69,164 @@ const DEFAULT_CONFIG := {
 	}
 }
 
+const POSTURE_PROFILES := {
+	"balanced": {},
+	"aggressive": {
+		"attackOpportunity": {
+			"components": {
+				"objective_value": {"weight": 1.15},
+				"enemy_weakness_estimate": {"weight": 1.30},
+				"local_friendly_power": {"weight": 1.20},
+				"overextension_risk": {"weight": -0.75}
+			}
+		},
+		"counterattackOpportunity": {
+			"components": {
+				"enemy_weakness_estimate": {"weight": 1.35},
+				"local_friendly_power": {"weight": 1.20},
+				"overextension_risk": {"weight": -0.90}
+			}
+		},
+		"opportunityThresholds": {
+			"counterattack": 0.65,
+			"attack": 0.60,
+			"moveReserve": 0.56,
+			"reinforce": 0.54,
+			"withdraw": 0.76
+		},
+		"breakthroughThresholds": {
+			"reserveNeed": 0.58,
+			"reinforcementRequest": 0.78
+		}
+	},
+	"defensive": {
+		"friendlyStrength": {
+			"components": {
+				"terrain_defense": {"weight": 0.90},
+				"isolation_penalty": {"weight": -1.00},
+				"overstack_penalty": {"weight": -0.70}
+			}
+		},
+		"sectorDanger": {
+			"components": {
+				"friendly_weakness": {"weight": 1.15},
+				"isolation": {"weight": 0.55}
+			}
+		},
+		"opportunityThresholds": {
+			"counterattack": 0.79,
+			"attack": 0.75,
+			"moveReserve": 0.68,
+			"reinforce": 0.55,
+			"delay": 0.45,
+			"withdraw": 0.62
+		},
+		"quietSectorThresholds": {
+			"maxPressure": 0.30,
+			"minDefensibility": 0.60,
+			"minSupport": 0.55
+		},
+		"breakthroughThresholds": {
+			"reserveNeed": 0.50,
+			"reinforcementRequest": 0.69
+		}
+	},
+	"cautious": {
+		"attackOpportunity": {
+			"components": {
+				"defensive_coherence_risk": {"weight": -1.05},
+				"overextension_risk": {"weight": -1.15}
+			}
+		},
+		"counterattackOpportunity": {
+			"components": {
+				"defensive_coherence_risk": {"weight": -1.15},
+				"overextension_risk": {"weight": -1.25}
+			}
+		},
+		"opportunityThresholds": {
+			"counterattack": 0.82,
+			"attack": 0.78,
+			"moveReserve": 0.72,
+			"reinforce": 0.62,
+			"delay": 0.42,
+			"withdraw": 0.60
+		},
+		"breakthroughThresholds": {
+			"reserveNeed": 0.48,
+			"reinforcementRequest": 0.66
+		}
+	},
+	"armorHeavy": {
+		"attackOpportunity": {
+			"components": {
+				"local_friendly_power": {"weight": 1.25},
+				"terrain_suitability": {"weight": 0.70}
+			}
+		},
+		"counterattackOpportunity": {
+			"components": {
+				"local_friendly_power": {"weight": 1.30},
+				"terrain_suitability": {"weight": 0.60}
+			}
+		},
+		"opportunityThresholds": {
+			"counterattack": 0.68,
+			"attack": 0.62,
+			"moveReserve": 0.57,
+			"withdraw": 0.73
+		}
+	},
+	"infantryHeavy": {
+		"friendlyStrength": {
+			"components": {
+				"terrain_defense": {"weight": 0.85},
+				"support_strength": {"weight": 1.10}
+			}
+		},
+		"sectorDanger": {
+			"components": {
+				"route_access": {"weight": 0.45},
+				"objective_proximity": {"weight": 0.75}
+			}
+		},
+		"attackOpportunity": {
+			"components": {
+				"terrain_suitability": {"weight": 0.70},
+				"artillery_support": {"weight": 0.72},
+				"overextension_risk": {"weight": -1.05}
+			}
+		},
+		"opportunityThresholds": {
+			"counterattack": 0.76,
+			"attack": 0.70,
+			"moveReserve": 0.65,
+			"withdraw": 0.65
+		}
+	}
+}
+
+
 static func scoring_config(overrides: Dictionary = {}) -> Dictionary:
 	return _deep_merge(DEFAULT_CONFIG, overrides)
+
+static func weights_for_posture(posture: String, base_config: Dictionary = {}) -> Dictionary:
+	var normalized_posture := _normalize_posture(posture)
+	var posture_overrides: Dictionary = POSTURE_PROFILES.get(normalized_posture, {})
+	var merged := _deep_merge(posture_overrides, base_config)
+	if normalized_posture == "balanced":
+		return merged
+	var adjusted_components := _collect_adjusted_components(posture_overrides)
+	var adjusted_thresholds := _collect_adjusted_thresholds(posture_overrides)
+	return _deep_merge(merged, {
+		"shared": {
+			"postureMeta": {
+				"active": normalized_posture,
+				"adjustedComponents": adjusted_components,
+				"adjustedThresholds": adjusted_thresholds
+			}
+		}
+	})
 
 # context keys include: combat/support strength, terrain defense, artillery/recon/reserve proximity,
 # isolation and overstack pressure.
@@ -110,11 +266,17 @@ static func _score_from_section(section_key: String, context: Dictionary, overri
 		component_names.append(String(key_variant))
 	component_names.sort()
 
+	var posture_meta: Dictionary = cfg.get("shared", {}).get("postureMeta", {})
+	var active_posture := String(posture_meta.get("active", "balanced"))
+	var adjusted_components: Dictionary = posture_meta.get("adjustedComponents", {})
+	var section_adjusted: Dictionary = adjusted_components.get(section_key, {})
 	for component_name in component_names:
 		var component_cfg: Dictionary = components.get(component_name, {})
 		var contribution := _component_contribution(component_cfg, defaults, context)
 		score += contribution
 		reasons.append(_reason(component_name, contribution))
+		if active_posture != "balanced" and bool(section_adjusted.get(component_name, false)):
+			reasons.append("posture_adjusted_component=%s:%s" % [active_posture, component_name])
 
 	var bounded_score := _clamp_score(score, cfg)
 	return {
@@ -147,6 +309,38 @@ static func _clamp_score(score: float, cfg: Dictionary) -> float:
 
 static func _reason(label: String, value: float) -> String:
 	return "%s%+.2f" % [label + ":", value]
+
+static func _normalize_posture(posture: String) -> String:
+	var trimmed := posture.strip_edges()
+	if trimmed.is_empty():
+		return "balanced"
+	if POSTURE_PROFILES.has(trimmed):
+		return trimmed
+	return "balanced"
+
+static func _collect_adjusted_components(overrides: Dictionary) -> Dictionary:
+	var adjusted := {}
+	for section_key_variant in overrides.keys():
+		var section_key := String(section_key_variant)
+		var section_value = overrides.get(section_key)
+		if not (section_value is Dictionary):
+			continue
+		var components: Dictionary = section_value.get("components", {})
+		if components.is_empty():
+			continue
+		adjusted[section_key] = {}
+		for component_key_variant in components.keys():
+			adjusted[section_key][String(component_key_variant)] = true
+	return adjusted
+
+static func _collect_adjusted_thresholds(overrides: Dictionary) -> Array[String]:
+	var thresholds: Array[String] = []
+	for section_key_variant in overrides.keys():
+		var section_key := String(section_key_variant)
+		if section_key.ends_with("Thresholds"):
+			thresholds.append(section_key)
+	thresholds.sort()
+	return thresholds
 
 static func _deep_merge(base: Dictionary, overrides: Dictionary) -> Dictionary:
 	var merged := base.duplicate(true)

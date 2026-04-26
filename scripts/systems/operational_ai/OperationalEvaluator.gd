@@ -65,7 +65,10 @@ const DEFAULT_WEIGHTS := {
 }
 
 static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionary:
+	var posture := String(input.get("posture", overrides.get("posture", "balanced")))
 	var cfg := _merge_dict(DEFAULT_WEIGHTS, overrides)
+	cfg.erase("posture")
+	cfg = OperationalScoringModel.weights_for_posture(posture, cfg)
 	var operation_id := String(input.get("operationId", ""))
 	var turn_index := int(input.get("turnIndex", 0))
 
@@ -114,6 +117,7 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	assessment["counterattackOpportunities"] = _sort_scored(opportunity_pipeline.get("counterattackOpportunities", []))
 	assessment["recommendedIntents"] = _sort_scored(recommended_intents)
 	assessment["warnings"] = _dedupe_sorted_strings(warnings)
+	assessment["posture"] = _normalize_posture(posture)
 	return assessment
 
 static func _evaluate_enemy_adjacent_opportunities(candidate_hexes: Array, cfg: Dictionary) -> Dictionary:
@@ -285,6 +289,22 @@ static func _dedupe_intents(intents: Array[Dictionary]) -> Array[Dictionary]:
 		seen[key] = true
 		deduped.append(intent)
 	return deduped
+
+static func _normalize_posture(posture: String) -> String:
+	var trimmed := posture.strip_edges()
+	if trimmed.is_empty():
+		return "balanced"
+	var allowed := {
+		"aggressive": true,
+		"balanced": true,
+		"defensive": true,
+		"cautious": true,
+		"armorHeavy": true,
+		"infantryHeavy": true
+	}
+	if bool(allowed.get(trimmed, false)):
+		return trimmed
+	return "balanced"
 
 static func _evaluate_threats(threats: Array, cfg: Dictionary) -> Array[Dictionary]:
 	var weights: Dictionary = cfg.get("threat", {})
