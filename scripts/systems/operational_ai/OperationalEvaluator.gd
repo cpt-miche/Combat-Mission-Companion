@@ -65,25 +65,25 @@ const DEFAULT_WEIGHTS := {
 }
 
 static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionary:
-	var posture := String(input.get("posture", overrides.get("posture", "balanced")))
+	var posture: String = String(input.get("posture", overrides.get("posture", "balanced")))
 	var cfg := _merge_dict(DEFAULT_WEIGHTS, overrides)
 	cfg.erase("posture")
 	cfg = OperationalScoringModel.weights_for_posture(posture, cfg)
-	var operation_id := String(input.get("operationId", ""))
-	var turn_index := int(input.get("turnIndex", 0))
+	var operation_id: String = String(input.get("operationId", ""))
+	var turn_index: int = int(input.get("turnIndex", 0))
 
-	var threat_assessments := _evaluate_threats(input.get("threats", []), cfg)
-	var breakthrough_pipeline := _evaluate_breakthrough_pipeline(input.get("breakthroughs", []), cfg)
+	var threat_assessments: Array[Dictionary] = _evaluate_threats(input.get("threats", []), cfg)
+	var breakthrough_pipeline: Dictionary = _evaluate_breakthrough_pipeline(input.get("breakthroughs", []), cfg)
 	var breakthrough_assessments: Array[Dictionary] = breakthrough_pipeline.get("breakthroughHexes", [])
-	var sector_assessments := _evaluate_sectors(input.get("sectors", []), cfg)
-	var reserve_requests := _evaluate_reserve_requests(input.get("reserveRequests", []), cfg)
+	var sector_assessments: Array[Dictionary] = _evaluate_sectors(input.get("sectors", []), cfg)
+	var reserve_requests: Array[Dictionary] = _evaluate_reserve_requests(input.get("reserveRequests", []), cfg)
 	reserve_requests.append_array(breakthrough_pipeline.get("reserveNeeds", []))
 	var quiet_sector_index := _build_quiet_sector_index(sector_assessments)
-	var reinforcement_pipeline := _evaluate_reinforcement_requests(input.get("reinforcementRequests", []), cfg, quiet_sector_index)
+	var reinforcement_pipeline: Dictionary = _evaluate_reinforcement_requests(input.get("reinforcementRequests", []), cfg, quiet_sector_index)
 	var reinforcement_requests: Array[Dictionary] = reinforcement_pipeline.get("assessments", [])
 	reinforcement_requests.append_array(breakthrough_pipeline.get("reinforcementRequests", []))
-	var response_intents := _evaluate_response_intents(input.get("responseIntents", []), cfg)
-	var opportunity_pipeline := _evaluate_enemy_adjacent_opportunities(input.get("enemyAdjacentHexes", []), cfg)
+	var response_intents: Array[Dictionary] = _evaluate_response_intents(input.get("responseIntents", []), cfg)
+	var opportunity_pipeline: Dictionary = _evaluate_enemy_adjacent_opportunities(input.get("enemyAdjacentHexes", []), cfg)
 	var recommended_intents := _derive_recommended_intents(
 		opportunity_pipeline.get("attackOpportunities", []),
 		opportunity_pipeline.get("counterattackOpportunities", []),
@@ -128,10 +128,10 @@ static func _evaluate_enemy_adjacent_opportunities(candidate_hexes: Array, cfg: 
 		var normalized := _normalize_candidate_hex(candidate)
 		var attack_score := OperationalScoringModel.score_attack_opportunity(normalized, cfg)
 		var counterattack_score := OperationalScoringModel.score_counterattack_opportunity(normalized, cfg)
-		var candidate_id := String(candidate.get("id", candidate.get("hexId", "enemy_adjacent_%d" % index)))
-		var sector_id := String(candidate.get("sectorId", ""))
-		var attack_urgency := _score_to_confidence(float(attack_score.get("score", 0.0)), cfg)
-		var counterattack_urgency := _score_to_confidence(float(counterattack_score.get("score", 0.0)), cfg)
+		var candidate_id: String = String(candidate.get("id", candidate.get("hexId", "enemy_adjacent_%d" % index)))
+		var sector_id: String = String(candidate.get("sectorId", ""))
+		var attack_urgency: float = _score_to_confidence(float(attack_score.get("score", 0.0)), cfg)
+		var counterattack_urgency: float = _score_to_confidence(float(counterattack_score.get("score", 0.0)), cfg)
 		var attack_details := candidate.duplicate(true)
 		attack_details["normalizedFactors"] = normalized
 		attack_details["rawScore"] = float(attack_score.get("rawScore", 0.0))
@@ -175,8 +175,8 @@ static func _normalize_candidate_hex(candidate: Dictionary) -> Dictionary:
 
 static func _score_to_confidence(score: float, cfg: Dictionary = {}) -> float:
 	var score_range: Dictionary = cfg.get("shared", {}).get("scoreRange", {})
-	var min_score := float(score_range.get("min", -4.0))
-	var max_score := float(score_range.get("max", 4.0))
+	var min_score: float = float(score_range.get("min", -4.0))
+	var max_score: float = float(score_range.get("max", 4.0))
 	if max_score <= min_score:
 		return 0.0
 	return clamp((score - min_score) / (max_score - min_score), 0.0, 1.0)
@@ -203,10 +203,10 @@ static func _derive_recommended_intents(
 		elif confidence >= float(thresholds.get("moveReserve", 0.62)):
 			intents.append(_make_advisory_intent(opportunity, "requestRecon", confidence, "moderate_attack_confidence"))
 	for assessment in sector_assessments:
-		var sector_id := String(assessment.get("sectorId", assessment.get("id", "")))
+		var sector_id: String = String(assessment.get("sectorId", assessment.get("id", "")))
 		var urgency: float = clamp(float(assessment.get("urgency", assessment.get("score", 0.0))), 0.0, 1.0)
 		var details: Dictionary = assessment.get("details", {})
-		var quiet := bool(details.get("quietSector", false))
+		var quiet: bool = bool(details.get("quietSector", false))
 		if quiet and urgency <= float(thresholds.get("delay", 0.48)):
 			intents.append(OperationalTypes.make_response_intent(
 				"pull_quiet_%s" % sector_id,
@@ -277,8 +277,8 @@ static func _dedupe_intents(intents: Array[Dictionary]) -> Array[Dictionary]:
 	var deduped: Array[Dictionary] = []
 	var seen := {}
 	for intent in intents:
-		var sector_id := String(intent.get("sectorId", ""))
-		var action := String(intent.get("action", ""))
+		var sector_id: String = String(intent.get("sectorId", ""))
+		var action: String = String(intent.get("action", ""))
 		var fallback_identity := ""
 		if sector_id.is_empty():
 			var details: Dictionary = intent.get("details", {})
@@ -373,8 +373,8 @@ static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionar
 	var warnings: Array[String] = []
 	for index in breakthroughs.size():
 		var breakthrough: Dictionary = breakthroughs[index]
-		var previous_hexes := _string_set(breakthrough.get("previousHexes", []))
-		var current_hexes := _string_set(breakthrough.get("currentHexes", []))
+		var previous_hexes: Dictionary = _string_set(breakthrough.get("previousHexes", []))
+		var current_hexes: Dictionary = _string_set(breakthrough.get("currentHexes", []))
 		var penetration_count := 0
 		for hex_id in current_hexes.keys():
 			if not previous_hexes.has(hex_id):
@@ -407,8 +407,8 @@ static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionar
 			momentum,
 			severity
 		)
-		var breakthrough_id := String(breakthrough.get("id", "breakthrough_%d" % index))
-		var sector_id := String(breakthrough.get("sectorId", ""))
+		var breakthrough_id: String = String(breakthrough.get("id", "breakthrough_%d" % index))
+		var sector_id: String = String(breakthrough.get("sectorId", ""))
 		breakthrough_hexes.append(OperationalTypes.make_breakthrough_assessment(
 			breakthrough_id,
 			sector_id,
@@ -447,7 +447,7 @@ static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionar
 			))
 		var has_breakthrough := severity > 0.0 and penetration_count > 0
 		if has_breakthrough and not _has_reserve_in_window(breakthrough):
-			var required_window := int(breakthrough.get("requiredReserveTurns", 2))
+			var required_window: int = int(breakthrough.get("requiredReserveTurns", 2))
 			warnings.append(
 				"breakthrough=%s sector=%s no_reserve_response_within=%d_turns" % [breakthrough_id, sector_id, required_window]
 			)
@@ -499,7 +499,7 @@ static func _build_breakthrough_reasons(
 
 static func _has_reserve_in_window(breakthrough: Dictionary) -> bool:
 	var reserve_candidates: Array = breakthrough.get("reserveCandidates", [])
-	var required_window := int(breakthrough.get("requiredReserveTurns", 2))
+	var required_window: int = int(breakthrough.get("requiredReserveTurns", 2))
 	for item in reserve_candidates:
 		var reserve: Dictionary = item
 		if bool(reserve.get("available", true)) and int(reserve.get("etaTurns", 999)) <= required_window:
@@ -637,14 +637,14 @@ static func _evaluate_donor_candidates(request: Dictionary, quiet_sector_index: 
 	var legal_ranked: Array[Dictionary] = []
 	var evaluated_candidates: Array[Dictionary] = []
 	var preferred_sources: Array[String] = []
-	var request_id := String(request.get("id", ""))
-	var request_sector := String(request.get("sectorId", ""))
+	var request_id: String = String(request.get("id", ""))
+	var request_sector: String = String(request.get("sectorId", ""))
 	var requested_strength: float = clamp(float(request.get("requestedStrength", 0.0)), 0.0, 1.5)
 	var reasons: Array[String] = []
 	var retention_default: float = clamp(float(ranking_weights.get("defaultDefenseRetention", 0.65)), 0.0, 1.0)
 	for item in donor_candidates:
 		var donor: Dictionary = item
-		var donor_sector := String(donor.get("sectorId", donor.get("id", "")))
+		var donor_sector: String = String(donor.get("sectorId", donor.get("id", "")))
 		var pre_transfer_score: float = clamp(float(donor.get("preTransferDefenseScore", donor.get("defenseScore", donor.get("currentDefenseScore", 0.0)))), 0.0, 1.5)
 		var transfer_cost: float = max(
 			float(donor.get("transferDefenseCost", donor.get("defenseContributionLost", 0.0))),
@@ -652,7 +652,7 @@ static func _evaluate_donor_candidates(request: Dictionary, quiet_sector_index: 
 		)
 		var post_transfer_score: float = clamp(float(donor.get("postTransferDefenseScore", pre_transfer_score - transfer_cost)), 0.0, 1.5)
 		var minimum_required: float = clamp(float(donor.get("minimumRequiredDefenseScore", request.get("minimumRequiredDefenseScore", pre_transfer_score * retention_default))), 0.0, 1.5)
-		var quiet_sector_gate := bool(quiet_sector_index.get(donor_sector, false))
+		var quiet_sector_gate: bool = bool(quiet_sector_index.get(donor_sector, false))
 		var stays_above_threshold: bool = post_transfer_score >= minimum_required
 		var legal: bool = quiet_sector_gate and stays_above_threshold
 		var mobility: float = clamp(float(donor.get("mobility", donor.get("mobileFactor", 0.0))), 0.0, 1.0)
@@ -704,7 +704,7 @@ static func _evaluate_donor_candidates(request: Dictionary, quiet_sector_index: 
 static func _build_quiet_sector_index(sector_assessments: Array[Dictionary]) -> Dictionary:
 	var quiet_sector_index := {}
 	for assessment in sector_assessments:
-		var sector_id := String(assessment.get("sectorId", assessment.get("id", "")))
+		var sector_id: String = String(assessment.get("sectorId", assessment.get("id", "")))
 		if sector_id.is_empty():
 			continue
 		var details: Dictionary = assessment.get("details", {})
@@ -734,12 +734,12 @@ static func _evaluate_structural_warnings(
 ) -> Array[String]:
 	var warnings: Array[String] = []
 	var thresholds: Dictionary = cfg.get("opportunityThresholds", {})
-	var counterattack_threshold := float(thresholds.get("counterattack", 0.72))
+	var counterattack_threshold: float = float(thresholds.get("counterattack", 0.72))
 	var sectors: Array = input.get("sectors", [])
 	var breakthroughs: Array = input.get("breakthroughs", [])
 	for item in sectors:
 		var sector: Dictionary = item
-		var sector_id := String(sector.get("id", ""))
+		var sector_id: String = String(sector.get("id", ""))
 		var objective_criticality: float = clamp(float(sector.get("objectiveCriticality", sector.get("criticality", 0.0))), 0.0, 1.0)
 		var pressure: float = clamp(float(sector.get("pressure", 0.0)), 0.0, 1.0)
 		var readiness: float = clamp(float(sector.get("readiness", 0.0)), 0.0, 1.0)
@@ -784,7 +784,7 @@ static func _evaluate_structural_warnings(
 	return _dedupe_sorted_strings(warnings)
 
 static func _is_defend_sector(sector: Dictionary) -> bool:
-	var objective_mode := String(sector.get("objectiveMode", sector.get("objectiveType", sector.get("mission", "")))).to_lower()
+	var objective_mode: String = String(sector.get("objectiveMode", sector.get("objectiveType", sector.get("mission", "")))).to_lower()
 	return objective_mode.find("defend") >= 0 or bool(sector.get("defendObjective", false))
 
 static func _is_frontline_sector(sector: Dictionary) -> bool:
@@ -793,7 +793,7 @@ static func _is_frontline_sector(sector: Dictionary) -> bool:
 	return String(sector.get("type", sector.get("sectorType", ""))).to_lower() == "frontline"
 
 static func _is_understrength_frontline_sector(sector: Dictionary) -> bool:
-	var ratio := float(sector.get("strengthRatio", sector.get("friendlyToEnemyRatio", sector.get("combatRatio", -1.0))))
+	var ratio: float = float(sector.get("strengthRatio", sector.get("friendlyToEnemyRatio", sector.get("combatRatio", -1.0))))
 	if ratio >= 0.0:
 		ratio = clamp(ratio, 0.0, 3.0)
 	if ratio >= 0.0 and ratio < 0.75:
@@ -850,7 +850,7 @@ static func _has_reserve_clumping_in_input(input: Dictionary) -> bool:
 	return false
 
 static func _is_reserve_combat_entry(entry: Dictionary) -> bool:
-	var role := String(entry.get("role", "")).to_lower()
+	var role: String = String(entry.get("role", "")).to_lower()
 	if role == "reserve":
 		return true
 	if bool(entry.get("isReserve", false)) or bool(entry.get("reserve", false)):
@@ -878,7 +878,7 @@ static func _counterattack_exposes_defend_objective(opportunity: Dictionary) -> 
 	var coherence_risk: float = clamp(float(normalized.get("defensiveCoherenceRisk", details.get("defensiveCoherenceRisk", 0.0))), 0.0, 1.0)
 	var overextension: float = clamp(float(normalized.get("overextensionRisk", details.get("overextensionRisk", 0.0))), 0.0, 1.0)
 	var objective_value: float = clamp(float(normalized.get("objectiveValue", details.get("objectiveValue", 0.0))), 0.0, 1.0)
-	var defend_tag := bool(details.get("defendObjective", false)) or String(details.get("objectiveType", details.get("objectiveMode", ""))).to_lower().find("defend") >= 0
+	var defend_tag: bool = bool(details.get("defendObjective", false)) or String(details.get("objectiveType", details.get("objectiveMode", ""))).to_lower().find("defend") >= 0
 	return coherence_risk >= 0.65 and overextension >= 0.55 and (defend_tag or objective_value >= 0.75)
 
 static func _evaluate_response_intents(intents: Array, cfg: Dictionary) -> Array[Dictionary]:
@@ -910,12 +910,12 @@ static func _evaluate_response_intents(intents: Array, cfg: Dictionary) -> Array
 static func _sort_scored(items: Array[Dictionary]) -> Array[Dictionary]:
 	var ordered := items.duplicate(true)
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var a_urgency := float(a.get("urgency", a.get("score", 0.0)))
-		var b_urgency := float(b.get("urgency", b.get("score", 0.0)))
+		var a_urgency: float = float(a.get("urgency", a.get("score", 0.0)))
+		var b_urgency: float = float(b.get("urgency", b.get("score", 0.0)))
 		if not is_equal_approx(a_urgency, b_urgency):
 			return a_urgency > b_urgency
-		var a_score := float(a.get("score", 0.0))
-		var b_score := float(b.get("score", 0.0))
+		var a_score: float = float(a.get("score", 0.0))
+		var b_score: float = float(b.get("score", 0.0))
 		if not is_equal_approx(a_score, b_score):
 			return a_score > b_score
 		return String(a.get("id", "")) < String(b.get("id", ""))

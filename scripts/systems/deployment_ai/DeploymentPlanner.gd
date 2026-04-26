@@ -23,7 +23,7 @@ static func create_plan(
 	sector_model: Dictionary,
 	options: Dictionary = {}
 ) -> Dictionary:
-	var objective_mode := String(options.get("objectiveMode", "mixed_split")).strip_edges().to_lower().replace(" ", "_")
+	var objective_mode: String = String(options.get("objectiveMode", "mixed_split")).strip_edges().to_lower().replace(" ", "_")
 	var objectives: Array[Dictionary] = options.get("objectives", [])
 
 	var state := _build_state(elements, hexes, sector_model, options)
@@ -54,10 +54,10 @@ static func create_plan(
 	return DeploymentSanity.sanitize_plan(plan, hexes, sector_model)
 
 static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], sector_model: Dictionary, options: Dictionary = {}) -> Dictionary:
-	var frontline := _set_from_array(sector_model.get("frontlineHexes", []))
-	var contested := _set_from_array(sector_model.get("contestedArea", []))
-	var rear := _set_from_array(sector_model.get("rearArea", []))
-	var priorities := _extract_hex_priorities(sector_model.get("hexScores", {}))
+	var frontline: Dictionary = _set_from_array(sector_model.get("frontlineHexes", []))
+	var contested: Dictionary = _set_from_array(sector_model.get("contestedArea", []))
+	var rear: Dictionary = _set_from_array(sector_model.get("rearArea", []))
+	var priorities: Dictionary = _extract_hex_priorities(sector_model.get("hexScores", {}))
 	var hex_coords := _hex_coords(hexes)
 	var all_hexes := _all_hex_ids(hexes)
 
@@ -90,7 +90,7 @@ static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], 
 	)
 
 	for unit in unit_ordered:
-		var role := String(unit.get("role", DeploymentTypes.ROLE_INFANTRY))
+		var role: String = String(unit.get("role", DeploymentTypes.ROLE_INFANTRY))
 		if role == DeploymentTypes.ROLE_ARTILLERY_SUPPORT:
 			(state["units"]["artillery"] as Array).append(unit)
 		elif SUPPORT_ATTACH_ROLES.has(role):
@@ -139,7 +139,7 @@ static func _stage_a_allocate_combat_anchors(state: Dictionary, objective_mode: 
 		else:
 			mixed_cursor_defense = int(selected.get("nextIndex", 0))
 
-		var hex_id := String(selected.get("hexId", ""))
+		var hex_id: String = String(selected.get("hexId", ""))
 		_commit_combat_placement(state, unit, hex_id, stance)
 		var stage_reason := _reason_stage_a(unit, hex_id, stance, state)
 		var order := _make_order(unit, hex_id, "A", stance, stage_reason["reason"], stage_reason["reason_code"])
@@ -159,7 +159,7 @@ static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]
 	var stacks: Array[String] = state["stackOrder"]
 	var committed := 0
 	for unit in support_units:
-		var role := String(unit.get("role", ""))
+		var role: String = String(unit.get("role", ""))
 		var ranked_stacks := stacks.duplicate()
 		ranked_stacks.sort_custom(func(a: String, b: String) -> bool:
 			var a_score := _support_stack_score(state, unit, a)
@@ -187,7 +187,7 @@ static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]
 				_emit_candidate_rejected(state, "B", unit, hex_id, "support_capacity_exceeded", "Stage B: support cap reached for stack.", candidate_score)
 				continue
 			_commit_support_placement(state, unit, hex_id)
-			var stance := "defense" if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT else String(state["stackStanceByHex"].get(hex_id, "support"))
+			var stance: String = "defense" if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT else String(state["stackStanceByHex"].get(hex_id, "support"))
 			var stage_reason := _reason_stage_b(unit, hex_id, state)
 			var order := _make_order(unit, hex_id, "B", stance, stage_reason["reason"], stage_reason["reason_code"])
 			order["reason_meta"] = stage_reason.get("meta", {})
@@ -234,7 +234,7 @@ static func _stage_c_place_artillery(state: Dictionary, orders: Array[Dictionary
 				_emit_candidate_rejected(state, "C", unit, hex_id, "support_capacity_exceeded", "Stage C: support cap reached for artillery candidate.", 0.0)
 				continue
 			var coverage := _frontline_coverage_from(hex_id, state)
-			var priority := float(state["priorities"].get(hex_id, 0.0))
+			var priority: float = float(state["priorities"].get(hex_id, 0.0))
 			var score := coverage * 100.0 + priority
 			_emit_candidate_scored(state, "C", unit, hex_id, score, "artillery_coverage_score", "Stage C: scored artillery candidate by frontline coverage and priority.", {"coverage": coverage})
 			if score > best_score or (is_equal_approx(score, best_score) and hex_id < best_hex):
@@ -265,7 +265,7 @@ static func _stage_d_place_reserves(state: Dictionary, orders: Array[Dictionary]
 
 	var committed := 0
 	for unit in reserve_units:
-		var role := String(unit.get("role", ""))
+		var role: String = String(unit.get("role", ""))
 		var is_support := _is_support_role(role)
 		var best_hex := ""
 		var best_score := -INF
@@ -277,7 +277,7 @@ static func _stage_d_place_reserves(state: Dictionary, orders: Array[Dictionary]
 				_emit_candidate_rejected(state, "D", unit, hex_id, "combat_capacity_exceeded", "Stage D: reserve combat candidate exceeded combat cap.", 0.0, {"isSupport": false})
 				continue
 
-			var base_priority := float(state["priorities"].get(hex_id, 0.0))
+			var base_priority: float = float(state["priorities"].get(hex_id, 0.0))
 			var distance_to_front := _distance_to_frontline(hex_id, state)
 			var response_bonus := 1.0 / float(distance_to_front + 1)
 			var clump_penalty := _reserve_clumping_penalty(hex_id, state)
@@ -321,8 +321,8 @@ static func _ranked_hexes_for_mode(state: Dictionary, mode: String) -> Array[Str
 	for hex_id in pool.keys():
 		ranked.append(String(hex_id))
 	ranked.sort_custom(func(a: String, b: String) -> bool:
-		var a_priority := float(state["priorities"].get(a, 0.0))
-		var b_priority := float(state["priorities"].get(b, 0.0))
+		var a_priority: float = float(state["priorities"].get(a, 0.0))
+		var b_priority: float = float(state["priorities"].get(b, 0.0))
 		if not is_equal_approx(a_priority, b_priority):
 			return a_priority > b_priority
 		return a < b
@@ -334,8 +334,8 @@ static func _ranked_rear_hexes(state: Dictionary) -> Array[String]:
 	for hex_id in (state["rear"] as Dictionary).keys():
 		ranked.append(String(hex_id))
 	ranked.sort_custom(func(a: String, b: String) -> bool:
-		var a_priority := float(state["priorities"].get(a, 0.0))
-		var b_priority := float(state["priorities"].get(b, 0.0))
+		var a_priority: float = float(state["priorities"].get(a, 0.0))
+		var b_priority: float = float(state["priorities"].get(b, 0.0))
 		if not is_equal_approx(a_priority, b_priority):
 			return a_priority > b_priority
 		return a < b
@@ -346,8 +346,8 @@ static func _fallback_ranked_hexes(state: Dictionary) -> Array[String]:
 	var all_hexes: Array[String] = state["allHexes"]
 	var ranked := all_hexes.duplicate()
 	ranked.sort_custom(func(a: String, b: String) -> bool:
-		var a_priority := float(state["priorities"].get(a, 0.0))
-		var b_priority := float(state["priorities"].get(b, 0.0))
+		var a_priority: float = float(state["priorities"].get(a, 0.0))
+		var b_priority: float = float(state["priorities"].get(b, 0.0))
 		if not is_equal_approx(a_priority, b_priority):
 			return a_priority > b_priority
 		return a < b
@@ -363,7 +363,7 @@ static func _first_legal_combat_hex(state: Dictionary, unit: Dictionary, candida
 	var best_score_components := {}
 	for i in range(start_index, candidates.size()):
 		var hex_id := candidates[i]
-		var base_priority := float(state["priorities"].get(hex_id, 0.0))
+		var base_priority: float = float(state["priorities"].get(hex_id, 0.0))
 		var intel_components := _intel_score_components(state, hex_id, expected_floor)
 		var score := base_priority + float(intel_components.get("total", 0.0))
 		_emit_candidate_scored(state, stage, unit, hex_id, score, "combat_anchor_priority_score", "Stage A: scored combat anchor candidate.", {
@@ -390,7 +390,7 @@ static func _commit_combat_placement(state: Dictionary, unit: Dictionary, hex_id
 	state["combatLoad"][hex_id] = int(state["combatLoad"].get(hex_id, 0)) + cost
 	state["placementByUnit"][String(unit.get("id", ""))] = hex_id
 	state["stackStanceByHex"][hex_id] = stance
-	var has_attack := bool(state["stackHasAttackByHex"].get(hex_id, false))
+	var has_attack: bool = bool(state["stackHasAttackByHex"].get(hex_id, false))
 	state["stackHasAttackByHex"][hex_id] = has_attack or stance == "attack"
 	if not (state["stackOrder"] as Array).has(hex_id):
 		(state["stackOrder"] as Array).append(hex_id)
@@ -407,10 +407,10 @@ static func _can_place_support(state: Dictionary, hex_id: String) -> bool:
 	return int(state["supportLoad"].get(hex_id, 0)) + 1 <= MAX_SUPPORT_CAPACITY
 
 static func _support_stack_score(state: Dictionary, unit: Dictionary, hex_id: String) -> float:
-	var stance := String(state["stackStanceByHex"].get(hex_id, "defense"))
-	var has_attack := bool(state["stackHasAttackByHex"].get(hex_id, false))
-	var role := String(unit.get("role", ""))
-	var base_priority := float(state["priorities"].get(hex_id, 0.0))
+	var stance: String = String(state["stackStanceByHex"].get(hex_id, "defense"))
+	var has_attack: bool = bool(state["stackHasAttackByHex"].get(hex_id, false))
+	var role: String = String(unit.get("role", ""))
+	var base_priority: float = float(state["priorities"].get(hex_id, 0.0))
 	var role_bonus := 0.0
 	if role == DeploymentTypes.ROLE_RECON:
 		role_bonus = 1.0 if stance == "attack" else 0.6
@@ -430,27 +430,27 @@ static func _expected_intel_floor_for_role(role: String, is_combat: bool = false
 	return 1
 
 static func _adjacent_enemy_importance(state: Dictionary, anchor_hex_id: String) -> float:
-	var anchor := (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
+	var anchor: Vector2i = (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
 	var importance_sum := 0.0
 	for frontline_hex in (state["frontline"] as Dictionary).keys():
-		var enemy_hex_id := String(frontline_hex)
-		var enemy_coords := (state["hexCoords"] as Dictionary).get(enemy_hex_id, Vector2i.ZERO) as Vector2i
-		var distance := int((abs(anchor.x - enemy_coords.x) + abs(anchor.x + anchor.y - enemy_coords.x - enemy_coords.y) + abs(anchor.y - enemy_coords.y)) / 2)
+		var enemy_hex_id: String = String(frontline_hex)
+		var enemy_coords: Vector2i = (state["hexCoords"] as Dictionary).get(enemy_hex_id, Vector2i.ZERO) as Vector2i
+		var distance: int = int((abs(anchor.x - enemy_coords.x) + abs(anchor.x + anchor.y - enemy_coords.x - enemy_coords.y) + abs(anchor.y - enemy_coords.y)) / 2)
 		if distance > 1:
 			continue
 		importance_sum += float(state["priorities"].get(enemy_hex_id, 0.0))
 	return importance_sum
 
 static func _critical_adjacent_importance(state: Dictionary, anchor_hex_id: String) -> float:
-	var anchor := (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
+	var anchor: Vector2i = (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
 	var importance_sum := 0.0
 	for frontline_hex in (state["frontline"] as Dictionary).keys():
-		var enemy_hex_id := String(frontline_hex)
-		var enemy_coords := (state["hexCoords"] as Dictionary).get(enemy_hex_id, Vector2i.ZERO) as Vector2i
-		var distance := int((abs(anchor.x - enemy_coords.x) + abs(anchor.x + anchor.y - enemy_coords.x - enemy_coords.y) + abs(anchor.y - enemy_coords.y)) / 2)
+		var enemy_hex_id: String = String(frontline_hex)
+		var enemy_coords: Vector2i = (state["hexCoords"] as Dictionary).get(enemy_hex_id, Vector2i.ZERO) as Vector2i
+		var distance: int = int((abs(anchor.x - enemy_coords.x) + abs(anchor.x + anchor.y - enemy_coords.x - enemy_coords.y) + abs(anchor.y - enemy_coords.y)) / 2)
 		if distance > 1:
 			continue
-		var importance := float(state["priorities"].get(enemy_hex_id, 0.0))
+		var importance: float = float(state["priorities"].get(enemy_hex_id, 0.0))
 		if importance >= 0.75:
 			importance_sum += importance
 	return importance_sum
@@ -521,10 +521,10 @@ static func _hex_distance(a_id: String, b_id: String, state: Dictionary) -> int:
 
 static func _combat_cost(unit: Dictionary) -> int:
 	if unit.has("prpCost"):
-		var provided := int(unit.get("prpCost", 0))
+		var provided: int = int(unit.get("prpCost", 0))
 		if provided > 0:
 			return provided
-	var size := String(unit.get("size", "company")).strip_edges().to_lower()
+	var size: String = String(unit.get("size", "company")).strip_edges().to_lower()
 	return int(SIZE_COMBAT_COST.get(size, 3))
 
 static func _is_support_role(role: String) -> bool:
@@ -538,7 +538,7 @@ static func _is_support_role(role: String) -> bool:
 	]
 
 static func _make_order(unit: Dictionary, to_hex_id: String, stage: String, role: String, reason: String, reason_code: String) -> Dictionary:
-	var unit_id := String(unit.get("id", ""))
+	var unit_id: String = String(unit.get("id", ""))
 	return {
 		"id": "",
 		"unitId": unit_id,
@@ -570,7 +570,7 @@ static func _stage_weight(stage: String) -> float:
 			return 0.0
 
 static func _reason_stage_a(unit: Dictionary, hex_id: String, stance: String, state: Dictionary) -> Dictionary:
-	var p := float(state["priorities"].get(hex_id, 0.0))
+	var p: float = float(state["priorities"].get(hex_id, 0.0))
 	var expected_floor := _expected_intel_floor_for_role(String(unit.get("role", "")), true)
 	var intel_components := _intel_score_components(state, hex_id, expected_floor)
 	return {
@@ -580,8 +580,8 @@ static func _reason_stage_a(unit: Dictionary, hex_id: String, stance: String, st
 	}
 
 static func _reason_stage_b(unit: Dictionary, hex_id: String, state: Dictionary) -> Dictionary:
-	var support_now := int(state["supportLoad"].get(hex_id, 0))
-	var role := String(unit.get("role", "support"))
+	var support_now: int = int(state["supportLoad"].get(hex_id, 0))
+	var role: String = String(unit.get("role", "support"))
 	var meta := {"supportSlotsNow": support_now, "supportCapacity": MAX_SUPPORT_CAPACITY}
 	if role == DeploymentTypes.ROLE_RECON:
 		var expected_floor := _expected_intel_floor_for_role(role, false)
@@ -654,7 +654,7 @@ static func _emit_trace_event(state: Dictionary, event_type: String, stage: Stri
 static func _extract_hex_priorities(hex_scores: Dictionary) -> Dictionary:
 	var priorities := {}
 	for hex_id in hex_scores.keys():
-		var score := hex_scores[hex_id] as Dictionary
+		var score: Dictionary = hex_scores[hex_id] as Dictionary
 		priorities[String(hex_id)] = float(score.get("priority", 0.0))
 	return priorities
 
@@ -667,14 +667,14 @@ static func _set_from_array(values: Array) -> Dictionary:
 static func _hex_coords(hexes: Array[Dictionary]) -> Dictionary:
 	var coords := {}
 	for hex in hexes:
-		var hex_id := String(hex.get("id", ""))
+		var hex_id: String = String(hex.get("id", ""))
 		coords[hex_id] = Vector2i(int(hex.get("q", 0)), int(hex.get("r", 0)))
 	return coords
 
 static func _all_hex_ids(hexes: Array[Dictionary]) -> Array[String]:
 	var ids: Array[String] = []
 	for hex in hexes:
-		var hex_id := String(hex.get("id", ""))
+		var hex_id: String = String(hex.get("id", ""))
 		if hex_id.is_empty():
 			continue
 		ids.append(hex_id)
@@ -684,12 +684,12 @@ static func _all_hex_ids(hexes: Array[Dictionary]) -> Array[String]:
 static func _sort_orders(orders: Array[Dictionary]) -> Array[Dictionary]:
 	var sorted_orders := orders.duplicate(true)
 	sorted_orders.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var stage_a := String(a.get("stage", ""))
-		var stage_b := String(b.get("stage", ""))
+		var stage_a: String = String(a.get("stage", ""))
+		var stage_b: String = String(b.get("stage", ""))
 		if stage_a != stage_b:
 			return stage_a < stage_b
-		var unit_a := String(a.get("unitId", ""))
-		var unit_b := String(b.get("unitId", ""))
+		var unit_a: String = String(a.get("unitId", ""))
+		var unit_b: String = String(b.get("unitId", ""))
 		if unit_a != unit_b:
 			return unit_a < unit_b
 		return String(a.get("toHexId", "")) < String(b.get("toHexId", ""))
