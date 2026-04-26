@@ -487,7 +487,9 @@ static func _evaluate_donor_candidates(request: Dictionary, quiet_sector_index: 
 static func _build_quiet_sector_index(sector_assessments: Array[Dictionary]) -> Dictionary:
 	var quiet_sector_index := {}
 	for assessment in sector_assessments:
-		var sector_id := String(assessment.get("id", ""))
+		var sector_id := String(assessment.get("sectorId", assessment.get("id", "")))
+		if sector_id.is_empty():
+			continue
 		var details: Dictionary = assessment.get("details", {})
 		quiet_sector_index[sector_id] = bool(details.get("quietSector", false))
 	return quiet_sector_index
