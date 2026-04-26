@@ -93,7 +93,7 @@ func apply_map_payload(payload: Dictionary) -> void:
 	if not validate_map_payload(map_payload):
 		push_warning("Map payload failed validation. Falling back to defaults.")
 	var migrated_payload := _migrate_map_payload(map_payload)
-	_apply_grid_payload(migrated_payload.get("grid", {}))
+	_apply_grid_payload(migrated_payload.get("grid", null))
 	terrain_map = _sanitize_terrain_map(migrated_payload.get("terrain", {}))
 	territory_map = _sanitize_territory_map(migrated_payload.get("territory", {}))
 
@@ -105,6 +105,8 @@ func set_runtime_map_dimensions(columns: int, rows: int) -> void:
 func validate_map_payload(payload: Dictionary) -> bool:
 	if payload.is_empty():
 		return false
+	if payload.has("grid") and not (payload.get("grid") is Dictionary):
+		return false
 	if payload.has("terrain") and not (payload.get("terrain") is Dictionary):
 		return false
 	if payload.has("territory") and not (payload.get("territory") is Dictionary):
@@ -115,6 +117,8 @@ func _extract_map_payload(payload: Dictionary) -> Dictionary:
 	var map_container: Variant = payload.get("map", null)
 	if map_container is Dictionary:
 		var extracted := (map_container as Dictionary).duplicate(true)
+		if not extracted.has("grid") and payload.get("grid") is Dictionary:
+			extracted["grid"] = (payload.get("grid", {}) as Dictionary).duplicate(true)
 		if not extracted.has("terrain") and payload.get("terrain") is Dictionary:
 			extracted["terrain"] = (payload.get("terrain", {}) as Dictionary).duplicate(true)
 		if not extracted.has("territory") and payload.get("territory") is Dictionary:
@@ -145,10 +149,17 @@ func _run_map_migration(from_version: int, payload: Dictionary) -> Dictionary:
 
 func _apply_grid_payload(raw_grid: Variant) -> void:
 	var grid := raw_grid as Dictionary
-	if grid == null:
+	var default_columns := MapGridConfig.default_columns()
+	var default_rows := MapGridConfig.default_rows()
+	if grid == null or grid.is_empty():
+		set_runtime_map_dimensions(default_columns, default_rows)
 		return
-	var columns := int(grid.get("columns", map_columns))
-	var rows := int(grid.get("rows", map_rows))
+	var columns := int(grid.get("columns", default_columns))
+	var rows := int(grid.get("rows", default_rows))
+	if not MapGridConfig.is_allowed_grid_size(columns) or not MapGridConfig.is_allowed_grid_size(rows):
+		push_warning("Map payload grid dimensions are missing/invalid (%s x %s). Falling back to default %d x %d." % [String(columns), String(rows), default_columns, default_rows])
+		columns = default_columns
+		rows = default_rows
 	set_runtime_map_dimensions(columns, rows)
 
 func _sanitize_terrain_map(raw_terrain: Variant) -> Dictionary:
