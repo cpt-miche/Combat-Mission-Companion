@@ -16,6 +16,7 @@ var current_screen: Control
 
 func _ready() -> void:
 	DisplaySettings.load_and_apply()
+	DisplaySettings.connect_runtime_resize_notifications(get_tree().root)
 	GameState.phase_changed.connect(_on_phase_changed)
 	_swap_to_phase(GameState.current_phase)
 
@@ -33,3 +34,4 @@ func _swap_to_phase(phase: GameState.Phase) -> void:
 
 	current_screen = scene_resource.instantiate() as Control
 	screen_container.add_child(current_screen)
+	DisplaySettings.reapply_runtime_settings()
