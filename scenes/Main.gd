@@ -15,6 +15,7 @@ const PHASE_SCENES := {
 var current_screen: Control
 
 func _ready() -> void:
+	DisplaySettings.load_and_apply()
 	GameState.phase_changed.connect(_on_phase_changed)
 	_swap_to_phase(GameState.current_phase)
 
