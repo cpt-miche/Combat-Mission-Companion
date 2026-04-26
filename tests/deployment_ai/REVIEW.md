@@ -13,6 +13,7 @@ Use `scripts/tools/AITraceReplay.gd` to replay saved `deployment_ai` traces by r
 
 Replay output includes concise diff buckets:
 - `missing_events`
+- `unexpected_events`
 - `changed_scores`
 - `different_orders`
 

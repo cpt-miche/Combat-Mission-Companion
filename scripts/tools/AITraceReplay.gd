@@ -112,18 +112,38 @@ static func _collect_hex_ids(sector_model: Dictionary) -> Array[String]:
 	return sorted
 
 static func _build_hexes_from_sector_model(hex_ids: Array[String], _sector_model: Dictionary) -> Array[Dictionary]:
+	var known_hexes := {}
+	for hex_id in hex_ids:
+		known_hexes[hex_id] = true
+
 	var output: Array[Dictionary] = []
 	for hex_id in hex_ids:
 		var coords := _parse_axial_id(hex_id)
+		var neighbor_ids: Array[String] = []
+		for delta in _axial_neighbor_deltas():
+			var neighbor_coord := coords + delta
+			var neighbor_id := "%d,%d" % [neighbor_coord.x, neighbor_coord.y]
+			if known_hexes.has(neighbor_id):
+				neighbor_ids.append(neighbor_id)
 		output.append({
 			"id": hex_id,
 			"q": coords.x,
 			"r": coords.y,
 			"terrain": "open",
 			"owner": 0,
-			"neighborIds": []
+			"neighborIds": neighbor_ids
 		})
 	return output
+
+static func _axial_neighbor_deltas() -> Array[Vector2i]:
+	return [
+		Vector2i(1, 0),
+		Vector2i(1, -1),
+		Vector2i(0, -1),
+		Vector2i(-1, 0),
+		Vector2i(-1, 1),
+		Vector2i(0, 1)
+	]
 
 static func _parse_axial_id(hex_id: String) -> Vector2i:
 	var parts := hex_id.split(",")
@@ -166,6 +186,7 @@ static func _round_score(score: float) -> float:
 
 static func _diff_events_and_orders(expected_events: Array[Dictionary], actual_events: Array[Dictionary], expected_trace: Dictionary, actual_plan: Dictionary) -> Dictionary:
 	var missing_events: Array[Dictionary] = []
+	var unexpected_events: Array[Dictionary] = []
 	var different_orders: Array[Dictionary] = []
 	var changed_scores: Array[Dictionary] = []
 
@@ -190,6 +211,13 @@ static func _diff_events_and_orders(expected_events: Array[Dictionary], actual_e
 	if expected_events.size() > actual_events.size():
 		for i in range(actual_events.size(), expected_events.size()):
 			missing_events.append(expected_events[i])
+	elif actual_events.size() > expected_events.size():
+		for i in range(expected_events.size(), actual_events.size()):
+			unexpected_events.append({
+				"kind": "event",
+				"index": i,
+				"actual": actual_events[i]
+			})
 
 	var expected_plan := (expected_trace.get("outputs", {}) as Dictionary).get("plan", {}) as Dictionary
 	var expected_orders := expected_plan.get("orders", []) as Array
@@ -210,13 +238,22 @@ static func _diff_events_and_orders(expected_events: Array[Dictionary], actual_e
 				"index": i,
 				"expected": _order_identity(expected_orders[i])
 			})
+	elif actual_orders.size() > expected_orders.size():
+		for i in range(expected_orders.size(), actual_orders.size()):
+			unexpected_events.append({
+				"kind": "order",
+				"index": i,
+				"actual": _order_identity(actual_orders[i])
+			})
 
 	return {
 		"missing_events": missing_events,
+		"unexpected_events": unexpected_events,
 		"changed_scores": changed_scores,
 		"different_orders": different_orders,
 		"summary": {
 			"missing_events": missing_events.size(),
+			"unexpected_events": unexpected_events.size(),
 			"changed_scores": changed_scores.size(),
 			"different_orders": different_orders.size()
 		}
@@ -245,8 +282,9 @@ static func _order_identity(order_variant: Variant) -> String:
 
 static func _format_diff_report(diff: Dictionary) -> String:
 	var summary := diff.get("summary", {}) as Dictionary
-	return "missing_events=%d changed_scores=%d different_orders=%d" % [
+	return "missing_events=%d unexpected_events=%d changed_scores=%d different_orders=%d" % [
 		int(summary.get("missing_events", 0)),
+		int(summary.get("unexpected_events", 0)),
 		int(summary.get("changed_scores", 0)),
 		int(summary.get("different_orders", 0))
 	]
