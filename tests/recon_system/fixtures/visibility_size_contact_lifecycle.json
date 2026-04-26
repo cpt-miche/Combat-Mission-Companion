@@ -1,0 +1,426 @@
+{
+  "id": "visibility_size_contact_lifecycle",
+  "fixtureVersion": 1,
+  "observerOwner": 1,
+  "initialPriorIntel": {
+    "2,1": {
+      "hexId": "2,1",
+      "scoutLevel": 1,
+      "knownEnemyUnits": []
+    }
+  },
+  "turns": [
+    {
+      "id": "level_1_rules",
+      "seed": 7,
+      "priorIntelOverride": {
+        "2,1": {
+          "hexId": "2,1",
+          "scoutLevel": 1,
+          "knownEnemyUnits": []
+        }
+      },
+      "units": [
+        {
+          "id": "obs_art_1",
+          "owner": 1,
+          "unit_type": "artillery",
+          "size": "company",
+          "hex": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            2,
+            1
+          ]
+        }
+      ],
+      "expected": {
+        "hexLevels": {
+          "2,1": 1
+        },
+        "knownByUnit": {
+          "enemy_combat": {
+            "sizeKnown": false,
+            "sizeReportLocked": false
+          },
+          "enemy_support": {
+            "sizeKnown": false,
+            "sizeReportLocked": false
+          }
+        }
+      }
+    },
+    {
+      "id": "level_2_rules",
+      "seed": 9,
+      "priorIntelOverride": {
+        "2,1": {
+          "hexId": "2,1",
+          "scoutLevel": 2,
+          "knownEnemyUnits": []
+        }
+      },
+      "units": [
+        {
+          "id": "obs_art_1",
+          "owner": 1,
+          "unit_type": "artillery",
+          "size": "company",
+          "hex": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            2,
+            1
+          ]
+        }
+      ],
+      "expected": {
+        "hexLevels": {
+          "2,1": 2
+        },
+        "knownByUnit": {
+          "enemy_combat": {
+            "typeKnown": true,
+            "reportedUnitType": "infantry",
+            "sizeKnown": false
+          },
+          "enemy_support": {
+            "sizeKnown": false
+          }
+        }
+      }
+    },
+    {
+      "id": "level_3_rules",
+      "seed": 10,
+      "priorIntelOverride": {
+        "2,1": {
+          "hexId": "2,1",
+          "scoutLevel": 3,
+          "knownEnemyUnits": []
+        }
+      },
+      "units": [
+        {
+          "id": "obs_art_1",
+          "owner": 1,
+          "unit_type": "artillery",
+          "size": "company",
+          "hex": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            2,
+            1
+          ]
+        }
+      ],
+      "expected": {
+        "hexLevels": {
+          "2,1": 3
+        },
+        "knownByUnit": {
+          "enemy_support": {
+            "sizeKnown": false,
+            "sizeReportLocked": false
+          }
+        }
+      }
+    },
+    {
+      "id": "level_4_lock_seeded",
+      "seed": 11,
+      "units": [
+        {
+          "id": "obs_recon",
+          "owner": 1,
+          "unit_type": "recon",
+          "size": "platoon",
+          "hex": [
+            1,
+            2
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            2,
+            1
+          ]
+        }
+      ],
+      "expected": {
+        "hexLevels": {
+          "2,1": 4
+        },
+        "knownByUnit": {
+          "enemy_combat": {
+            "typeKnown": true,
+            "sizeKnown": true,
+            "sizeReportLocked": true
+          },
+          "enemy_support": {
+            "typeKnown": true,
+            "sizeKnown": true,
+            "sizeReportLocked": true
+          }
+        }
+      }
+    },
+    {
+      "id": "size_lock_persists_in_contact",
+      "seed": 13,
+      "units": [
+        {
+          "id": "obs_recon",
+          "owner": 1,
+          "unit_type": "recon",
+          "size": "platoon",
+          "hex": [
+            1,
+            2
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            2,
+            1
+          ]
+        }
+      ],
+      "expected": {
+        "hexLevels": {
+          "2,1": 4
+        },
+        "knownByUnit": {
+          "enemy_combat": {
+            "sizeReportLocked": true
+          },
+          "enemy_support": {
+            "sizeReportLocked": true
+          }
+        }
+      }
+    },
+    {
+      "id": "contact_lost_clears_hex_and_unit_intel",
+      "seed": 17,
+      "units": [
+        {
+          "id": "obs_recon",
+          "owner": 1,
+          "unit_type": "recon",
+          "size": "platoon",
+          "hex": [
+            1,
+            2
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            8,
+            8
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            8,
+            8
+          ]
+        }
+      ],
+      "expected": {
+        "clearedHexes": [
+          "2,1"
+        ],
+        "missingUnitIntel": [
+          "enemy_combat",
+          "enemy_support"
+        ]
+      }
+    },
+    {
+      "id": "rediscovery_after_contact_regained",
+      "seed": 19,
+      "units": [
+        {
+          "id": "obs_inf_floor",
+          "owner": 1,
+          "unit_type": "infantry",
+          "size": "company",
+          "hex": [
+            1,
+            2
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            2,
+            1
+          ]
+        }
+      ],
+      "expected": {
+        "hexLevels": {
+          "2,1": 1
+        },
+        "knownByUnit": {
+          "enemy_combat": {
+            "sizeReportLocked": false
+          },
+          "enemy_support": {
+            "sizeReportLocked": false
+          }
+        }
+      }
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "seed": 11,
+      "runs": 3,
+      "observerOwner": 1,
+      "priorIntel": {
+        "2,1": {
+          "hexId": "2,1",
+          "scoutLevel": 4,
+          "knownEnemyUnits": []
+        }
+      },
+      "units": [
+        {
+          "id": "obs_recon",
+          "owner": 1,
+          "unit_type": "recon",
+          "size": "platoon",
+          "hex": [
+            1,
+            2
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            2,
+            1
+          ]
+        }
+      ]
+    }
+  ]
+}
