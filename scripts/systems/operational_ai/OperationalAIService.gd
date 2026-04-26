@@ -88,7 +88,8 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 
 static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 	var ai_owner := _territory_owner_for_player(ai_player_index)
-	var enemy_owner := _territory_owner_for_player(1 - ai_player_index)
+	var enemy_player_index := 1 - ai_player_index
+	var enemy_owner := _territory_owner_for_player(enemy_player_index)
 	var sector_map := OperationalMapAnalyzer.analyze(GameState.territory_map, ai_owner, enemy_owner)
 	var units_by_hex := _units_by_hex()
 
@@ -111,7 +112,7 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 			var hex_id := String(hex_id_variant)
 			var friendly_units := (units_by_hex.get(hex_id, {}) as Dictionary).get("friendly", []) as Array
 			friendly_strength += float(friendly_units.size())
-			var adjacent_enemies := _adjacent_enemy_units(hex_id, enemy_owner, units_by_hex)
+			var adjacent_enemies := _adjacent_enemy_units(hex_id, enemy_player_index, units_by_hex)
 			enemy_adjacent_count += adjacent_enemies.size()
 			enemy_strength += float(adjacent_enemies.size())
 
@@ -157,7 +158,7 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 
 		for hex_id_variant in frontline:
 			var hex_id := String(hex_id_variant)
-			var adjacent_enemies := _adjacent_enemy_units(hex_id, enemy_owner, units_by_hex)
+			var adjacent_enemies := _adjacent_enemy_units(hex_id, enemy_player_index, units_by_hex)
 			if adjacent_enemies.is_empty():
 				continue
 			enemy_adjacent.append({
@@ -210,7 +211,7 @@ static func _units_by_hex() -> Dictionary:
 			((by_hex[hex_id] as Dictionary)["enemy"] as Array).append(unit)
 	return by_hex
 
-static func _adjacent_enemy_units(hex_id: String, enemy_owner: int, units_by_hex: Dictionary) -> Array:
+static func _adjacent_enemy_units(hex_id: String, enemy_player_index: int, units_by_hex: Dictionary) -> Array:
 	var results: Array = []
 	var parsed := _parse_hex_id(hex_id)
 	if not parsed is Vector2i:
@@ -223,7 +224,7 @@ static func _adjacent_enemy_units(hex_id: String, enemy_owner: int, units_by_hex
 		for unit_variant in ((units_by_hex[neighbor_id] as Dictionary).get("enemy", []) as Array):
 			if typeof(unit_variant) != TYPE_DICTIONARY:
 				continue
-			if int((unit_variant as Dictionary).get("owner", -1)) == enemy_owner:
+			if int((unit_variant as Dictionary).get("owner", -1)) == enemy_player_index:
 				results.append(unit_variant)
 	return results
 
