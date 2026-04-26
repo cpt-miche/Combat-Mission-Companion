@@ -42,6 +42,30 @@ const DEFAULT_CONFIG := {
 			"isolation": {"input": "isolation", "weight": 0.45, "min": 0.0, "max": 1.0, "default": 0.0},
 			"overstack": {"input": "overstack", "weight": 0.35, "min": 0.0, "max": 1.0, "default": 0.0}
 		}
+	},
+	"attackOpportunity": {
+		"components": {
+			"objective_value": {"input": "objectiveValue", "weight": 0.95, "min": 0.0, "max": 1.0, "default": 0.0},
+			"enemy_weakness_estimate": {"input": "enemyWeaknessEstimate", "weight": 1.10, "min": 0.0, "max": 1.0, "default": 0.0},
+			"local_friendly_power": {"input": "localFriendlyPower", "weight": 1.05, "min": 0.0, "max": 1.0, "default": 0.0},
+			"artillery_support": {"input": "artillerySupport", "weight": 0.60, "min": 0.0, "max": 1.0, "default": 0.0},
+			"recon_support": {"input": "reconSupport", "weight": 0.45, "min": 0.0, "max": 1.0, "default": 0.0},
+			"terrain_suitability": {"input": "terrainSuitability", "weight": 0.55, "min": 0.0, "max": 1.0, "default": 0.0},
+			"defensive_coherence_risk": {"input": "defensiveCoherenceRisk", "weight": -0.85, "min": 0.0, "max": 1.0, "default": 0.0},
+			"overextension_risk": {"input": "overextensionRisk", "weight": -0.95, "min": 0.0, "max": 1.0, "default": 0.0}
+		}
+	},
+	"counterattackOpportunity": {
+		"components": {
+			"objective_value": {"input": "objectiveValue", "weight": 0.80, "min": 0.0, "max": 1.0, "default": 0.0},
+			"enemy_weakness_estimate": {"input": "enemyWeaknessEstimate", "weight": 1.20, "min": 0.0, "max": 1.0, "default": 0.0},
+			"local_friendly_power": {"input": "localFriendlyPower", "weight": 1.10, "min": 0.0, "max": 1.0, "default": 0.0},
+			"artillery_support": {"input": "artillerySupport", "weight": 0.70, "min": 0.0, "max": 1.0, "default": 0.0},
+			"recon_support": {"input": "reconSupport", "weight": 0.60, "min": 0.0, "max": 1.0, "default": 0.0},
+			"terrain_suitability": {"input": "terrainSuitability", "weight": 0.45, "min": 0.0, "max": 1.0, "default": 0.0},
+			"defensive_coherence_risk": {"input": "defensiveCoherenceRisk", "weight": -1.00, "min": 0.0, "max": 1.0, "default": 0.0},
+			"overextension_risk": {"input": "overextensionRisk", "weight": -1.10, "min": 0.0, "max": 1.0, "default": 0.0}
+		}
 	}
 }
 
@@ -62,6 +86,16 @@ static func score_enemy_pressure(context: Dictionary, overrides: Dictionary = {}
 # route/objective proximity, recent advances, scout uncertainty, isolation and overstack.
 static func score_sector_danger(context: Dictionary, overrides: Dictionary = {}) -> Dictionary:
 	return _score_from_section("sectorDanger", context, overrides)
+
+# context keys include: objective value, enemy weakness estimate, local friendly power, artillery/recon support,
+# terrain suitability and defensive coherence / overextension risk.
+static func score_attack_opportunity(context: Dictionary, overrides: Dictionary = {}) -> Dictionary:
+	return _score_from_section("attackOpportunity", context, overrides)
+
+# context keys include: objective value, enemy weakness estimate, local friendly power, artillery/recon support,
+# terrain suitability and defensive coherence / overextension risk.
+static func score_counterattack_opportunity(context: Dictionary, overrides: Dictionary = {}) -> Dictionary:
+	return _score_from_section("counterattackOpportunity", context, overrides)
 
 static func _score_from_section(section_key: String, context: Dictionary, overrides: Dictionary) -> Dictionary:
 	var cfg := scoring_config(overrides)

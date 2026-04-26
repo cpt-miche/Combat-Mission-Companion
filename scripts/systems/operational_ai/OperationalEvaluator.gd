@@ -1,6 +1,8 @@
 extends RefCounted
 class_name OperationalEvaluator
 
+const OperationalScoringModel = preload("res://scripts/systems/operational_ai/OperationalScoringModel.gd")
+
 const DEFAULT_WEIGHTS := {
 	"threat": {
 		"enemyStrength": 0.45,
@@ -51,6 +53,14 @@ const DEFAULT_WEIGHTS := {
 		"mobility": 0.65,
 		"routeEfficiency": 0.35,
 		"defaultDefenseRetention": 0.65
+	},
+	"opportunityThresholds": {
+		"counterattack": 0.72,
+		"attack": 0.67,
+		"moveReserve": 0.62,
+		"reinforce": 0.58,
+		"delay": 0.48,
+		"withdraw": 0.68
 	}
 }
 
@@ -70,6 +80,14 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	var reinforcement_requests: Array[Dictionary] = reinforcement_pipeline.get("assessments", [])
 	reinforcement_requests.append_array(breakthrough_pipeline.get("reinforcementRequests", []))
 	var response_intents := _evaluate_response_intents(input.get("responseIntents", []), cfg)
+	var opportunity_pipeline := _evaluate_enemy_adjacent_opportunities(input.get("enemyAdjacentHexes", []), cfg)
+	var recommended_intents := _derive_recommended_intents(
+		opportunity_pipeline.get("attackOpportunities", []),
+		opportunity_pipeline.get("counterattackOpportunities", []),
+		sector_assessments,
+		breakthrough_pipeline.get("breakthroughHexes", []),
+		cfg
+	)
 	var warnings: Array[String] = breakthrough_pipeline.get("warnings", [])
 	warnings.append_array(reinforcement_pipeline.get("warnings", []))
 
@@ -86,8 +104,181 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	)
 	assessment["breakthroughHexes"] = _sort_scored(breakthrough_assessments)
 	assessment["reserveNeeds"] = _sort_scored(breakthrough_pipeline.get("reserveNeeds", []))
+	assessment["attackOpportunities"] = _sort_scored(opportunity_pipeline.get("attackOpportunities", []))
+	assessment["counterattackOpportunities"] = _sort_scored(opportunity_pipeline.get("counterattackOpportunities", []))
+	assessment["recommendedIntents"] = _sort_scored(recommended_intents)
 	assessment["warnings"] = warnings
 	return assessment
+
+static func _evaluate_enemy_adjacent_opportunities(candidate_hexes: Array, cfg: Dictionary) -> Dictionary:
+	var attack_opportunities: Array[Dictionary] = []
+	var counterattack_opportunities: Array[Dictionary] = []
+	for index in candidate_hexes.size():
+		var candidate: Dictionary = candidate_hexes[index]
+		var normalized := _normalize_candidate_hex(candidate)
+		var attack_score := OperationalScoringModel.score_attack_opportunity(normalized, cfg)
+		var counterattack_score := OperationalScoringModel.score_counterattack_opportunity(normalized, cfg)
+		var candidate_id := String(candidate.get("id", candidate.get("hexId", "enemy_adjacent_%d" % index)))
+		var sector_id := String(candidate.get("sectorId", ""))
+		var attack_urgency := _score_to_confidence(float(attack_score.get("score", 0.0)), cfg)
+		var counterattack_urgency := _score_to_confidence(float(counterattack_score.get("score", 0.0)), cfg)
+		var attack_details := candidate.duplicate(true)
+		attack_details["normalizedFactors"] = normalized
+		attack_details["rawScore"] = float(attack_score.get("rawScore", 0.0))
+		attack_details["confidence"] = attack_urgency
+		var counterattack_details := candidate.duplicate(true)
+		counterattack_details["normalizedFactors"] = normalized
+		counterattack_details["rawScore"] = float(counterattack_score.get("rawScore", 0.0))
+		counterattack_details["confidence"] = counterattack_urgency
+		attack_opportunities.append(OperationalTypes.make_breakthrough_assessment(
+			"attack_%s" % candidate_id,
+			sector_id,
+			attack_urgency,
+			attack_urgency,
+			attack_score.get("reasons", []),
+			attack_details
+		))
+		counterattack_opportunities.append(OperationalTypes.make_breakthrough_assessment(
+			"counterattack_%s" % candidate_id,
+			sector_id,
+			counterattack_urgency,
+			counterattack_urgency,
+			counterattack_score.get("reasons", []),
+			counterattack_details
+		))
+	return {
+		"attackOpportunities": _sort_scored(attack_opportunities),
+		"counterattackOpportunities": _sort_scored(counterattack_opportunities)
+	}
+
+static func _normalize_candidate_hex(candidate: Dictionary) -> Dictionary:
+	return {
+		"objectiveValue": clamp(float(candidate.get("objectiveValue", candidate.get("objective", 0.0))), 0.0, 1.0),
+		"enemyWeaknessEstimate": clamp(float(candidate.get("enemyWeaknessEstimate", candidate.get("enemyWeakness", 0.0))), 0.0, 1.0),
+		"localFriendlyPower": clamp(float(candidate.get("localFriendlyPower", candidate.get("friendlyPower", 0.0))), 0.0, 1.0),
+		"artillerySupport": clamp(float(candidate.get("artillerySupport", 0.0)), 0.0, 1.0),
+		"reconSupport": clamp(float(candidate.get("reconSupport", 0.0)), 0.0, 1.0),
+		"terrainSuitability": clamp(float(candidate.get("terrainSuitability", candidate.get("terrainFit", 0.0))), 0.0, 1.0),
+		"defensiveCoherenceRisk": clamp(float(candidate.get("defensiveCoherenceRisk", candidate.get("coherenceRisk", 0.0))), 0.0, 1.0),
+		"overextensionRisk": clamp(float(candidate.get("overextensionRisk", 0.0)), 0.0, 1.0)
+	}
+
+static func _score_to_confidence(score: float, cfg: Dictionary = {}) -> float:
+	var score_range: Dictionary = cfg.get("shared", {}).get("scoreRange", {})
+	var min_score := float(score_range.get("min", -4.0))
+	var max_score := float(score_range.get("max", 4.0))
+	if max_score <= min_score:
+		return 0.0
+	return clamp((score - min_score) / (max_score - min_score), 0.0, 1.0)
+
+static func _derive_recommended_intents(
+	attack_opportunities: Array[Dictionary],
+	counterattack_opportunities: Array[Dictionary],
+	sector_assessments: Array[Dictionary],
+	breakthrough_hexes: Array[Dictionary],
+	cfg: Dictionary
+) -> Array[Dictionary]:
+	var intents: Array[Dictionary] = []
+	var thresholds: Dictionary = cfg.get("opportunityThresholds", {})
+	for opportunity in counterattack_opportunities:
+		var confidence := clamp(float(opportunity.get("urgency", 0.0)), 0.0, 1.0)
+		if confidence < float(thresholds.get("counterattack", 0.72)):
+			continue
+		intents.append(_make_advisory_intent(opportunity, "counterattack", confidence, "high_counterattack_confidence"))
+	for opportunity in attack_opportunities:
+		var confidence := clamp(float(opportunity.get("urgency", 0.0)), 0.0, 1.0)
+		if confidence >= float(thresholds.get("attack", 0.67)):
+			intents.append(_make_advisory_intent(opportunity, "moveReserve", confidence, "high_attack_confidence"))
+			intents.append(_make_advisory_intent(opportunity, "shiftArtillerySupport", confidence, "high_attack_confidence"))
+		elif confidence >= float(thresholds.get("moveReserve", 0.62)):
+			intents.append(_make_advisory_intent(opportunity, "requestRecon", confidence, "moderate_attack_confidence"))
+	for assessment in sector_assessments:
+		var sector_id := String(assessment.get("sectorId", assessment.get("id", "")))
+		var urgency := clamp(float(assessment.get("urgency", assessment.get("score", 0.0))), 0.0, 1.0)
+		var details: Dictionary = assessment.get("details", {})
+		var quiet := bool(details.get("quietSector", false))
+		if quiet and urgency <= float(thresholds.get("delay", 0.48)):
+			intents.append(OperationalTypes.make_response_intent(
+				"pull_quiet_%s" % sector_id,
+				sector_id,
+				0.55,
+				0.55,
+				["quiet_sector_reallocation_candidate=true"],
+				"pullFromQuietSector",
+				{"source": "sectorAssessment", "quietSector": true}
+			))
+		if urgency >= float(thresholds.get("reinforce", 0.58)):
+			intents.append(OperationalTypes.make_response_intent(
+				"reinforce_%s" % sector_id,
+				sector_id,
+				urgency,
+				urgency,
+				["sector_pressure_requires_reinforcement=true"],
+				"reinforce",
+				{"source": "sectorAssessment"}
+			))
+		elif urgency >= float(thresholds.get("delay", 0.48)):
+			intents.append(OperationalTypes.make_response_intent(
+				"delay_%s" % sector_id,
+				sector_id,
+				urgency,
+				urgency,
+				["sector_pressure_favors_delay=true"],
+				"delay",
+				{"source": "sectorAssessment"}
+			))
+		else:
+			intents.append(OperationalTypes.make_response_intent(
+				"hold_%s" % sector_id,
+				sector_id,
+				max(0.35, 1.0 - urgency),
+				max(0.35, 1.0 - urgency),
+				["sector_stability_supports_hold=true"],
+				"hold",
+				{"source": "sectorAssessment"}
+			))
+	for breakthrough in breakthrough_hexes:
+		var severity := clamp(float(breakthrough.get("urgency", breakthrough.get("score", 0.0))), 0.0, 1.0)
+		if severity < float(thresholds.get("withdraw", 0.68)):
+			continue
+		intents.append(OperationalTypes.make_response_intent(
+			"withdraw_%s" % String(breakthrough.get("id", "")),
+			String(breakthrough.get("sectorId", "")),
+			severity,
+			severity,
+			["breakthrough_severity_exceeds_withdraw_threshold=true"],
+			"withdraw",
+			{"source": "breakthroughHexes"}
+		))
+	return _dedupe_intents(_sort_scored(intents))
+
+static func _make_advisory_intent(opportunity: Dictionary, action: String, confidence: float, reason: String) -> Dictionary:
+	return OperationalTypes.make_response_intent(
+		"%s_%s" % [action, String(opportunity.get("id", ""))],
+		String(opportunity.get("sectorId", "")),
+		confidence,
+		confidence,
+		[reason],
+		action,
+		{"source": "opportunityAssessment", "opportunityId": String(opportunity.get("id", ""))}
+	)
+
+static func _dedupe_intents(intents: Array[Dictionary]) -> Array[Dictionary]:
+	var deduped: Array[Dictionary] = []
+	var seen := {}
+	for intent in intents:
+		var sector_id := String(intent.get("sectorId", ""))
+		var action := String(intent.get("action", ""))
+		var fallback_identity := ""
+		if sector_id.is_empty():
+			var details: Dictionary = intent.get("details", {})
+			fallback_identity = String(details.get("opportunityId", intent.get("id", "")))
+		var key := "%s|%s|%s" % [sector_id, action, fallback_identity]
+		if seen.has(key):
+			continue
+		seen[key] = true
+		deduped.append(intent)
+	return deduped
 
 static func _evaluate_threats(threats: Array, cfg: Dictionary) -> Array[Dictionary]:
 	var weights: Dictionary = cfg.get("threat", {})
