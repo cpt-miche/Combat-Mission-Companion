@@ -1,0 +1,39 @@
+{
+  "id": "artillery_support_warning_high_danger",
+  "description": "High-danger sector without artillery support should raise explicit artillery coverage warning.",
+  "operationalInput": {
+    "operationId": "op_arty_warning",
+    "turnIndex": 11,
+    "sectors": [
+      {
+        "id": "sector_red",
+        "type": "frontline",
+        "pressure": 0.8,
+        "enemyPressure": 0.85,
+        "danger": 0.82,
+        "readiness": 0.4,
+        "defensibility": 0.4,
+        "artillerySupport": 0.05,
+        "artilleryCoverage": 0.05,
+        "objectiveCriticality": 0.75,
+        "importance": 0.75,
+        "friendlyStrength": 0.4,
+        "enemyStrength": 1.0
+      }
+    ]
+  },
+  "expected": {
+    "warningsMustContain": [
+      "warning=no_artillery_coverage_high_danger_sector sector=sector_red"
+    ],
+    "deterministicSortAssertions": [
+      {
+        "collection": "warnings",
+        "expectedOrder": [
+          "warning=no_artillery_coverage_high_danger_sector sector=sector_red",
+          "warning=understrength_frontline_sector sector=sector_red"
+        ]
+      }
+    ]
+  }
+}

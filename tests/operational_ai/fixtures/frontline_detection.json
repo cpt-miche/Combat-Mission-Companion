@@ -1,0 +1,31 @@
+{
+  "id": "frontline_detection",
+  "description": "Operational map analysis should correctly detect frontline hexes and deterministic sector ordering.",
+  "mapAnalysis": {
+    "aiOwner": 1,
+    "playerOwner": 2,
+    "territoryMap": {
+      "0,0": 1,
+      "1,0": 1,
+      "2,0": 2,
+      "0,1": 1,
+      "1,1": 0,
+      "2,1": 2
+    }
+  },
+  "expected": {
+    "frontlineHexIds": [
+      "1,0"
+    ],
+    "sectorCount": 1,
+    "deterministicSortAssertions": [
+      {
+        "collection": "mapSectors",
+        "field": "sectorId",
+        "expectedOrder": [
+          "sector_0,0"
+        ]
+      }
+    ]
+  }
+}

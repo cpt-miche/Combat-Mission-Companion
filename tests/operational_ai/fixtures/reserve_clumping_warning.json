@@ -1,0 +1,25 @@
+{
+  "id": "reserve_clumping_warning",
+  "description": "Adjacent reserve combat units should raise reserve clumping warning.",
+  "operationalInput": {
+    "operationId": "op_reserve_clump",
+    "turnIndex": 4,
+    "reserveUnits": [
+      {"id": "res_a", "role": "reserve", "q": 4, "r": 4},
+      {"id": "res_b", "role": "reserve", "q": 5, "r": 4}
+    ]
+  },
+  "expected": {
+    "warningsMustContain": [
+      "warning=reserve_clumping"
+    ],
+    "deterministicSortAssertions": [
+      {
+        "collection": "warnings",
+        "expectedOrder": [
+          "warning=reserve_clumping"
+        ]
+      }
+    ]
+  }
+}

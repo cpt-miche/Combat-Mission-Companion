@@ -1,0 +1,43 @@
+{
+  "id": "counterattack_exposed_salient",
+  "description": "Exposed salient with high-confidence counterattack should produce counterattack opportunity and warning.",
+  "operationalInput": {
+    "operationId": "op_counterattack",
+    "turnIndex": 15,
+    "enemyAdjacentHexes": [
+      {
+        "id": "salient_gap",
+        "sectorId": "south",
+        "objectiveValue": 0.80,
+        "enemyWeaknessEstimate": 0.90,
+        "localFriendlyPower": 0.85,
+        "artillerySupport": 0.50,
+        "reconSupport": 0.60,
+        "terrainSuitability": 0.50,
+        "defensiveCoherenceRisk": 0.70,
+        "overextensionRisk": 0.60,
+        "objectiveType": "defend"
+      }
+    ]
+  },
+  "expected": {
+    "counterattackUrgencyMin": {
+      "counterattack_salient_gap": 0.72
+    },
+    "recommendedActionsMustInclude": [
+      "counterattack"
+    ],
+    "warningsMustContain": [
+      "warning=counterattack_exposes_defend_objective opportunity=counterattack_salient_gap"
+    ],
+    "deterministicSortAssertions": [
+      {
+        "collection": "counterattackOpportunities",
+        "field": "id",
+        "expectedOrder": [
+          "counterattack_salient_gap"
+        ]
+      }
+    ]
+  }
+}
