@@ -357,6 +357,10 @@ static func _fallback_ranked_hexes(state: Dictionary) -> Array[String]:
 static func _first_legal_combat_hex(state: Dictionary, unit: Dictionary, candidates: Array[String], start_index: int, stage: String, stance: String) -> Dictionary:
 	var cost := _combat_cost(unit)
 	var expected_floor := _expected_intel_floor_for_role(String(unit.get("role", "")), true)
+	var best_hex_id := ""
+	var best_next_index := -1
+	var best_score := -INF
+	var best_score_components := {}
 	for i in range(start_index, candidates.size()):
 		var hex_id := candidates[i]
 		var base_priority := float(state["priorities"].get(hex_id, 0.0))
@@ -370,9 +374,16 @@ static func _first_legal_combat_hex(state: Dictionary, unit: Dictionary, candida
 			"intelComponents": intel_components
 		})
 		if _can_place_combat(state, hex_id, cost):
-			return {"hexId": hex_id, "nextIndex": i + 1, "scoreComponents": {"basePriority": base_priority, "expectedIntelFloor": expected_floor, "intelComponents": intel_components}}
+			if best_hex_id == "" or score > best_score:
+				best_hex_id = hex_id
+				best_next_index = i + 1
+				best_score = score
+				best_score_components = {"basePriority": base_priority, "expectedIntelFloor": expected_floor, "intelComponents": intel_components}
+			continue
 		_emit_candidate_rejected(state, stage, unit, hex_id, "combat_capacity_exceeded", "Stage A: candidate exceeded combat stack cap.", score, {"stance": stance, "combatCost": cost})
-	return {}
+	if best_hex_id == "":
+		return {}
+	return {"hexId": best_hex_id, "nextIndex": best_next_index, "scoreComponents": best_score_components}
 
 static func _commit_combat_placement(state: Dictionary, unit: Dictionary, hex_id: String, stance: String) -> void:
 	var cost := _combat_cost(unit)
