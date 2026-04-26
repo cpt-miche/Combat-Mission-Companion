@@ -53,6 +53,12 @@ custom_minimum_size = Vector2(220, 48)
 layout_mode = 2
 text = "Load"
 
+[node name="DisplayButton" type="Button" parent="RootMargin/CenterVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 48)
+layout_mode = 2
+text = "Display Settings"
+
 [node name="StatusLabel" type="Label" parent="RootMargin/CenterVBox"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -118,6 +124,49 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="MapSelectionStatusLabel" type="Label" parent="MapDialog/MapDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 2
+text = ""
+
+[node name="DisplayDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Display Settings"
+size = Vector2i(430, 300)
+initial_position = 1
+ok_button_text = "Apply"
+cancel_button_text = "Close"
+
+[node name="DisplayDialogVBox" type="VBoxContainer" parent="DisplayDialog"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 404.0
+offset_bottom = 220.0
+theme_override_constants/separation = 8
+
+[node name="ResolutionLabel" type="Label" parent="DisplayDialog/DisplayDialogVBox"]
+layout_mode = 2
+text = "Resolution preset"
+
+[node name="ResolutionSelector" type="OptionButton" parent="DisplayDialog/DisplayDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="WindowModeToggle" type="CheckBox" parent="DisplayDialog/DisplayDialogVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Fullscreen"
+
+[node name="DisplayActionRow" type="HBoxContainer" parent="DisplayDialog/DisplayDialogVBox"]
+layout_mode = 2
+
+[node name="RevertDisplayButton" type="Button" parent="DisplayDialog/DisplayDialogVBox/DisplayActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Revert"
+
+[node name="DisplayStatusLabel" type="Label" parent="DisplayDialog/DisplayDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 2
