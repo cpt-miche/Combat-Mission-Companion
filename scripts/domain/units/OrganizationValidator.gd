@@ -129,6 +129,14 @@ static func _validate_required_child_mix(parent: UnitModel, children: Array[Unit
 			"ok": true
 		}
 
+	# Allow placeholder/leaf organizations to be submitted without forcing
+	# synthetic child units. Composition checks are enforced once a parent
+	# actually has subordinate formations.
+	if children.is_empty():
+		return {
+			"ok": true
+		}
+
 	var child_counts := _count_children_by_type(children)
 	var missing_parts: Array[String] = []
 	for unit_type in mix.keys():

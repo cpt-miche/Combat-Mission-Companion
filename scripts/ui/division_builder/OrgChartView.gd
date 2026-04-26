@@ -30,9 +30,34 @@ const DRAG_THRESHOLD := 8.0
 func set_organization(root: UnitModel, selected: UnitModel) -> void:
 	root_unit = root
 	selected_unit = selected
-	_collapsed_by_unit_id.clear()
+	_sync_collapsed_defaults(root_unit)
+	if root_unit != null:
+		_collapsed_by_unit_id[root_unit.id] = false
 	_toggle_hitboxes.clear()
 	queue_redraw()
+
+func _sync_collapsed_defaults(unit: UnitModel) -> void:
+	var live_ids := {}
+	_collect_live_ids(unit, live_ids)
+	for unit_id in _collapsed_by_unit_id.keys():
+		if not live_ids.has(unit_id):
+			_collapsed_by_unit_id.erase(unit_id)
+	_apply_default_collapsed_state(unit)
+
+func _collect_live_ids(unit: UnitModel, sink: Dictionary) -> void:
+	if unit == null:
+		return
+	sink[unit.id] = true
+	for child in unit.children:
+		_collect_live_ids(child, sink)
+
+func _apply_default_collapsed_state(unit: UnitModel) -> void:
+	if unit == null:
+		return
+	if not _collapsed_by_unit_id.has(unit.id):
+		_collapsed_by_unit_id[unit.id] = true
+	for child in unit.children:
+		_apply_default_collapsed_state(child)
 
 func set_selected_unit(unit: UnitModel) -> void:
 	selected_unit = unit
