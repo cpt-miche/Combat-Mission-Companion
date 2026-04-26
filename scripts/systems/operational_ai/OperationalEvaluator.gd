@@ -773,7 +773,9 @@ static func _is_frontline_sector(sector: Dictionary) -> bool:
 	return String(sector.get("type", sector.get("sectorType", ""))).to_lower() == "frontline"
 
 static func _is_understrength_frontline_sector(sector: Dictionary) -> bool:
-	var ratio := clamp(float(sector.get("strengthRatio", sector.get("friendlyToEnemyRatio", sector.get("combatRatio", -1.0)))), 0.0, 3.0)
+	var ratio := float(sector.get("strengthRatio", sector.get("friendlyToEnemyRatio", sector.get("combatRatio", -1.0))))
+	if ratio >= 0.0:
+		ratio = clamp(ratio, 0.0, 3.0)
 	if ratio >= 0.0 and ratio < 0.75:
 		return true
 	var friendly := max(float(sector.get("friendlyStrength", sector.get("friendlyCombatPower", 0.0))), 0.0)
