@@ -17,3 +17,12 @@
 
 ## Reviewer
 - Automated review pass by Codex agent.
+
+## Resolution & Stretch Policy (Godot Multiple Resolutions)
+- Base design resolution is **1920×1080** (`viewport_width`/`viewport_height`).
+- Stretch mode is **`canvas_items`** for UI-centric scaling behavior.
+- Stretch aspect is **`expand`** to preserve aspect ratio while safely supporting wider/taller displays than 16:9.
+- Startup desktop window behavior is explicit: **windowed mode** with **resizable enabled**.
+
+Use these assumptions for new screens and Control layout anchoring so additional visible area behaves predictably across aspect ratios.
+
