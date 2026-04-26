@@ -10,10 +10,13 @@ const LEVEL_SPACING := 180.0
 const SIBLING_SPACING := 36.0
 const MIN_ZOOM := 0.5
 const MAX_ZOOM := 2.0
+const TOGGLE_SIZE := 16.0
 
 var root_unit: UnitModel
 var selected_unit: UnitModel
 var _node_rects: Dictionary = {}
+var _collapsed_by_unit_id: Dictionary = {}
+var _toggle_hitboxes: Dictionary = {}
 var _pan_offset := Vector2(80.0, 60.0)
 var _zoom := 1.0
 var _is_panning := false
@@ -59,6 +62,15 @@ func _gui_input(event: InputEvent) -> void:
 			return
 
 		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+			var toggle_id := _pick_toggle(mouse_event.position)
+			if not toggle_id.is_empty():
+				if toggle_id != root_unit.id:
+					var is_collapsed := bool(_collapsed_by_unit_id.get(toggle_id, false))
+					_collapsed_by_unit_id[toggle_id] = not is_collapsed
+				queue_redraw()
+				accept_event()
+				return
+
 			var clicked := _pick_unit(mouse_event.position)
 			if clicked != null:
 				if clicked == selected_unit:
@@ -122,6 +134,7 @@ func _gui_input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	_node_rects.clear()
+	_toggle_hitboxes.clear()
 	if root_unit == null:
 		return
 
@@ -129,15 +142,21 @@ func _draw() -> void:
 	_draw_subtree(root_unit, 0, next_y)
 
 func _draw_subtree(unit: UnitModel, depth: int, next_y: float) -> float:
+	var has_children := not unit.children.is_empty()
+	var is_collapsed := bool(_collapsed_by_unit_id.get(unit.id, false))
+	if unit == root_unit:
+		is_collapsed = false
+
 	var child_centers: Array[float] = []
 	var working_y := next_y
 
-	for child in unit.children:
-		if child == null:
-			continue
-		working_y = _draw_subtree(child, depth + 1, working_y)
-		var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
-		child_centers.append(child_rect.get_center().y)
+	if has_children and not is_collapsed:
+		for child in unit.children:
+			if child == null:
+				continue
+			working_y = _draw_subtree(child, depth + 1, working_y)
+			var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
+			child_centers.append(child_rect.get_center().y)
 
 	var center_y := 0.0
 	if child_centers.is_empty():
@@ -152,24 +171,25 @@ func _draw_subtree(unit: UnitModel, depth: int, next_y: float) -> float:
 	)
 	_node_rects[unit.id] = rect
 	var screen_rect := _to_screen_rect(rect)
-	_draw_unit_node(unit, screen_rect)
+	_draw_unit_node(unit, screen_rect, has_children, is_collapsed)
 
-	for child in unit.children:
-		if child == null:
-			continue
-		var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
-		if child_rect.size == Vector2.ZERO:
-			continue
-		var from := _to_screen_point(Vector2(rect.end.x, rect.get_center().y))
-		var to := _to_screen_point(Vector2(child_rect.position.x, child_rect.get_center().y))
-		draw_line(from, to, Color(0.65, 0.72, 0.8), 2.0)
+	if has_children and not is_collapsed:
+		for child in unit.children:
+			if child == null:
+				continue
+			var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
+			if child_rect.size == Vector2.ZERO:
+				continue
+			var from := _to_screen_point(Vector2(rect.end.x, rect.get_center().y))
+			var to := _to_screen_point(Vector2(child_rect.position.x, child_rect.get_center().y))
+			draw_line(from, to, Color(0.65, 0.72, 0.8), 2.0)
 
 	if _is_dragging and _dragging_unit != null and unit == _dragging_unit:
 		draw_line(screen_rect.get_center(), _drag_mouse_position, Color(0.27, 0.76, 1.0, 0.8), 2.0)
 
 	return working_y
 
-func _draw_unit_node(unit: UnitModel, rect: Rect2) -> void:
+func _draw_unit_node(unit: UnitModel, rect: Rect2, has_children: bool, is_collapsed: bool) -> void:
 	var is_selected := unit == selected_unit
 	var border := Color(0.85, 0.89, 0.95)
 	var fill := Color(0.14, 0.16, 0.21)
@@ -180,6 +200,18 @@ func _draw_unit_node(unit: UnitModel, rect: Rect2) -> void:
 	draw_rect(rect, fill, true)
 	draw_rect(rect, border, false, 2.0)
 	_draw_nato_symbol(unit, rect)
+
+	if has_children:
+		var toggle_rect := Rect2(
+			rect.position + Vector2(rect.size.x - TOGGLE_SIZE - 6.0, 6.0),
+			Vector2(TOGGLE_SIZE, TOGGLE_SIZE)
+		)
+		_toggle_hitboxes[unit.id] = toggle_rect
+		draw_rect(toggle_rect, Color(0.08, 0.1, 0.14), true)
+		draw_rect(toggle_rect, border, false, 1.0)
+		var toggle_label := "+" if is_collapsed else "−"
+		var label_position := toggle_rect.position + Vector2(4.0, TOGGLE_SIZE - 3.0)
+		draw_string(get_theme_default_font(), label_position, toggle_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, Color.WHITE)
 
 	var title := _display_name_from_template_id(unit.template_id)
 	var label := "%s\n%s %s" % [title, UnitSize.display_name(unit.size), UnitType.display_name(unit.type)]
@@ -253,6 +285,13 @@ func _pick_unit(position: Vector2) -> UnitModel:
 		if rect.has_point(position):
 			return _find_by_id(root_unit, unit_id)
 	return null
+
+func _pick_toggle(position: Vector2) -> String:
+	for unit_id in _toggle_hitboxes.keys():
+		var rect: Rect2 = _toggle_hitboxes[unit_id]
+		if rect.has_point(position):
+			return unit_id
+	return ""
 
 func _to_screen_rect(rect: Rect2) -> Rect2:
 	return Rect2(rect.position * _zoom + _pan_offset, rect.size * _zoom)
