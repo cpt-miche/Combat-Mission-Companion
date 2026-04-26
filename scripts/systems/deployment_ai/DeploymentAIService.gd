@@ -157,7 +157,7 @@ static func _deployments_from_plan(ai_player_index: int, elements: Array[Diction
 
 static func _units_by_id_for_player(player_index: int) -> Dictionary:
 	var player := GameState.players[player_index] as Dictionary
-	var root := player.get("division_tree", {})
+	var root: Variant = player.get("division_tree", {})
 	var units := {}
 	_flatten_units(root, units)
 	return units
@@ -219,7 +219,7 @@ static func _is_legal_hex_for_player(hex_id: String, player_index: int) -> bool:
 
 static func _deployments_has_unit_id(deployments: Dictionary, unit_id: String) -> bool:
 	for key_variant in deployments.keys():
-		var unit_variant := deployments[key_variant]
+		var unit_variant: Variant = deployments[key_variant]
 		if typeof(unit_variant) != TYPE_DICTIONARY:
 			continue
 		if String((unit_variant as Dictionary).get("id", "")) == unit_id:

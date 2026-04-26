@@ -532,7 +532,7 @@ static func _emit_order_committed(state: Dictionary, stage: String, unit: Dictio
 	})
 
 static func _emit_trace_event(state: Dictionary, event_type: String, stage: String, payload: Dictionary) -> void:
-	var callback_variant := state.get("traceEventCallback", Callable())
+	var callback_variant: Variant = state.get("traceEventCallback", Callable())
 	if typeof(callback_variant) != TYPE_CALLABLE:
 		return
 	var callback := callback_variant as Callable

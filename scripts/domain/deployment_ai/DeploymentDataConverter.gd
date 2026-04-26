@@ -54,7 +54,7 @@ static func _unit_type_name_from_enum_value(unit_type_value: int) -> String:
 		UnitType.Value.HEADQUARTERS:
 			return "headquarters"
 		_:
-			return String(unit_type_value).strip_edges().to_lower()
+			return str(unit_type_value).strip_edges().to_lower()
 
 static func map_payload_to_hexes(terrain_map: Dictionary, territory_map: Dictionary) -> Array[Dictionary]:
 	var known_hexes := {}
@@ -71,7 +71,7 @@ static func map_payload_to_hexes(terrain_map: Dictionary, territory_map: Diction
 
 	for key_variant in ordered_keys:
 		var key := String(key_variant)
-		var coords := _parse_hex_key(key)
+		var coords: Variant = _parse_hex_key(key)
 		if coords == null:
 			continue
 
@@ -97,23 +97,23 @@ static func map_payload_to_hexes(terrain_map: Dictionary, territory_map: Diction
 static func players_to_formations(players: Array[Dictionary]) -> Array[Dictionary]:
 	var formations: Array[Dictionary] = []
 	for player_index in players.size():
-		var player := players[player_index]
+		var player: Dictionary = players[player_index]
 		if typeof(player) != TYPE_DICTIONARY:
 			continue
-		var root := player.get("division_tree", {})
+		var root: Variant = player.get("division_tree", {})
 		_flatten_formation_tree(root, formations, "")
 	return formations
 
 static func players_to_deployable_elements(players: Array[Dictionary]) -> Array[Dictionary]:
 	var elements: Array[Dictionary] = []
 	for player_index in players.size():
-		var player := players[player_index]
+		var player: Dictionary = players[player_index]
 		if typeof(player) != TYPE_DICTIONARY:
 			continue
 
 		var deployments := player.get("deployments", {}) as Dictionary
 		var deployment_index := _deployment_index_by_unit_id(deployments)
-		var root := player.get("division_tree", {})
+		var root: Variant = player.get("division_tree", {})
 		_flatten_deployable_elements(root, player_index, "", deployment_index, elements)
 	return elements
 
@@ -197,7 +197,7 @@ static func _deployment_index_by_unit_id(deployments: Dictionary) -> Dictionary:
 	var index := {}
 	for key_variant in deployments.keys():
 		var hex_id := String(key_variant)
-		var deployed_unit := deployments[key_variant]
+		var deployed_unit: Variant = deployments[key_variant]
 		if typeof(deployed_unit) != TYPE_DICTIONARY:
 			continue
 		var deployed := deployed_unit as Dictionary

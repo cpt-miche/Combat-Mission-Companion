@@ -307,7 +307,7 @@ static func _move_unit(unit_id: String, to_hex: String, state: Dictionary, stage
 
 static func _important_frontline_hexes(state: Dictionary) -> Array[String]:
 	var result: Array[String] = []
-	var threshold := max(0.6 * float(state.get("maxPriority", 0.0)), 1.0)
+	var threshold: float = max(0.6 * float(state.get("maxPriority", 0.0)), 1.0)
 	for hex_id in (state["frontline"] as Dictionary).keys():
 		var as_str := String(hex_id)
 		if float(state["priorities"].get(as_str, 0.0)) >= threshold:
