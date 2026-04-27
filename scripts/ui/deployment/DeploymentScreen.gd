@@ -4,6 +4,11 @@ const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValida
 const DeploymentAIService = preload("res://scripts/systems/deployment_ai/DeploymentAIService.gd")
 
 @onready var phase_label: Label = %PhaseLabel
+# Maintainer note: this is intentionally a Tree (not an ItemList) because deployment units are hierarchical,
+# and operators need expand/collapse by command chain while still selecting leaf/parent nodes.
+# Godot stable docs: Tree/TreeItem API used here →
+# https://docs.godotengine.org/en/stable/classes/class_tree.html and
+# https://docs.godotengine.org/en/stable/classes/class_treeitem.html
 @onready var unit_list: Tree = %UnitList
 @onready var status_label: Label = %StatusLabel
 @onready var hex_map_view: DeploymentHexMapView = %HexMapView
@@ -13,6 +18,7 @@ const DeploymentAIService = preload("res://scripts/systems/deployment_ai/Deploym
 
 var _player_index := 0
 var _deployable_units: Array[Dictionary] = []
+# Maintainer note: selected unit UI state lives in these two fields and is refreshed from TreeItem metadata.
 var _selected_unit_id := ""
 var _selected_unit_metadata: Dictionary = {}
 
@@ -459,6 +465,8 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coo
 	var block_reason := _deployability_block_reason(unit_data)
 	var display_label := _unit_label(unit_data)
 	var unit_id := String(unit_data.get("id", ""))
+	# Maintainer note: "Placed: x,y" annotation is derived from deployments keyed by unit id.
+	# `_deployment_coordinates_by_unit_id` builds that lookup from `GameState.players[*]["deployments"]`.
 	var deployed_coordinate := String(coordinates_by_unit_id.get(unit_id, ""))
 	var is_placed := not deployed_coordinate.is_empty()
 	if is_placed:
@@ -610,6 +618,9 @@ func _deployment_coordinates_by_unit_id(deployments: Dictionary) -> Dictionary:
 	return coordinates_by_unit_id
 
 func _unit_snapshot(unit: Dictionary) -> Dictionary:
+	# Maintainer note: keep `_unit_snapshot`, `_string_for_type`, `_string_for_size`, `_size_rank`,
+	# `_preferred_unit_name`, and `_preferred_short_name` aligned with DeploymentValidator contracts
+	# (`can_deploy_in_territory` / `placement_block_reason`) so UI checks and validator checks stay identical.
 	var unit_type := _string_for_type(unit.get("type", ""))
 	var unit_size := _string_for_size(unit.get("size", ""))
 	var preferred_name := _preferred_unit_name(unit)
