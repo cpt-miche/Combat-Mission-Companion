@@ -576,14 +576,18 @@ func _on_hex_selected(column: int, row: int) -> void:
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
 	var target_key := "%d,%d" % [column, row]
 	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
+	var units_on_target_hex := _deployed_unit_snapshots_at_key(deployments, target_key)
+	var filtered_units_on_target_hex: Array[Dictionary] = []
+	for deployed_unit in units_on_target_hex:
+		if String(deployed_unit.get("id", "")) == unit_id:
+			continue
+		filtered_units_on_target_hex.append(deployed_unit)
 
 	var next_deployments := deployments.duplicate(true)
 	if existing_key != "":
 		next_deployments.erase(existing_key)
-	next_deployments.erase(target_key)
 
-	var units_on_target_hex := _deployed_unit_snapshots_at_key(next_deployments, target_key)
-	var placement_block_reason := DeploymentValidator.placement_block_reason(unit_snapshot, units_on_target_hex)
+	var placement_block_reason := DeploymentValidator.placement_block_reason(unit_snapshot, filtered_units_on_target_hex)
 	if not placement_block_reason.is_empty():
 		_refresh_phase_ui(placement_block_reason)
 		return
