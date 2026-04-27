@@ -18,6 +18,7 @@ const DeploymentAIService = preload("res://scripts/systems/deployment_ai/Deploym
 
 var _player_index := 0
 var _deployable_units: Array[Dictionary] = []
+var _unplaced_deployable_unit_ids: Dictionary = {}
 # Maintainer note: selected unit UI state lives in these two fields and is refreshed from TreeItem metadata.
 var _selected_unit_id := ""
 var _selected_unit_metadata: Dictionary = {}
@@ -455,6 +456,7 @@ func _build_deployable_unit_list(preserve_ui_state: bool = true) -> void:
 		_selected_unit_metadata = {}
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
 	var coordinates_by_unit_id := _deployment_coordinates_by_unit_id(deployments)
+	_unplaced_deployable_unit_ids = _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id)
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
 	var root_item := unit_list.create_item()
@@ -484,6 +486,8 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coo
 		display_label += "  [Not deployable: %s]" % block_reason
 	item.set_text(0, display_label)
 	item.set_selectable(0, block_reason.is_empty() or is_placed)
+	if block_reason.is_empty() and not is_placed:
+		item.set_custom_color(0, Color(1.0, 0.35, 0.35))
 	item.set_metadata(0, {
 		"unit": unit_data,
 		"base_block_reason": block_reason,
@@ -696,6 +700,19 @@ func _deployment_coordinates_by_unit_id(deployments: Dictionary) -> Dictionary:
 		coordinates_by_unit_id[unit_id] = String(key)
 	return coordinates_by_unit_id
 
+func _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id: Dictionary) -> Dictionary:
+	var unplaced_by_id := {}
+	for deployable_unit in _deployable_units:
+		if not _is_deployable(deployable_unit):
+			continue
+		var unit_id := String(deployable_unit.get("id", ""))
+		if unit_id.is_empty():
+			continue
+		if coordinates_by_unit_id.has(unit_id):
+			continue
+		unplaced_by_id[unit_id] = true
+	return unplaced_by_id
+
 func _unit_snapshot(unit: Dictionary) -> Dictionary:
 	# Maintainer note: keep `_unit_snapshot`, `_string_for_type`, `_string_for_size`, `_size_rank`,
 	# `_preferred_unit_name`, and `_preferred_short_name` aligned with DeploymentValidator contracts
@@ -766,6 +783,12 @@ func _size_rank(size_name: String) -> int:
 			return -1
 
 func _on_finish_deployment_pressed() -> void:
+	var unplaced_count := _unplaced_deployable_unit_ids.size()
+	if unplaced_count > 0:
+		_build_deployable_unit_list()
+		_refresh_phase_ui("Place all deployable units before submitting (%d remaining)." % unplaced_count)
+		return
+
 	if _player_index == 0:
 		_run_ai_deployment_if_needed(1)
 		GameState.set_phase(GameState.Phase.DEPLOYMENT_P2)

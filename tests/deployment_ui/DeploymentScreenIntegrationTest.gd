@@ -13,6 +13,7 @@ func _run() -> void:
 	_test_occupied_hex_replacement_still_respects_validation_rules()
 	_test_tree_model_is_hierarchical_and_collapsed_by_default()
 	_test_non_deployable_units_stay_blocked()
+	_test_finish_deployment_requires_all_deployable_units()
 	_test_finish_deployment_phase_transitions()
 
 	if _failures.is_empty():
@@ -130,6 +131,31 @@ func _test_finish_deployment_phase_transitions() -> void:
 	p2_screen._on_finish_deployment_pressed()
 	_assert_equal(GameState.Phase.GAMEPLAY, GameState.current_phase, "Finish deployment should advance P2 to GAMEPLAY.")
 	_cleanup_screen(p2_screen)
+
+func _test_finish_deployment_requires_all_deployable_units() -> void:
+	_reset_state(GameState.Phase.DEPLOYMENT_P1)
+	GameState.territory_map = {
+		"0,0": GameState.TerritoryOwnership.PLAYER_1,
+		"0,1": GameState.TerritoryOwnership.PLAYER_1
+	}
+	var platoon_a := _platoon("plt_a", "Platoon A")
+	var platoon_b := _platoon("plt_b", "Platoon B")
+	GameState.players[0]["division_tree"] = _root_with_children([platoon_a, platoon_b])
+
+	var screen := _spawn_screen()
+	_select_unit_by_id(screen, "plt_a")
+	screen._on_hex_selected(0, 0)
+	screen._on_finish_deployment_pressed()
+
+	_assert_equal(GameState.Phase.DEPLOYMENT_P1, GameState.current_phase, "Finish deployment should not advance phase until all deployable units are placed.")
+	_assert_true(String(screen.status_label.text).contains("Place all deployable units before submitting"), "Expected finish action to explain why submission was blocked.")
+
+	var missing_item := _find_item_by_unit_id(screen.unit_list.get_root(), "plt_b")
+	_assert_true(missing_item != null, "Expected missing deployable unit to remain visible in deployment tree.")
+	if missing_item != null:
+		_assert_true(missing_item.get_custom_color(0) == Color(1.0, 0.35, 0.35), "Expected unplaced deployable unit to be highlighted in the sidebar.")
+
+	_cleanup_screen(screen)
 
 func _reset_state(phase: int) -> void:
 	GameState.reset()
