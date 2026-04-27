@@ -567,6 +567,7 @@ func _on_hex_selected(column: int, row: int) -> void:
 
 	next_deployments[target_key] = unit_snapshot
 	GameState.players[_player_index]["deployments"] = next_deployments
+	_build_deployable_unit_list()
 	if existing_key.is_empty():
 		_refresh_phase_ui("Placed %s at %d,%d." % [_unit_label(unit_data), column, row])
 	else:
