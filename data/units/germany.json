@@ -184,6 +184,200 @@
       "type": "ARTILLERY",
       "size": "REGIMENT",
       "default_veterancy": "HARDENED"
+    },
+    {
+      "id": "ger_infantry_division",
+      "display_name": "Infantry Division",
+      "type": "INFANTRY",
+      "size": "DIVISION",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {
+          "id": "ger_division_infantry_regiment",
+          "display_name": "Infantry Regiment",
+          "type": "INFANTRY",
+          "size": "REGIMENT",
+          "count": 3,
+          "children": [
+            {
+              "id": "ger_regiment_infantry_battalion",
+              "display_name": "Infantry Battalion",
+              "type": "INFANTRY",
+              "size": "BATTALION",
+              "count": 3,
+              "children": [
+                {
+                  "id": "ger_battalion_infantry_company",
+                  "display_name": "Infantry Company",
+                  "type": "INFANTRY",
+                  "size": "COMPANY",
+                  "count": 3,
+                  "children": [
+                    {
+                      "id": "ger_company_infantry_platoon",
+                      "display_name": "Infantry Platoon",
+                      "type": "INFANTRY",
+                      "size": "PLATOON",
+                      "count": 3
+                    },
+                    {
+                      "id": "ger_company_hmg_platoon",
+                      "display_name": "Heavy Machine Gun Platoon",
+                      "type": "INFANTRY",
+                      "size": "PLATOON",
+                      "count": 1,
+                      "children": [
+                        {
+                          "id": "ger_company_hmg_section",
+                          "display_name": "Heavy Machine Gun Section",
+                          "type": "INFANTRY",
+                          "size": "SECTION",
+                          "count": 2
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "ger_battalion_weapons_company",
+                  "display_name": "Weapons Company",
+                  "type": "INFANTRY",
+                  "size": "COMPANY",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "ger_weapons_company_hmg_platoon",
+                      "display_name": "Heavy Machine Gun Platoon",
+                      "type": "INFANTRY",
+                      "size": "PLATOON",
+                      "count": 1,
+                      "children": [
+                        {
+                          "id": "ger_weapons_company_hmg_section",
+                          "display_name": "Heavy Machine Gun Section",
+                          "type": "INFANTRY",
+                          "size": "SECTION",
+                          "count": 3
+                        }
+                      ]
+                    },
+                    {
+                      "id": "ger_weapons_company_mortar_platoon",
+                      "display_name": "Mortar Platoon",
+                      "type": "ARTILLERY",
+                      "size": "PLATOON",
+                      "count": 1,
+                      "children": [
+                        {
+                          "id": "ger_weapons_company_mortar_8cm_section",
+                          "display_name": "8cm Mortar Section",
+                          "type": "ARTILLERY",
+                          "size": "SECTION",
+                          "count": 3,
+                          "children": [
+                            {
+                              "id": "ger_weapons_company_mortar_8cm_team",
+                              "display_name": "8cm Mortar Team",
+                              "type": "ARTILLERY",
+                              "size": "SQUAD",
+                              "count": 2
+                            }
+                          ]
+                        },
+                        {
+                          "id": "ger_weapons_company_mortar_12cm_section",
+                          "display_name": "12cm Mortar Section",
+                          "type": "ARTILLERY",
+                          "size": "SECTION",
+                          "count": 3,
+                          "children": [
+                            {
+                              "id": "ger_weapons_company_mortar_12cm_team",
+                              "display_name": "12cm Mortar Team",
+                              "type": "ARTILLERY",
+                              "size": "SQUAD",
+                              "count": 2
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "ger_regiment_antitank_company",
+              "display_name": "Anti-Tank Company",
+              "type": "ANTI_TANK",
+              "size": "COMPANY",
+              "count": 1
+            },
+            {
+              "id": "ger_regiment_howitzer_company",
+              "display_name": "Howitzer Company",
+              "type": "ARTILLERY",
+              "size": "COMPANY",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "ger_division_antitank_battalion",
+          "display_name": "Anti-Tank Battalion",
+          "type": "ANTI_TANK",
+          "size": "BATTALION",
+          "count": 1
+        },
+        {
+          "id": "ger_division_recon_battalion",
+          "display_name": "Recon Battalion",
+          "type": "RECON",
+          "size": "BATTALION",
+          "count": 1,
+          "children": [
+            {
+              "id": "ger_recon_company",
+              "display_name": "Recon Company",
+              "type": "RECON",
+              "size": "COMPANY",
+              "count": 3,
+              "children": [
+                {
+                  "id": "ger_recon_platoon",
+                  "display_name": "Recon Platoon",
+                  "type": "RECON",
+                  "size": "PLATOON",
+                  "count": 3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ger_division_howitzer_regiment",
+          "display_name": "Howitzer Regiment",
+          "type": "ARTILLERY",
+          "size": "REGIMENT",
+          "count": 1,
+          "children": [
+            {
+              "id": "ger_howitzer_155mm_battalion",
+              "display_name": "155mm Howitzer Battalion",
+              "type": "ARTILLERY",
+              "size": "BATTALION",
+              "count": 3
+            },
+            {
+              "id": "ger_howitzer_105mm_battalion",
+              "display_name": "105mm Howitzer Battalion",
+              "type": "ARTILLERY",
+              "size": "BATTALION",
+              "count": 3
+            }
+          ]
+        }
+      ]
     }
   ]
 }
