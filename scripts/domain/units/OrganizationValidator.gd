@@ -3,40 +3,6 @@ extends RefCounted
 
 const MAX_CHILDREN := 6
 const MAX_SAME_TYPE_CHILDREN := 4
-const _ANY_TYPE_KEY := -1
-const _DESCENDANT_FALLBACK_TYPES := {
-	UnitType.Value.ENGINEER: true,
-}
-const REQUIRED_CHILD_MIX_BY_ECHELON_AND_TYPE := {
-	UnitSize.Value.DIVISION: {
-		_ANY_TYPE_KEY: {
-			UnitType.Value.INFANTRY: 2,
-			UnitType.Value.ARTILLERY: 1,
-			UnitType.Value.ENGINEER: 1,
-		}
-	},
-	UnitSize.Value.REGIMENT: {
-		UnitType.Value.INFANTRY: {
-			UnitType.Value.INFANTRY: 2,
-			UnitType.Value.ARTILLERY: 1,
-		}
-	},
-	UnitSize.Value.BATTALION: {
-		UnitType.Value.INFANTRY: {
-			UnitType.Value.INFANTRY: 2,
-		}
-	},
-	UnitSize.Value.COMPANY: {
-		UnitType.Value.INFANTRY: {
-			UnitType.Value.INFANTRY: 2,
-		}
-	},
-	UnitSize.Value.PLATOON: {
-		UnitType.Value.INFANTRY: {
-			UnitType.Value.INFANTRY: 1,
-		}
-	},
-}
 
 static func can_add_child(parent: UnitModel, candidate: UnitModel) -> bool:
 	return bool(can_add_child_detailed(parent, candidate).get("ok", false))
@@ -93,7 +59,19 @@ static func validate_subtree(root: UnitModel) -> Dictionary:
 			"error": "Organization root is missing."
 		}
 
-	return _validate_subtree_recursive(root)
+	var structure_result := _validate_subtree_recursive(root)
+	if not bool(structure_result.get("ok", false)):
+		return structure_result
+
+	if not _has_deployable_company_or_larger(root):
+		return {
+			"ok": false,
+			"error": "Organization must include at least 1 company-sized unit (or larger) before deployment."
+		}
+
+	return {
+		"ok": true
+	}
 
 static func _validate_subtree_recursive(node: UnitModel) -> Dictionary:
 	if node == null:
@@ -101,10 +79,6 @@ static func _validate_subtree_recursive(node: UnitModel) -> Dictionary:
 			"ok": false,
 			"error": "Organization contains an invalid unit."
 		}
-
-	var mix_result := _validate_required_child_mix(node, node.children)
-	if not bool(mix_result.get("ok", false)):
-		return mix_result
 
 	for child in node.children:
 		if child == null:
@@ -125,71 +99,27 @@ static func _validate_subtree_recursive(node: UnitModel) -> Dictionary:
 		"ok": true
 	}
 
-static func _validate_required_child_mix(parent: UnitModel, children: Array[UnitModel]) -> Dictionary:
-	var mix := _required_mix_for_parent(parent)
-	if mix.is_empty():
-		return {
-			"ok": true
-		}
-
-	# Allow placeholder/leaf organizations to be submitted without forcing
-	# synthetic child units. Composition checks are enforced once a parent
-	# actually has subordinate formations.
-	if children.is_empty():
-		return {
-			"ok": true
-		}
-
-	var child_counts := _count_children_by_type(children)
-	var descendant_counts := _count_descendants_by_type(children)
-	var missing_parts: Array[String] = []
-	for unit_type in mix.keys():
-		var required_count := int(mix.get(unit_type, 0))
-		if required_count <= 0:
-			continue
-		var actual_count := int(child_counts.get(unit_type, 0))
-		if actual_count < required_count and _DESCENDANT_FALLBACK_TYPES.has(unit_type):
-			actual_count = int(descendant_counts.get(unit_type, 0))
-		if actual_count < required_count:
-			missing_parts.append("%d %s (has %d)" % [required_count, UnitType.display_name(unit_type), actual_count])
-
-	if missing_parts.is_empty():
-		return {
-			"ok": true
-		}
-
+static func _validate_required_child_mix(_parent: UnitModel, _children: Array[UnitModel]) -> Dictionary:
+	# Minimum composition requirements are intentionally disabled.
+	# Force structure is constrained by containment and upper limits only.
 	return {
-		"ok": false,
-		"error": "%s requires child mix: %s." % [UnitSize.display_name(parent.size), ", ".join(missing_parts)]
+		"ok": true
 	}
 
-static func _required_mix_for_parent(parent: UnitModel) -> Dictionary:
-	if parent == null:
-		return {}
-	var by_type: Dictionary = REQUIRED_CHILD_MIX_BY_ECHELON_AND_TYPE.get(parent.size, {})
-	if by_type.is_empty():
-		return {}
-	if by_type.has(parent.type):
-		return by_type[parent.type]
-	return by_type.get(_ANY_TYPE_KEY, {})
+static func _has_deployable_company_or_larger(root: UnitModel) -> bool:
+	if root == null:
+		return false
+	for child in root.children:
+		if _contains_company_or_larger(child):
+			return true
+	return false
 
-static func _count_children_by_type(children: Array[UnitModel]) -> Dictionary:
-	var counts := {}
-	for child in children:
-		if child == null:
-			continue
-		counts[child.type] = int(counts.get(child.type, 0)) + 1
-	return counts
-
-static func _count_descendants_by_type(children: Array[UnitModel]) -> Dictionary:
-	var counts := {}
-	for child in children:
-		_count_descendants_recursive(child, counts)
-	return counts
-
-static func _count_descendants_recursive(unit: UnitModel, counts: Dictionary) -> void:
+static func _contains_company_or_larger(unit: UnitModel) -> bool:
 	if unit == null:
-		return
-	counts[unit.type] = int(counts.get(unit.type, 0)) + 1
+		return false
+	if UnitSize.rank(unit.size) >= UnitSize.rank(UnitSize.Value.COMPANY):
+		return true
 	for child in unit.children:
-		_count_descendants_recursive(child, counts)
+		if _contains_company_or_larger(child):
+			return true
+	return false
