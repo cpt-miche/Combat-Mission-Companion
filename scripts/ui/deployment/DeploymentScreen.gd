@@ -28,7 +28,7 @@ func _ready() -> void:
 	_populate_p2_structure_picker()
 	unit_list.columns = 1
 	unit_list.hide_root = true
-	_build_deployable_unit_list()
+	_build_deployable_unit_list(false)
 	_refresh_phase_ui("Select a unit, then click a hex in your territory.")
 
 	hex_map_view.hex_selected.connect(_on_hex_selected)
@@ -215,7 +215,7 @@ func _apply_selected_p2_structure(index: int, show_status: bool) -> void:
 	if tree_changed:
 		GameState.players[1]["deployments"] = {}
 	if _player_index == 1:
-		_build_deployable_unit_list()
+		_build_deployable_unit_list(false)
 		if show_status:
 			_refresh_phase_ui("Opponent structure updated.")
 
@@ -440,20 +440,29 @@ func _default_rifle_platoon(side_label: String, company_suffix: String, platoon_
 		]
 	}
 
-func _build_deployable_unit_list() -> void:
+func _build_deployable_unit_list(preserve_ui_state: bool = true) -> void:
+	var collapsed_by_unit_id := {}
+	var previously_selected_unit_id := ""
+	if preserve_ui_state:
+		collapsed_by_unit_id = _collapsed_state_by_unit_id(unit_list.get_root())
+		previously_selected_unit_id = _selected_unit_id
+
 	unit_list.clear()
 	unit_list.hide_root = true
 	_deployable_units.clear()
-	_selected_unit_id = ""
-	_selected_unit_metadata = {}
+	if not preserve_ui_state:
+		_selected_unit_id = ""
+		_selected_unit_metadata = {}
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
 	var coordinates_by_unit_id := _deployment_coordinates_by_unit_id(deployments)
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
 	var root_item := unit_list.create_item()
-	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id)
+	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id, collapsed_by_unit_id)
+	if preserve_ui_state and not previously_selected_unit_id.is_empty():
+		_restore_selected_unit(previously_selected_unit_id)
 
-func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}) -> void:
+func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}, collapsed_by_unit_id: Dictionary = {}) -> void:
 	if typeof(node) != TYPE_DICTIONARY:
 		return
 
@@ -487,10 +496,11 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coo
 		return
 
 	for child in children_variant:
-		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id)
+		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id, collapsed_by_unit_id)
 
 	if item.get_child_count() > 0:
-		item.set_collapsed(true)
+		var was_collapsed := bool(collapsed_by_unit_id.get(unit_id, true))
+		item.set_collapsed(was_collapsed)
 
 func _on_unit_item_selected() -> void:
 	var selected_item := unit_list.get_selected()
@@ -566,14 +576,18 @@ func _on_hex_selected(column: int, row: int) -> void:
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
 	var target_key := "%d,%d" % [column, row]
 	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
+	var units_on_target_hex := _deployed_unit_snapshots_at_key(deployments, target_key)
+	var filtered_units_on_target_hex: Array[Dictionary] = []
+	for deployed_unit in units_on_target_hex:
+		if String(deployed_unit.get("id", "")) == unit_id:
+			continue
+		filtered_units_on_target_hex.append(deployed_unit)
 
 	var next_deployments := deployments.duplicate(true)
 	if existing_key != "":
 		next_deployments.erase(existing_key)
-	next_deployments.erase(target_key)
 
-	var snapshot := _deployed_unit_snapshots(next_deployments)
-	var placement_block_reason := DeploymentValidator.placement_block_reason(unit_snapshot, snapshot)
+	var placement_block_reason := DeploymentValidator.placement_block_reason(unit_snapshot, filtered_units_on_target_hex)
 	if not placement_block_reason.is_empty():
 		_refresh_phase_ui(placement_block_reason)
 		return
@@ -593,6 +607,71 @@ func _deployed_unit_snapshots(deployments: Dictionary) -> Array[Dictionary]:
 		if typeof(unit_data) == TYPE_DICTIONARY:
 			units.append(unit_data)
 	return units
+
+func _deployed_unit_snapshots_at_key(deployments: Dictionary, key: String) -> Array[Dictionary]:
+	var units: Array[Dictionary] = []
+	if not deployments.has(key):
+		return units
+	var deployment_variant: Variant = deployments[key]
+	if typeof(deployment_variant) == TYPE_DICTIONARY:
+		units.append(deployment_variant as Dictionary)
+	elif typeof(deployment_variant) == TYPE_ARRAY:
+		for unit_variant in (deployment_variant as Array):
+			if typeof(unit_variant) == TYPE_DICTIONARY:
+				units.append(unit_variant as Dictionary)
+	return units
+
+func _collapsed_state_by_unit_id(root_item: TreeItem) -> Dictionary:
+	var collapsed_by_unit_id := {}
+	_collect_collapsed_state(root_item, collapsed_by_unit_id)
+	return collapsed_by_unit_id
+
+func _collect_collapsed_state(item: TreeItem, collapsed_by_unit_id: Dictionary) -> void:
+	if item == null:
+		return
+	var metadata_variant: Variant = item.get_metadata(0)
+	if typeof(metadata_variant) == TYPE_DICTIONARY:
+		var metadata := metadata_variant as Dictionary
+		var unit_id := String(metadata.get("unit_id", ""))
+		if not unit_id.is_empty() and item.get_child_count() > 0:
+			collapsed_by_unit_id[unit_id] = item.is_collapsed()
+
+	var child := item.get_first_child()
+	while child != null:
+		_collect_collapsed_state(child, collapsed_by_unit_id)
+		child = child.get_next()
+
+func _restore_selected_unit(unit_id: String) -> void:
+	var item := _find_tree_item_by_unit_id(unit_list.get_root(), unit_id)
+	if item == null:
+		_selected_unit_id = ""
+		_selected_unit_metadata = {}
+		return
+	item.select(0)
+	var selected_metadata_variant: Variant = item.get_metadata(0)
+	if typeof(selected_metadata_variant) == TYPE_DICTIONARY:
+		_selected_unit_metadata = (selected_metadata_variant as Dictionary).duplicate(true)
+		_selected_unit_id = unit_id
+	else:
+		_selected_unit_id = ""
+		_selected_unit_metadata = {}
+
+func _find_tree_item_by_unit_id(item: TreeItem, unit_id: String) -> TreeItem:
+	if item == null:
+		return null
+	var metadata_variant: Variant = item.get_metadata(0)
+	if typeof(metadata_variant) == TYPE_DICTIONARY:
+		var metadata := metadata_variant as Dictionary
+		if String(metadata.get("unit_id", "")) == unit_id:
+			return item
+
+	var child := item.get_first_child()
+	while child != null:
+		var found := _find_tree_item_by_unit_id(child, unit_id)
+		if found != null:
+			return found
+		child = child.get_next()
+	return null
 
 func _deployment_key_for_unit_id(deployments: Dictionary, unit_id: String) -> String:
 	if unit_id.is_empty():
