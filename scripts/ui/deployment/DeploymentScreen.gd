@@ -440,12 +440,14 @@ func _build_deployable_unit_list() -> void:
 	_deployable_units.clear()
 	_selected_unit_id = ""
 	_selected_unit_metadata = {}
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var coordinates_by_unit_id := _deployment_coordinates_by_unit_id(deployments)
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
 	var root_item := unit_list.create_item()
-	_build_deployable_unit_tree_items(root_item, division_tree)
+	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id)
 
-func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant) -> void:
+func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}) -> void:
 	if typeof(node) != TYPE_DICTIONARY:
 		return
 
@@ -456,14 +458,19 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant) -> 
 	var item := unit_list.create_item(parent_item)
 	var block_reason := _deployability_block_reason(unit_data)
 	var display_label := _unit_label(unit_data)
+	var unit_id := String(unit_data.get("id", ""))
+	var deployed_coordinate := String(coordinates_by_unit_id.get(unit_id, ""))
+	var is_placed := not deployed_coordinate.is_empty()
+	if is_placed:
+		display_label += " (Placed: %s)" % deployed_coordinate
 	if not block_reason.is_empty():
 		display_label += "  [Not deployable: %s]" % block_reason
 	item.set_text(0, display_label)
-	item.set_selectable(0, block_reason.is_empty())
+	item.set_selectable(0, block_reason.is_empty() or is_placed)
 	item.set_metadata(0, {
 		"unit": unit_data,
 		"base_block_reason": block_reason,
-		"unit_id": String(unit_data.get("id", ""))
+		"unit_id": unit_id
 	})
 	_deployable_units.append(unit_data)
 
@@ -472,7 +479,7 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant) -> 
 		return
 
 	for child in children_variant:
-		_build_deployable_unit_tree_items(item, child)
+		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id)
 
 	if item.get_child_count() > 0:
 		item.set_collapsed(true)
@@ -560,7 +567,10 @@ func _on_hex_selected(column: int, row: int) -> void:
 
 	next_deployments[target_key] = unit_snapshot
 	GameState.players[_player_index]["deployments"] = next_deployments
-	_refresh_phase_ui("Placed %s at %d,%d." % [_unit_label(unit_data), column, row])
+	if existing_key.is_empty():
+		_refresh_phase_ui("Placed %s at %d,%d." % [_unit_label(unit_data), column, row])
+	else:
+		_refresh_phase_ui("Moved %s from %s to %d,%d." % [_unit_label(unit_data), existing_key, column, row])
 
 func _deployed_unit_snapshots(deployments: Dictionary) -> Array[Dictionary]:
 	var units: Array[Dictionary] = []
@@ -580,6 +590,18 @@ func _deployment_key_for_unit_id(deployments: Dictionary, unit_id: String) -> St
 		if String(unit_data.get("id", "")) == unit_id:
 			return String(key)
 	return ""
+
+func _deployment_coordinates_by_unit_id(deployments: Dictionary) -> Dictionary:
+	var coordinates_by_unit_id := {}
+	for key in deployments.keys():
+		var unit_data = deployments[key]
+		if typeof(unit_data) != TYPE_DICTIONARY:
+			continue
+		var unit_id := String((unit_data as Dictionary).get("id", ""))
+		if unit_id.is_empty():
+			continue
+		coordinates_by_unit_id[unit_id] = String(key)
+	return coordinates_by_unit_id
 
 func _unit_snapshot(unit: Dictionary) -> Dictionary:
 	var unit_type := _string_for_type(unit.get("type", ""))
