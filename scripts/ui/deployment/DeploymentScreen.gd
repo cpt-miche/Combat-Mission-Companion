@@ -456,11 +456,11 @@ func _build_deployable_unit_list(preserve_ui_state: bool = true) -> void:
 		_selected_unit_metadata = {}
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
 	var coordinates_by_unit_id := _deployment_coordinates_by_unit_id(deployments)
-	_unplaced_deployable_unit_ids = _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id)
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
 	var root_item := unit_list.create_item()
 	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id, collapsed_by_unit_id)
+	_unplaced_deployable_unit_ids = _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id)
 	if preserve_ui_state and not previously_selected_unit_id.is_empty():
 		_restore_selected_unit(previously_selected_unit_id)
 
