@@ -535,7 +535,12 @@ func _on_hex_selected(column: int, row: int) -> void:
 		_refresh_phase_ui("Select a unit first.")
 		return
 
-	var unit_data := _selected_unit_metadata.get("unit", {}) as Dictionary
+	var unit_data_variant: Variant = _selected_unit_metadata.get("unit", {})
+	if typeof(unit_data_variant) != TYPE_DICTIONARY or (unit_data_variant as Dictionary).is_empty():
+		_refresh_phase_ui("Select a unit first.")
+		return
+	var unit_data := unit_data_variant as Dictionary
+
 	var base_block_reason := String(_selected_unit_metadata.get("base_block_reason", ""))
 	if not base_block_reason.is_empty():
 		_refresh_phase_ui(base_block_reason)
