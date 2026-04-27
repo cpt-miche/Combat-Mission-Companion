@@ -393,7 +393,8 @@ func _persist_units_to_state() -> void:
 
 func _load_or_initialize_units() -> void:
 	if not GameState.gameplay_units.is_empty():
-		_units = GameState.gameplay_units.duplicate(true)
+		_units = _without_headquarters_units(GameState.gameplay_units)
+		GameState.gameplay_units = _units.duplicate(true)
 		return
 	var generated: Dictionary = {}
 	for player_index in range(min(GameState.players.size(), 2)):
@@ -407,13 +408,16 @@ func _load_or_initialize_units() -> void:
 			var unit_data := deployments[key] as Dictionary
 			if not GameState.is_unit_alive(unit_data):
 				continue
+			var unit_type := _normalized_unit_type(unit_data.get("type", "infantry"))
+			if unit_type == "headquarters":
+				continue
 			var id := String(unit_data.get("id", "P%d_U_%d_%d" % [player_index + 1, q, r]))
 			generated[id] = {
 				"id": id,
 				"owner": player_index,
 				"hex": Vector2i(q, r),
 				"initiative": 50,
-				"unit_type": String(unit_data.get("type", "tank" if bool(unit_data.get("is_tank", false)) else "infantry")),
+				"unit_type": unit_type,
 				"formation_size": String(unit_data.get("size", "company")),
 				"status": String(unit_data.get("status", "alive")).to_lower(),
 				"is_alive": bool(unit_data.get("is_alive", String(unit_data.get("status", "alive")).to_lower() != "dead")),
@@ -422,6 +426,49 @@ func _load_or_initialize_units() -> void:
 			}
 	_units = generated
 	GameState.gameplay_units = _units.duplicate(true)
+
+func _without_headquarters_units(units: Dictionary) -> Dictionary:
+	var filtered := {}
+	for unit_id_variant in units.keys():
+		var unit_id := String(unit_id_variant)
+		var unit_variant: Variant = units[unit_id_variant]
+		if typeof(unit_variant) != TYPE_DICTIONARY:
+			continue
+		var unit := unit_variant as Dictionary
+		var unit_type := _normalized_unit_type(unit.get("unit_type", unit.get("type", "infantry")))
+		if unit_type == "headquarters":
+			continue
+		filtered[unit_id] = unit.duplicate(true)
+	return filtered
+
+func _normalized_unit_type(raw_type: Variant) -> String:
+	if typeof(raw_type) == TYPE_INT:
+		match int(raw_type):
+			UnitType.Value.INFANTRY:
+				return "infantry"
+			UnitType.Value.TANK:
+				return "tank"
+			UnitType.Value.ENGINEER:
+				return "engineer"
+			UnitType.Value.ARTILLERY:
+				return "artillery"
+			UnitType.Value.RECON:
+				return "recon"
+			UnitType.Value.AIRBORNE:
+				return "airborne"
+			UnitType.Value.MECHANIZED:
+				return "mechanized"
+			UnitType.Value.MOTORIZED:
+				return "motorized"
+			UnitType.Value.ANTI_TANK:
+				return "anti_tank"
+			UnitType.Value.AIR_DEFENSE:
+				return "air_defense"
+			UnitType.Value.HEADQUARTERS:
+				return "headquarters"
+			_:
+				return String(raw_type).strip_edges().to_lower()
+	return String(raw_type).strip_edges().to_lower()
 
 func _begin_player_turn() -> void:
 	_autosave_current_game()
