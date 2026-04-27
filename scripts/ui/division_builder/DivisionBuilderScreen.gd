@@ -725,15 +725,7 @@ func _assign_unit_names_recursive(unit: UnitModel, parent: UnitModel) -> void:
 
 	var sibling_index := 1
 	if parent != null:
-		var same_size_index := 0
-		for sibling in parent.children:
-			if sibling == null:
-				continue
-			if sibling.size == unit.size:
-				same_size_index += 1
-			if sibling == unit:
-				sibling_index = max(same_size_index, 1)
-				break
+		sibling_index = _sibling_index_for_naming(parent, unit)
 
 	var names := _name_for_echelon(unit, sibling_index)
 	unit.display_name = String(names.get("display_name", "Unit"))
@@ -747,6 +739,11 @@ func _name_for_echelon(unit: UnitModel, sibling_index: int) -> Dictionary:
 	var size := unit.size
 	var type_label := UnitType.display_name(unit.type)
 	var is_auto_hq := unit.template_id.begins_with("auto_hq_")
+	if unit.type == UnitType.Value.HEADQUARTERS:
+		return {
+			"display_name": "%s HQ" % UnitSize.display_name(size),
+			"short_name": "%s HQ" % UnitSize.display_name(size)
+		}
 	match size:
 		UnitSize.Value.ARMY:
 			return {
@@ -810,6 +807,25 @@ func _name_for_echelon(unit: UnitModel, sibling_index: int) -> Dictionary:
 				"display_name": "%s %s" % [nth, UnitSize.display_name(size)],
 				"short_name": "%s" % nth
 			}
+
+func _sibling_index_for_naming(parent: UnitModel, unit: UnitModel) -> int:
+	var same_size_index := 0
+	for sibling in parent.children:
+		if sibling == null:
+			continue
+		if sibling.size != unit.size:
+			continue
+
+		var include_in_index := true
+		if unit.size == UnitSize.Value.COMPANY and sibling.type == UnitType.Value.HEADQUARTERS:
+			include_in_index = unit.type == UnitType.Value.HEADQUARTERS
+
+		if include_in_index:
+			same_size_index += 1
+		if sibling == unit:
+			return max(same_size_index, 1)
+
+	return 1
 
 func _ordinal(value: int) -> String:
 	var positive_value := maxi(value, 1)

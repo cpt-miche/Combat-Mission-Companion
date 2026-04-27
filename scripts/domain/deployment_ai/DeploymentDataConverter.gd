@@ -181,12 +181,18 @@ static func _flatten_deployable_elements(
 	if unit_id.is_empty():
 		return
 
+	var unit_type := _normalized_unit_type_key(unit.get("type", "infantry"))
+	if unit_type == "headquarters":
+		for child_variant in unit.get("children", []):
+			_flatten_deployable_elements(child_variant, player_index, unit_id, deployment_index, output)
+		return
+
 	var deployed_hex_id := String(deployment_index.get(unit_id, ""))
 	output.append(DeploymentTypes.make_deployable_element(
 		unit_id,
 		player_index,
 		String(unit.get("name", unit_id)),
-		planner_role_for(unit.get("type", "infantry")),
+		planner_role_for(unit_type),
 		String(unit.get("size", "company")),
 		parent_id,
 		deployed_hex_id,
