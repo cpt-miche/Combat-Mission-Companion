@@ -225,10 +225,11 @@ func _on_add_unit_pressed() -> void:
 	var nation := String(_pending_unit_data.get("nation", _selected_nation()))
 	var top_level_count := maxi(int(_pending_unit_data.get("count", 1)), 1)
 	var added_roots: Array[UnitModel] = []
+	var added_requested_units: Array[UnitModel] = []
 
 	for i in range(top_level_count):
-		var candidate := _create_unit_from_template_tree(_pending_unit_data, nation, i + 1, top_level_count)
-		candidate = _wrap_candidate_with_required_hq(selected_parent, candidate, nation)
+		var requested_unit := _create_unit_from_template_tree(_pending_unit_data, nation, i + 1, top_level_count)
+		var candidate := _wrap_candidate_with_required_hq(selected_parent, requested_unit, nation)
 		_apply_auto_variant_to_candidate(selected_parent, candidate)
 		var insertion_result := _insert_subtree_with_validation(selected_parent, candidate)
 		if not bool(insertion_result.get("ok", false)):
@@ -239,12 +240,13 @@ func _on_add_unit_pressed() -> void:
 			_refresh_all()
 			return
 		added_roots.append(candidate)
+		added_requested_units.append(requested_unit)
 
 	if added_roots.is_empty():
 		return
 
 	_assign_unit_names()
-	_selected_unit = added_roots[0]
+	_selected_unit = added_requested_units[0] if not added_requested_units.is_empty() else added_roots[0]
 	_refresh_all()
 
 func _has_grouped_template(grouped_templates: Array, nation_id: String, unit_type: UnitType.Value, unit_size: UnitSize.Value, template_name: String) -> bool:
@@ -744,6 +746,7 @@ func _name_for_echelon(unit: UnitModel, sibling_index: int) -> Dictionary:
 	var nth := _ordinal(sibling_index)
 	var size := unit.size
 	var type_label := UnitType.display_name(unit.type)
+	var is_auto_hq := unit.template_id.begins_with("auto_hq_")
 	match size:
 		UnitSize.Value.ARMY:
 			return {
@@ -751,11 +754,21 @@ func _name_for_echelon(unit: UnitModel, sibling_index: int) -> Dictionary:
 				"short_name": "Army HQ"
 			}
 		UnitSize.Value.DIVISION:
+			if is_auto_hq:
+				return {
+					"display_name": "%s Division HQ" % nth,
+					"short_name": "%s Div HQ" % nth
+				}
 			return {
 				"display_name": "%s %s Division" % [nth, type_label],
 				"short_name": "%s Div" % nth
 			}
 		UnitSize.Value.REGIMENT:
+			if is_auto_hq:
+				return {
+					"display_name": "%s Regiment HQ" % nth,
+					"short_name": "%s Regt HQ" % nth
+				}
 			return {
 				"display_name": "%s Regiment" % nth,
 				"short_name": "%s Regt" % nth
