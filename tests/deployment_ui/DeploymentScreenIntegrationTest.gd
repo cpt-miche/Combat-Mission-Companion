@@ -36,6 +36,7 @@ func _test_replacing_same_unit_keeps_single_deployment_entry() -> void:
 	var screen := _spawn_screen()
 	_select_unit_by_id(screen, "u1")
 	screen._on_hex_selected(0, 0)
+	_select_unit_by_id(screen, "u1")
 	screen._on_hex_selected(0, 1)
 
 	var deployments: Dictionary = GameState.players[0].get("deployments", {})
