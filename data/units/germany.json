@@ -64,18 +64,27 @@
               ]
             },
             {
-              "id": "ger_grenadier_rifle_co_mg_group",
-              "display_name": "MG Group",
+              "id": "ger_grenadier_rifle_co_weapons_platoon",
+              "display_name": "Weapons Platoon",
               "type": "INFANTRY",
-              "size": "SECTION",
+              "size": "PLATOON",
               "count": 1,
               "children": [
                 {
-                  "id": "ger_grenadier_rifle_co_hmg_team",
-                  "display_name": "Heavy MG detachment / gun team",
+                  "id": "ger_grenadier_rifle_co_mg_group",
+                  "display_name": "MG Group",
                   "type": "INFANTRY",
-                  "size": "SQUAD",
-                  "count": 2
+                  "size": "SECTION",
+                  "count": 1,
+                  "children": [
+                    {
+                      "id": "ger_grenadier_rifle_co_hmg_team",
+                      "display_name": "Heavy MG detachment / gun team",
+                      "type": "INFANTRY",
+                      "size": "SQUAD",
+                      "count": 2
+                    }
+                  ]
                 }
               ]
             }
