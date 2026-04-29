@@ -387,15 +387,46 @@ func _default_rifle_company_children(side_label: String, company_suffix: String)
 		_default_rifle_platoon(side_label, company_suffix, 1),
 		_default_rifle_platoon(side_label, company_suffix, 2),
 		_default_rifle_platoon(side_label, company_suffix, 3),
-		{
-			"id": "%s_weapons_platoon" % company_tag,
-			"name": "%s Rifle Company %s Weapons Platoon" % [side_label, company_upper],
-			"type": "infantry",
-			"size": "platoon",
-			"status": "alive",
-			"children": []
-		}
+		_default_rifle_company_weapons_platoon(side_label, company_suffix)
 	]
+
+
+func _default_rifle_company_weapons_platoon(side_label: String, company_suffix: String) -> Dictionary:
+	var company_tag := "%s_rifle_company_%s" % [side_label, company_suffix]
+	var weapons_platoon_tag := "%s_weapons_platoon" % company_tag
+	return {
+		"id": weapons_platoon_tag,
+		"name": "%s Rifle Company %s Weapons Platoon" % [side_label, company_suffix.to_upper()],
+		"type": "infantry",
+		"size": "platoon",
+		"status": "alive",
+		"children": [
+			{
+				"id": "%s_hq" % weapons_platoon_tag,
+				"name": "%s Weapons Platoon HQ" % side_label,
+				"type": "headquarters",
+				"size": "section",
+				"status": "alive",
+				"children": []
+			},
+			{
+				"id": "%s_mmg_section" % weapons_platoon_tag,
+				"name": "%s Weapons Platoon MMG Section" % side_label,
+				"type": "infantry",
+				"size": "section",
+				"status": "alive",
+				"children": []
+			},
+			{
+				"id": "%s_mortar_section" % weapons_platoon_tag,
+				"name": "%s Weapons Platoon Mortar Section" % side_label,
+				"type": "infantry",
+				"size": "section",
+				"status": "alive",
+				"children": []
+			}
+		]
+	}
 
 func _default_rifle_platoon(side_label: String, company_suffix: String, platoon_number: int) -> Dictionary:
 	var platoon_tag := "%s_rifle_company_%s_platoon_%d" % [side_label, company_suffix, platoon_number]
