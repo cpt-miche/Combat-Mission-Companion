@@ -5,6 +5,7 @@ const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
 const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 const ReconSystem = preload("res://scripts/systems/ReconSystem.gd")
 const OperationalAIService = preload("res://scripts/systems/operational_ai/OperationalAIService.gd")
+const Rules = preload("res://scripts/core/Rules.gd")
 
 static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: CombatLog, trace_context: Dictionary = {}) -> Dictionary:
 	var execution_queue: Array[Dictionary] = []
@@ -78,6 +79,17 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		if path.size() > 1:
 			for i in range(1, path.size()):
 				var next_hex: Vector2i = path[i]
+				var stack_check := _validate_destination_stack(units, unit_id, unit_state, next_hex)
+				if not bool(stack_check.get("ok", false)):
+					var stack_payload := {
+						"unit_id": unit_id,
+						"step_index": i,
+						"to": _hex_to_dict(next_hex),
+						"reason": String(stack_check.get("reason", "stack violation"))
+					}
+					_add_anomaly(trace_anomalies, turn_trace, "illegal_stack_move", stack_payload)
+					combat_log.add_entry("%s halted: %s at %d,%d." % [unit_id, String(stack_check.get("reason", "stack violation")), next_hex.x, next_hex.y], stack_payload)
+					break
 				execution_queue.append({"type": "move", "unit_id": unit_id, "to": next_hex})
 				unit_state["hex"] = next_hex
 				_add_trace_event(trace_events, turn_trace, "move_step", {
@@ -288,3 +300,18 @@ static func _detect_unexpected_state_mutations(base_units: Dictionary, resolved_
 
 static func _hex_to_dict(hex: Vector2i) -> Dictionary:
 	return {"q": hex.x, "r": hex.y}
+
+static func _validate_destination_stack(units: Dictionary, moving_unit_id: String, moving_unit: Dictionary, target_hex: Vector2i) -> Dictionary:
+	var occupants: Array[Dictionary] = []
+	for candidate_id in units.keys():
+		if String(candidate_id) == moving_unit_id:
+			continue
+		var candidate := units[candidate_id] as Dictionary
+		if not GameState.is_unit_alive(candidate):
+			continue
+		if int(candidate.get("owner", -1)) != int(moving_unit.get("owner", -1)):
+			continue
+		if (candidate.get("hex", Vector2i.ZERO) as Vector2i) != target_hex:
+			continue
+		occupants.append(candidate)
+	return Rules.can_enter_stack(moving_unit, occupants)
