@@ -85,18 +85,23 @@ func set_display_settings(preset_id: String, window_mode: String, ui_scale_mode:
 	_apply_effective_ui_scale()
 	_last_known_window_size = get_window_size()
 	if persist:
-		SaveManager.save_display_settings({
-			"preset_id": applied_preset_id,
-			"window_mode": applied_window_mode,
-			"ui_scale_mode": applied_ui_scale_mode,
-			"ui_scale_value": applied_ui_scale_value
-		})
+		var save_manager := _get_save_manager()
+		if save_manager != null:
+			save_manager.call("save_display_settings", {
+				"preset_id": applied_preset_id,
+				"window_mode": applied_window_mode,
+				"ui_scale_mode": applied_ui_scale_mode,
+				"ui_scale_value": applied_ui_scale_value
+			})
 	var applied_settings := get_current_settings()
 	runtime_display_updated.emit(applied_settings)
 	return applied_settings
 
 func load_and_apply() -> String:
-	var settings := SaveManager.load_display_settings()
+	var settings := {}
+	var save_manager := _get_save_manager()
+	if save_manager != null:
+		settings = save_manager.call("load_display_settings") as Dictionary
 	var stored_preset_id := String(settings.get("preset_id", DEFAULT_PRESET_ID))
 	var stored_window_mode := String(settings.get("window_mode", DEFAULT_WINDOW_MODE))
 	var stored_ui_scale_mode := String(settings.get("ui_scale_mode", DEFAULT_UI_SCALE_MODE))
@@ -136,6 +141,12 @@ func get_current_settings() -> Dictionary:
 		"effective_ui_scale": get_effective_ui_scale(),
 		"window_size": get_window_size()
 	}
+
+func _get_save_manager() -> Node:
+	var root := get_tree().root if get_tree() != null else null
+	if root == null:
+		return null
+	return root.get_node_or_null("SaveManager")
 
 func _apply_preset_id(preset_id: String) -> String:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
