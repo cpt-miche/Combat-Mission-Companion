@@ -14,9 +14,23 @@ godot --version
 echo "Importing project assets..."
 godot --headless --path . --import
 
+echo "Validating autoload singleton scripts first..."
+for autoload_script in \
+  "res://scripts/core/GameState.gd" \
+  "res://scripts/core/DisplaySettings.gd"; do
+  if ! godot --headless --path . --check-only --script "$autoload_script"; then
+    echo "Autoload singleton failed to parse; downstream Identifier not found errors are secondary." >&2
+    echo "Troubleshooting hint: verify [autoload] entries in project.godot point to valid script paths." >&2
+    exit 1
+  fi
+done
+
 echo "Checking GDScript parse errors..."
 while IFS= read -r script_path; do
   project_script="res://${script_path#./}"
+  if [[ "$project_script" == "res://scripts/core/GameState.gd" ]] || [[ "$project_script" == "res://scripts/core/DisplaySettings.gd" ]]; then
+    continue
+  fi
   godot --headless --path . --check-only --script "$project_script"
 done < <(find . -type f -name "*.gd" -not -path "./.godot/*" | sort)
 
