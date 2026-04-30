@@ -14,6 +14,7 @@ func _run() -> void:
 	_test_tree_model_is_hierarchical_and_collapsed_by_default()
 	_test_non_deployable_units_stay_blocked()
 	_test_finish_deployment_requires_all_deployable_units()
+	_test_finish_deployment_allows_subordinates_when_parent_placed()
 	_test_finish_deployment_phase_transitions()
 
 	if _failures.is_empty():
@@ -154,6 +155,25 @@ func _test_finish_deployment_requires_all_deployable_units() -> void:
 	_assert_true(missing_item != null, "Expected missing deployable unit to remain visible in deployment tree.")
 	if missing_item != null:
 		_assert_true(missing_item.get_custom_color(0) == Color(1.0, 0.35, 0.35), "Expected unplaced deployable unit to be highlighted in the sidebar.")
+
+	_cleanup_screen(screen)
+
+func _test_finish_deployment_allows_subordinates_when_parent_placed() -> void:
+	_reset_state(GameState.Phase.DEPLOYMENT_P1)
+	GameState.territory_map = {
+		"0,0": GameState.TerritoryOwnership.PLAYER_1
+	}
+	var platoon := _platoon("plt_a", "Platoon A")
+	var company := _company("co_a", "A Company")
+	company["children"] = [platoon]
+	GameState.players[0]["division_tree"] = _root_with_children([company])
+
+	var screen := _spawn_screen()
+	_select_unit_by_id(screen, "co_a")
+	screen._on_hex_selected(0, 0)
+	screen._on_finish_deployment_pressed()
+
+	_assert_equal(GameState.Phase.DEPLOYMENT_P2, GameState.current_phase, "Deploying a parent formation should satisfy subordinate deployment requirements.")
 
 	_cleanup_screen(screen)
 

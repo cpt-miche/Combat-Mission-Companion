@@ -733,16 +733,63 @@ func _deployment_coordinates_by_unit_id(deployments: Dictionary) -> Dictionary:
 
 func _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id: Dictionary) -> Dictionary:
 	var unplaced_by_id := {}
+	var covered_unit_ids := _unit_ids_covered_by_higher_echelon_deployments()
 	for deployable_unit in _deployable_units:
 		if not _is_deployable(deployable_unit):
 			continue
 		var unit_id := String(deployable_unit.get("id", ""))
 		if unit_id.is_empty():
 			continue
+		if covered_unit_ids.has(unit_id):
+			continue
 		if coordinates_by_unit_id.has(unit_id):
 			continue
 		unplaced_by_id[unit_id] = true
 	return unplaced_by_id
+
+func _unit_ids_covered_by_higher_echelon_deployments() -> Dictionary:
+	var covered_unit_ids := {}
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	if deployments.is_empty():
+		return covered_unit_ids
+
+	var deployed_unit_ids := {}
+	for deployment in deployments.values():
+		if typeof(deployment) != TYPE_DICTIONARY:
+			continue
+		var deployed_unit_id := String((deployment as Dictionary).get("id", ""))
+		if deployed_unit_id.is_empty():
+			continue
+		deployed_unit_ids[deployed_unit_id] = true
+
+	if deployed_unit_ids.is_empty():
+		return covered_unit_ids
+
+	var division_tree := GameState.players[_player_index].get("division_tree", {})
+	_collect_covered_descendant_ids(division_tree, false, deployed_unit_ids, covered_unit_ids)
+	return covered_unit_ids
+
+func _collect_covered_descendant_ids(node: Variant, ancestor_deployed: bool, deployed_unit_ids: Dictionary, covered_unit_ids: Dictionary) -> void:
+	if typeof(node) != TYPE_DICTIONARY:
+		return
+
+	var unit_data := node as Dictionary
+	if unit_data.is_empty():
+		return
+
+	var unit_id := String(unit_data.get("id", ""))
+	var current_is_deployed := not unit_id.is_empty() and deployed_unit_ids.has(unit_id)
+	var descendant_is_covered := ancestor_deployed or current_is_deployed
+
+	if ancestor_deployed and not unit_id.is_empty():
+		covered_unit_ids[unit_id] = true
+
+	var children_variant: Variant = unit_data.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return
+
+	for child in (children_variant as Array):
+		_collect_covered_descendant_ids(child, descendant_is_covered, deployed_unit_ids, covered_unit_ids)
 
 func _unit_snapshot(unit: Dictionary) -> Dictionary:
 	# Maintainer note: keep `_unit_snapshot`, `_string_for_type`, `_string_for_size`, `_size_rank`,
