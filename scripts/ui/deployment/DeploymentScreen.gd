@@ -870,8 +870,12 @@ func _on_finish_deployment_pressed() -> void:
 		return
 
 	if _player_index == 0:
+		var p2_is_ai := _is_ai_controlled(1)
 		_run_ai_deployment_if_needed(1)
-		GameState.set_phase(GameState.Phase.DEPLOYMENT_P2)
+		if p2_is_ai:
+			GameState.set_phase(GameState.Phase.GAMEPLAY)
+		else:
+			GameState.set_phase(GameState.Phase.DEPLOYMENT_P2)
 		return
 
 	_run_ai_deployment_if_needed(0)
