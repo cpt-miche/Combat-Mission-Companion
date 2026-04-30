@@ -489,13 +489,14 @@ func _build_deployable_unit_list(preserve_ui_state: bool = true) -> void:
 	var coordinates_by_unit_id := _deployment_coordinates_by_unit_id(deployments)
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
+	var covered_unit_ids := _unit_ids_covered_by_higher_echelon_deployments()
 	var root_item := unit_list.create_item()
-	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id, collapsed_by_unit_id)
+	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id, collapsed_by_unit_id, covered_unit_ids)
 	_unplaced_deployable_unit_ids = _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id)
 	if preserve_ui_state and not previously_selected_unit_id.is_empty():
 		_restore_selected_unit(previously_selected_unit_id)
 
-func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}, collapsed_by_unit_id: Dictionary = {}) -> void:
+func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}, collapsed_by_unit_id: Dictionary = {}, covered_unit_ids: Dictionary = {}) -> void:
 	if typeof(node) != TYPE_DICTIONARY:
 		return
 
@@ -517,7 +518,8 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coo
 		display_label += "  [Not deployable: %s]" % block_reason
 	item.set_text(0, display_label)
 	item.set_selectable(0, block_reason.is_empty() or is_placed)
-	if block_reason.is_empty() and not is_placed:
+	var is_covered_by_higher_echelon := covered_unit_ids.has(unit_id)
+	if block_reason.is_empty() and not is_placed and not is_covered_by_higher_echelon:
 		item.set_custom_color(0, Color(1.0, 0.35, 0.35))
 	item.set_metadata(0, {
 		"unit": unit_data,
@@ -531,7 +533,7 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coo
 		return
 
 	for child in children_variant:
-		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id, collapsed_by_unit_id)
+		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id, collapsed_by_unit_id, covered_unit_ids)
 
 	if item.get_child_count() > 0:
 		var was_collapsed := bool(collapsed_by_unit_id.get(unit_id, true))
