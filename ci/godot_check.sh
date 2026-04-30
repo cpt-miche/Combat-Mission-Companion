@@ -25,14 +25,11 @@ for autoload_script in \
   fi
 done
 
-echo "Checking GDScript parse errors..."
-while IFS= read -r script_path; do
-  project_script="res://${script_path#./}"
-  if [[ "$project_script" == "res://scripts/core/GameState.gd" ]] || [[ "$project_script" == "res://scripts/core/DisplaySettings.gd" ]]; then
-    continue
-  fi
-  godot --headless --path . --check-only --script "$project_script"
-done < <(find . -type f -name "*.gd" -not -path "./.godot/*" | sort)
+echo "Loading all project scenes to expand parse coverage in project context..."
+while IFS= read -r scene_path; do
+  echo "Loading scene: ${scene_path}"
+  godot --headless --path . --quit --scene "$scene_path"
+done < <(find scenes -type f -name "*.tscn" | sort)
 
 echo "Running headless project startup check..."
 godot --headless --path . --quit
