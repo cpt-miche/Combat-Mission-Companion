@@ -51,3 +51,30 @@ offset_right = 1008.0
 offset_bottom = 568.0
 scroll_active = false
 bbcode_enabled = false
+
+[node name="SelectedHexPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 640.0
+offset_top = 580.0
+offset_right = 1008.0
+offset_bottom = 712.0
+
+[node name="SelectedHexVBox" type="VBoxContainer" parent="SelectedHexPanel"]
+layout_mode = 2
+
+[node name="SelectedHexTitleLabel" type="Label" parent="SelectedHexPanel/SelectedHexVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Selected Hex: -, -"
+
+[node name="SelectedHexTerrainLabel" type="Label" parent="SelectedHexPanel/SelectedHexVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Terrain: Unknown"
+
+[node name="SelectedHexUnitsLabel" type="Label" parent="SelectedHexPanel/SelectedHexVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+text = "Units: None"
