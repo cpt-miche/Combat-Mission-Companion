@@ -48,7 +48,7 @@ func _test_stack_cap_feedback() -> void:
 	_reset_state()
 	var screen := _spawn_screen()
 	screen._selected_unit_id = "u1"
-	var succeeded := screen._issue_move_order("u1", Vector2i(1, 0))
+	var succeeded: bool = screen._issue_move_order("u1", Vector2i(1, 0))
 	_assert_true(not succeeded, "Move order should be blocked when destination stack cap exceeded")
 	_assert_true(String(screen.info_label.text).contains("Stack exceeds"), "Blocked stack move should explain stack-cap feedback")
 	_cleanup_screen(screen)
