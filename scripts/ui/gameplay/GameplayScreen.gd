@@ -570,6 +570,22 @@ func _delete_path_at(hex: Vector2i) -> bool:
 			return true
 	return false
 
+
+func _units_at_hex(hex: Vector2i) -> Array[Dictionary]:
+	var units_at_hex: Array[Dictionary] = []
+	for unit_id in _units.keys():
+		var unit := _units[unit_id] as Dictionary
+		if not GameState.is_unit_alive(unit):
+			continue
+		if unit.get("hex", Vector2i.ZERO) != hex:
+			continue
+		units_at_hex.append({
+			"id": String(unit_id),
+			"owner": int(unit.get("owner", -1)),
+			"unit": unit
+		})
+	return units_at_hex
+
 func _unit_at_hex(hex: Vector2i, owner: int) -> String:
 	for unit_id in _units.keys():
 		var unit := _units[unit_id] as Dictionary
