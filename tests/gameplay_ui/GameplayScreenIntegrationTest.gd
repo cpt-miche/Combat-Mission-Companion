@@ -56,7 +56,7 @@ func _test_stack_cap_feedback() -> void:
 func _reset_state() -> void:
 	GameState.reset()
 	GameState.set_phase(GameState.Phase.GAMEPLAY)
-	GameState.active_player = 0
+	GameState.active_player = 0 # GameplayScreen reads GameState.active_player in _ready(); keep deterministic active side for tests.
 	GameState.players = [
 		{"name":"P1","division_tree":{},"deployments":{},"controller":"human"},
 		{"name":"P2","division_tree":{},"deployments":{},"controller":"human"}
