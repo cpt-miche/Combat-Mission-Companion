@@ -16,10 +16,15 @@ const HEX_ORIGIN := Vector2(120.0, 220.0)
 const PATH_PREVIEW_THROTTLE_MS := 75
 const UNIT_MARKER_RADIUS := 16.0
 const DRAG_START_THRESHOLD := 6.0
+enum OrderMode { MOVE, ATTACK, DIG_IN }
 
 @onready var info_label: Label = %InfoLabel
 @onready var log_label: RichTextLabel = %CombatLogLabel
 @onready var end_turn_button: Button = %EndTurnButton
+@onready var order_action_panel: PanelContainer = %OrderActionPanel
+@onready var move_button: Button = %MoveButton
+@onready var attack_button: Button = %AttackButton
+@onready var dig_in_button: Button = %DigInButton
 @onready var hovered_terrain_label: Label = %HoveredTerrainLabel
 @onready var animation_timer: Timer = %AnimationTimer
 @onready var selected_hex_title_label: Label = %SelectedHexTitleLabel
@@ -49,6 +54,7 @@ var _drag_start_mouse_pos := Vector2.ZERO
 var _drag_mouse_pos := Vector2.ZERO
 var _hovered_hex := Vector2i(-9999, -9999)
 var _selected_hex := Vector2i(-9999, -9999)
+var _active_order_mode: OrderMode = OrderMode.MOVE
 
 func _ready() -> void:
 	var dimensions := GameState.selected_map_dimensions
@@ -59,9 +65,13 @@ func _ready() -> void:
 	_rebuild_hex_polygon_cache()
 	_begin_player_turn()
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
+	move_button.pressed.connect(_on_move_mode_pressed)
+	attack_button.pressed.connect(_on_attack_mode_pressed)
+	dig_in_button.pressed.connect(_on_dig_in_mode_pressed)
 	animation_timer.timeout.connect(_on_animation_step)
 	_refresh_log()
-	info_label.text = "Drag friendly units to create move orders. Click+drag empty space to pan. Ctrl+Right-click to issue attack."
+	_update_info_label()
+	_update_order_action_panel()
 	_update_hovered_terrain_label(TerrainCatalog.default_terrain_id())
 	_refresh_selected_hex_panel(_selected_hex)
 
@@ -102,29 +112,31 @@ func _gui_input(event: InputEvent) -> void:
 
 		if mouse_event.button_index == MOUSE_BUTTON_RIGHT:
 			if _selected_unit_id.is_empty():
-				info_label.text = "Select a friendly unit first."
+				_update_info_label("Select a friendly unit first.")
 				return
-			var is_attack := Input.is_key_pressed(KEY_CTRL)
-			if not is_attack:
+			if _active_order_mode == OrderMode.MOVE:
 				if _issue_move_order(_selected_unit_id, hex):
-					info_label.text = "Move order created for %s." % _selected_unit_id
+					_update_info_label("Move order created for %s." % _selected_unit_id)
 					queue_redraw()
+				return
+			if _active_order_mode == OrderMode.DIG_IN:
+				_issue_dig_in_order(_selected_unit_id)
 				return
 			var target_id := ""
 			target_id = _unit_at_hex(hex, 1 - _active_player)
 			if target_id.is_empty():
-				info_label.text = "Attack orders require an enemy target hex."
+				_update_info_label("Attack orders require an enemy target hex.")
 				return
 			var start_hex := _units[_selected_unit_id].get("hex", Vector2i.ZERO) as Vector2i
 			var blocked := _blocked_cells(_selected_unit_id)
 			blocked.erase("%d,%d" % [hex.x, hex.y])
 			var path := Pathfinding.find_path(start_hex, hex, GameState.terrain_map, blocked)
 			if path.is_empty():
-				info_label.text = "No path found."
+				_update_info_label("No path found.")
 				return
 
 			_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
-			info_label.text = "Attack order created for %s." % _selected_unit_id
+			_update_info_label("Attack order created for %s." % _selected_unit_id)
 			_preview_path.clear()
 			_preview_target_hex = Vector2i(-9999, -9999)
 			queue_redraw()
@@ -148,26 +160,32 @@ func _handle_left_release(position: Vector2) -> void:
 			var hex := Vector2i(clicked_hex["q"], clicked_hex["r"])
 			_selected_hex = hex
 			_refresh_selected_hex_panel(_selected_hex)
+			var friendly_at_hex := _unit_at_hex(hex, _active_player)
+			if not _selected_unit_id.is_empty() and friendly_at_hex.is_empty():
+				if _try_issue_mode_order_on_hex(hex):
+					queue_redraw()
+					return
 			if _delete_path_at(hex):
 				queue_redraw()
-				info_label.text = "Order deleted."
+				_update_info_label("Order deleted.")
 				return
-			_selected_unit_id = _unit_at_hex(hex, _active_player)
+			_selected_unit_id = friendly_at_hex
 			_preview_path.clear()
 			_preview_target_hex = Vector2i(-9999, -9999)
 			if not _selected_unit_id.is_empty():
-				info_label.text = "Selected %s" % _selected_unit_id
+				_update_info_label("Selected %s" % _selected_unit_id)
+			_update_order_action_panel()
 			queue_redraw()
 		return
 
 	if not _dragging_unit_id.is_empty():
 		var dropped_hex_dict := _find_hex(position)
 		if dropped_hex_dict.is_empty():
-			info_label.text = "Drop on a hex to create a move order."
+			_update_info_label("Drop on a hex to create a move order.")
 		else:
 			var dropped_hex := Vector2i(dropped_hex_dict["q"], dropped_hex_dict["r"])
 			if _issue_move_order(_dragging_unit_id, dropped_hex):
-				info_label.text = "Move order created for %s." % _dragging_unit_id
+				_update_info_label("Move order created for %s." % _dragging_unit_id)
 		_preview_path.clear()
 		_preview_target_hex = Vector2i(-9999, -9999)
 		_pending_preview_target_hex = Vector2i(-9999, -9999)
@@ -177,9 +195,10 @@ func _handle_left_release(position: Vector2) -> void:
 			_selected_hex = Vector2i(clicked_hex["q"], clicked_hex["r"])
 			_refresh_selected_hex_panel(_selected_hex)
 		_selected_unit_id = _drag_candidate_unit_id
-		info_label.text = "Selected %s" % _selected_unit_id
+		_update_info_label("Selected %s" % _selected_unit_id)
 	_drag_candidate_unit_id = ""
 	_dragging_unit_id = ""
+	_update_order_action_panel()
 	queue_redraw()
 
 func _refresh_selected_hex_panel(hex: Vector2i) -> void:
@@ -355,22 +374,98 @@ func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 	if unit_id.is_empty() or not _units.has(unit_id):
 		return false
 	if not GameState.is_unit_alive(_units[unit_id] as Dictionary):
-		info_label.text = "%s is dead and cannot receive orders." % unit_id
+		_update_info_label("%s is dead and cannot receive orders." % unit_id)
 		return false
 	var start_hex := (_units[unit_id] as Dictionary).get("hex", Vector2i.ZERO) as Vector2i
 	var stack_validation := _validate_move_destination_stack(unit_id, target_hex)
 	if not bool(stack_validation.get("ok", false)):
-		info_label.text = String(stack_validation.get("reason", "Illegal destination stack."))
+		_update_info_label(String(stack_validation.get("reason", "Illegal destination stack.")))
 		return false
 	var blocked := _blocked_cells(unit_id)
 	var path := Pathfinding.find_path(start_hex, target_hex, GameState.terrain_map, blocked)
 	if path.is_empty():
-		info_label.text = "No path found."
+		_update_info_label("No path found.")
 		return false
 	_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_move_order(unit_id, path))
 	_preview_path.clear()
 	_preview_target_hex = Vector2i(-9999, -9999)
 	return true
+
+func _issue_dig_in_order(unit_id: String) -> void:
+	if unit_id.is_empty() or not _units.has(unit_id):
+		_update_info_label("Select a friendly unit first.")
+		return
+	var unit := _units[unit_id] as Dictionary
+	if int(unit.get("owner", -1)) != _active_player:
+		_update_info_label("Only friendly units can dig in.")
+		return
+	var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
+	_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_move_order(unit_id, [hex, hex]))
+	_update_info_label("Dig In order created for %s." % unit_id)
+	queue_redraw()
+
+func _try_issue_mode_order_on_hex(hex: Vector2i) -> bool:
+	if _selected_unit_id.is_empty():
+		return false
+	match _active_order_mode:
+		OrderMode.ATTACK:
+			var target_id := _unit_at_hex(hex, 1 - _active_player)
+			if target_id.is_empty():
+				_update_info_label("Attack mode requires clicking an enemy target hex.")
+				return false
+			var start_hex := _units[_selected_unit_id].get("hex", Vector2i.ZERO) as Vector2i
+			var blocked := _blocked_cells(_selected_unit_id)
+			blocked.erase("%d,%d" % [hex.x, hex.y])
+			var path := Pathfinding.find_path(start_hex, hex, GameState.terrain_map, blocked)
+			if path.is_empty():
+				_update_info_label("No path found.")
+				return false
+			_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
+			_update_info_label("Attack order created for %s." % _selected_unit_id)
+			return true
+		OrderMode.DIG_IN:
+			_issue_dig_in_order(_selected_unit_id)
+			return true
+		_:
+			if _issue_move_order(_selected_unit_id, hex):
+				_update_info_label("Move order created for %s." % _selected_unit_id)
+				return true
+	return false
+
+func _update_order_action_panel() -> void:
+	var has_friendly_selected := (not _selected_unit_id.is_empty()) and _units.has(_selected_unit_id) and int((_units[_selected_unit_id] as Dictionary).get("owner", -1)) == _active_player
+	order_action_panel.visible = has_friendly_selected
+
+func _set_order_mode(mode: OrderMode) -> void:
+	_active_order_mode = mode
+	_update_info_label()
+
+func _on_move_mode_pressed() -> void:
+	_set_order_mode(OrderMode.MOVE)
+
+func _on_attack_mode_pressed() -> void:
+	_set_order_mode(OrderMode.ATTACK)
+
+func _on_dig_in_mode_pressed() -> void:
+	_set_order_mode(OrderMode.DIG_IN)
+	if not _selected_unit_id.is_empty():
+		_issue_dig_in_order(_selected_unit_id)
+
+func _order_mode_text() -> String:
+	match _active_order_mode:
+		OrderMode.ATTACK:
+			return "Attack"
+		OrderMode.DIG_IN:
+			return "Dig In"
+		_:
+			return "Move"
+
+func _update_info_label(status_message: String = "") -> void:
+	var controls := "Mode: %s | Left-click unit to select, drag selected unit to create a move path, click+drag empty space to pan, right-click hex to issue mode action." % _order_mode_text()
+	if status_message.is_empty():
+		info_label.text = controls
+		return
+	info_label.text = "%s %s" % [status_message, controls]
 
 func _on_end_turn_pressed() -> void:
 	_orders = _prune_orders_for_dead_units(_orders)

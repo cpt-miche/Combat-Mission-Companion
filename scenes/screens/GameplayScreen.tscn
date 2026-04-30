@@ -29,6 +29,33 @@ offset_right = 148.0
 offset_bottom = 94.0
 text = "End Turn"
 
+[node name="OrderActionPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 24.0
+offset_top = 104.0
+offset_right = 240.0
+offset_bottom = 212.0
+
+[node name="OrderActionVBox" type="VBoxContainer" parent="OrderActionPanel"]
+layout_mode = 2
+
+[node name="MoveButton" type="Button" parent="OrderActionPanel/OrderActionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Move"
+
+[node name="AttackButton" type="Button" parent="OrderActionPanel/OrderActionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Attack"
+
+[node name="DigInButton" type="Button" parent="OrderActionPanel/OrderActionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Dig In"
+
 [node name="AnimationTimer" type="Timer" parent="."]
 unique_name_in_owner = true
 wait_time = 0.35
