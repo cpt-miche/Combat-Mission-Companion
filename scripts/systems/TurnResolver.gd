@@ -117,11 +117,16 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 			continue
 
 		if order_type == OrderSystem.OrderType.DIG_IN:
+			var was_dug_in := bool(unit_state.get("dug_in", false))
 			unit_state["dug_in"] = true
+			unit_state["entrenched"] = true
 			units[unit_id] = unit_state
 			var dig_in_payload := {
 				"unit_id": unit_id,
-				"hex": _hex_to_dict(unit_state.get("hex", Vector2i.ZERO))
+				"hex": _hex_to_dict(unit_state.get("hex", Vector2i.ZERO)),
+				"was_dug_in": was_dug_in,
+				"is_dug_in": true,
+				"is_entrenched": true
 			}
 			_add_trace_event(trace_events, turn_trace, "dig_in_applied", dig_in_payload)
 			combat_log.add_entry("%s dug in at %d,%d." % [unit_id, int(dig_in_payload["hex"]["q"]), int(dig_in_payload["hex"]["r"])], dig_in_payload)

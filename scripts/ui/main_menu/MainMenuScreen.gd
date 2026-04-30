@@ -193,6 +193,9 @@ func _deserialize_units(serialized_units: Dictionary) -> Dictionary:
 			normalized_status = "alive" if bool(unit.get("is_alive", true)) else "dead"
 		unit["status"] = normalized_status
 		unit["is_alive"] = bool(unit.get("is_alive", normalized_status != "dead"))
+		var dug_in := bool(unit.get("dug_in", unit.get("entrenched", false)))
+		unit["dug_in"] = dug_in
+		unit["entrenched"] = dug_in
 		deserialized[unit_id] = unit
 	return deserialized
 
