@@ -3,7 +3,8 @@ class_name OrderSystem
 
 enum OrderType {
 	MOVE,
-	ATTACK
+	ATTACK,
+	DIG_IN
 }
 
 static func create_move_order(unit_id: String, path: Array[Vector2i], trace_context: Dictionary = {}) -> Dictionary:
@@ -59,6 +60,27 @@ static func create_attack_order(unit_id: String, path: Array[Vector2i], target_u
 			"unit_id": unit_id,
 			"target_unit_id": target_unit_id,
 			"path_length": path.size()
+		})
+	return order
+
+static func create_dig_in_order(unit_id: String, trace_context: Dictionary = {}) -> Dictionary:
+	var trace := _normalize_trace_context(trace_context)
+	var order := {
+		"unit_id": unit_id,
+		"type": OrderType.DIG_IN,
+		"path": [],
+		"target_unit_id": "",
+		"trace_id": trace.get("trace_id", ""),
+		"session_id": trace.get("session_id", ""),
+		"created_at_unix": trace.get("created_at_unix", 0),
+		"trace_events": []
+	}
+	_add_trace_event(order, "dig_in_order_created", {
+		"unit_id": unit_id
+	})
+	if unit_id.is_empty():
+		_add_trace_anomaly(order, "invalid_order", {
+			"reason": "dig in order missing unit_id"
 		})
 	return order
 
