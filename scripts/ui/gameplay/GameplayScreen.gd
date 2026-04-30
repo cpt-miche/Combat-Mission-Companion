@@ -161,10 +161,6 @@ func _handle_left_release(position: Vector2) -> void:
 			_selected_hex = hex
 			_refresh_selected_hex_panel(_selected_hex)
 			var friendly_at_hex := _unit_at_hex(hex, _active_player)
-			if not _selected_unit_id.is_empty() and friendly_at_hex.is_empty():
-				if _try_issue_mode_order_on_hex(hex):
-					queue_redraw()
-					return
 			if _delete_path_at(hex):
 				queue_redraw()
 				_update_info_label("Order deleted.")
@@ -403,34 +399,6 @@ func _issue_dig_in_order(unit_id: String) -> void:
 	_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_move_order(unit_id, [hex, hex]))
 	_update_info_label("Dig In order created for %s." % unit_id)
 	queue_redraw()
-
-func _try_issue_mode_order_on_hex(hex: Vector2i) -> bool:
-	if _selected_unit_id.is_empty():
-		return false
-	match _active_order_mode:
-		OrderMode.ATTACK:
-			var target_id := _unit_at_hex(hex, 1 - _active_player)
-			if target_id.is_empty():
-				_update_info_label("Attack mode requires clicking an enemy target hex.")
-				return false
-			var start_hex := _units[_selected_unit_id].get("hex", Vector2i.ZERO) as Vector2i
-			var blocked := _blocked_cells(_selected_unit_id)
-			blocked.erase("%d,%d" % [hex.x, hex.y])
-			var path := Pathfinding.find_path(start_hex, hex, GameState.terrain_map, blocked)
-			if path.is_empty():
-				_update_info_label("No path found.")
-				return false
-			_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
-			_update_info_label("Attack order created for %s." % _selected_unit_id)
-			return true
-		OrderMode.DIG_IN:
-			_issue_dig_in_order(_selected_unit_id)
-			return true
-		_:
-			if _issue_move_order(_selected_unit_id, hex):
-				_update_info_label("Move order created for %s." % _selected_unit_id)
-				return true
-	return false
 
 func _update_order_action_panel() -> void:
 	var has_friendly_selected := (not _selected_unit_id.is_empty()) and _units.has(_selected_unit_id) and int((_units[_selected_unit_id] as Dictionary).get("owner", -1)) == _active_player
