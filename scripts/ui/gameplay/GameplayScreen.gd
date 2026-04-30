@@ -379,11 +379,20 @@ func _pick_friendly_unit_at(screen_position: Vector2) -> String:
 	if clicked_hex_dict.is_empty():
 		return ""
 	var clicked_hex := Vector2i(clicked_hex_dict["q"], clicked_hex_dict["r"])
-	var marker_center := _world_to_screen(_hex_center(clicked_hex.x, clicked_hex.y))
+	var friendly_stack := _units_at_hex(clicked_hex, _active_player)
+	if friendly_stack.is_empty():
+		return ""
+
+	var base_center := _world_to_screen(_hex_center(clicked_hex.x, clicked_hex.y))
+	for index in range(friendly_stack.size()):
+		var marker_center := base_center + _stack_offset_for_index(index, friendly_stack.size())
+		if marker_center.distance_to(screen_position) <= UNIT_MARKER_RADIUS:
+			return String((friendly_stack[index] as Dictionary).get("id", ""))
+
+	var marker_center := base_center
 	if marker_center.distance_to(screen_position) > UNIT_MARKER_RADIUS * 1.9:
 		return ""
 	return _next_friendly_unit_for_hex(clicked_hex)
-	return ""
 
 func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 	if unit_id.is_empty() or not _units.has(unit_id):
