@@ -767,7 +767,7 @@ func _unit_ids_covered_by_higher_echelon_deployments() -> Dictionary:
 	if deployed_unit_ids.is_empty():
 		return covered_unit_ids
 
-	var division_tree := GameState.players[_player_index].get("division_tree", {})
+	var division_tree: Dictionary = GameState.players[_player_index].get("division_tree", {})
 	_collect_covered_descendant_ids(division_tree, false, deployed_unit_ids, covered_unit_ids)
 	return covered_unit_ids
 
