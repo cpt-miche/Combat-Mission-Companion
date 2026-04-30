@@ -25,17 +25,11 @@ for autoload_script in \
   fi
 done
 
-echo "Checking core utility scripts for standalone parse errors..."
-for script_path in \
-  "res://scripts/core/GameState.gd" \
-  "res://scripts/core/DisplaySettings.gd" \
-  "res://scripts/core/UnitCatalog.gd" \
-  "res://scripts/core/SaveManager.gd"; do
-  godot --headless --path . --check-only --script "$script_path"
-done
-
-echo "Skipping per-file parse checks for UI/gameplay scripts because they depend on autoload singletons."
-echo "Project startup and smoke tests below validate those scripts in full project context."
+echo "Loading all project scenes to expand parse coverage in project context..."
+while IFS= read -r scene_path; do
+  echo "Loading scene: ${scene_path}"
+  godot --headless --path . --quit --scene "$scene_path"
+done < <(find scenes -type f -name "*.tscn" | sort)
 
 echo "Running headless project startup check..."
 godot --headless --path . --quit
