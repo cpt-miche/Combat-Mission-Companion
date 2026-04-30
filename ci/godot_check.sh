@@ -16,7 +16,8 @@ godot --headless --path . --import
 
 echo "Checking GDScript parse errors..."
 while IFS= read -r script_path; do
-  godot --headless --path . --check-only --script "$script_path"
+  project_script="res://${script_path#./}"
+  godot --headless --path . --check-only --script "$project_script"
 done < <(find . -type f -name "*.gd" -not -path "./.godot/*" | sort)
 
 echo "Running headless project startup check..."
