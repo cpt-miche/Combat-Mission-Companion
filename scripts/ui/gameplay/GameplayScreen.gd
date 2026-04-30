@@ -663,6 +663,8 @@ func _rebuild_hex_polygon_cache() -> void:
 			_hex_polygon_cache[Vector2i(column, row)] = _hex_points(center)
 
 func _handle_path_preview_motion(position: Vector2) -> void:
+	if _active_order_mode != OrderMode.MOVE:
+		return
 	if _selected_unit_id.is_empty():
 		return
 	var clicked_hex := _find_hex(position)
@@ -675,6 +677,12 @@ func _handle_path_preview_motion(position: Vector2) -> void:
 	_preview_recalc_due_at_msec = Time.get_ticks_msec() + PATH_PREVIEW_THROTTLE_MS
 
 func _recalculate_preview_path() -> void:
+	if _active_order_mode != OrderMode.MOVE:
+		_preview_path.clear()
+		_preview_target_hex = Vector2i(-9999, -9999)
+		_pending_preview_target_hex = Vector2i(-9999, -9999)
+		queue_redraw()
+		return
 	if _selected_unit_id.is_empty() or not _units.has(_selected_unit_id):
 		return
 	var target := _pending_preview_target_hex
