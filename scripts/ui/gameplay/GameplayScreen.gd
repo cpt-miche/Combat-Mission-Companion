@@ -21,6 +21,9 @@ const DRAG_START_THRESHOLD := 6.0
 @onready var end_turn_button: Button = %EndTurnButton
 @onready var hovered_terrain_label: Label = %HoveredTerrainLabel
 @onready var animation_timer: Timer = %AnimationTimer
+@onready var selected_hex_title_label: Label = %SelectedHexTitleLabel
+@onready var selected_hex_terrain_label: Label = %SelectedHexTerrainLabel
+@onready var selected_hex_units_label: Label = %SelectedHexUnitsLabel
 
 var _units: Dictionary = {}
 var _orders: Dictionary = {}
@@ -44,6 +47,7 @@ var _dragging_unit_id := ""
 var _drag_start_mouse_pos := Vector2.ZERO
 var _drag_mouse_pos := Vector2.ZERO
 var _hovered_hex := Vector2i(-9999, -9999)
+var _selected_hex := Vector2i(-9999, -9999)
 
 func _ready() -> void:
 	var dimensions := GameState.selected_map_dimensions
@@ -58,6 +62,7 @@ func _ready() -> void:
 	_refresh_log()
 	info_label.text = "Drag friendly units to create move orders. Click+drag empty space to pan. Ctrl+Right-click to issue attack."
 	_update_hovered_terrain_label(TerrainCatalog.default_terrain_id())
+	_refresh_selected_hex_panel(_selected_hex)
 
 func _process(_delta: float) -> void:
 	if _preview_recalc_due_at_msec <= 0:
@@ -140,6 +145,8 @@ func _handle_left_release(position: Vector2) -> void:
 			if clicked_hex.is_empty():
 				return
 			var hex := Vector2i(clicked_hex["q"], clicked_hex["r"])
+			_selected_hex = hex
+			_refresh_selected_hex_panel(_selected_hex)
 			if _delete_path_at(hex):
 				queue_redraw()
 				info_label.text = "Order deleted."
@@ -164,11 +171,48 @@ func _handle_left_release(position: Vector2) -> void:
 		_preview_target_hex = Vector2i(-9999, -9999)
 		_pending_preview_target_hex = Vector2i(-9999, -9999)
 	elif not _drag_candidate_unit_id.is_empty() and total_drag <= DRAG_START_THRESHOLD:
+		var clicked_hex := _find_hex(position)
+		if not clicked_hex.is_empty():
+			_selected_hex = Vector2i(clicked_hex["q"], clicked_hex["r"])
+			_refresh_selected_hex_panel(_selected_hex)
 		_selected_unit_id = _drag_candidate_unit_id
 		info_label.text = "Selected %s" % _selected_unit_id
 	_drag_candidate_unit_id = ""
 	_dragging_unit_id = ""
 	queue_redraw()
+
+func _refresh_selected_hex_panel(hex: Vector2i) -> void:
+	if hex == Vector2i(-9999, -9999):
+		selected_hex_title_label.text = "Selected Hex: -, -"
+		selected_hex_terrain_label.text = "Terrain: %s" % TerrainCatalog.display_name(TerrainCatalog.default_terrain_id())
+		selected_hex_units_label.text = "Units: None"
+		return
+
+	var coordinate_key := "%d,%d" % [hex.x, hex.y]
+	selected_hex_title_label.text = "Selected Hex: %s" % coordinate_key
+
+	var terrain_id := String(GameState.terrain_map.get(coordinate_key, TerrainCatalog.default_terrain_id()))
+	terrain_id = TerrainCatalog.normalize_terrain_id(terrain_id)
+	selected_hex_terrain_label.text = "Terrain: %s" % TerrainCatalog.display_name(terrain_id)
+
+	var unit_lines: Array[String] = []
+	for unit_id in _units.keys():
+		var unit := _units[unit_id] as Dictionary
+		if not GameState.is_unit_alive(unit):
+			continue
+		if (unit.get("hex", Vector2i.ZERO) as Vector2i) != hex:
+			continue
+		var line := "%s (owner %d)" % [String(unit.get("id", unit_id)), int(unit.get("owner", -1))]
+		if unit.has("unit_type"):
+			line += " - %s" % String(unit.get("unit_type", ""))
+		if unit.has("status"):
+			line += " [%s]" % String(unit.get("status", ""))
+		unit_lines.append(line)
+
+	if unit_lines.is_empty():
+		selected_hex_units_label.text = "Units: None"
+		return
+	selected_hex_units_label.text = "Units:\n%s" % "\n".join(unit_lines)
 
 func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
 	if _is_panning:
