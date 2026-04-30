@@ -55,6 +55,7 @@ var _drag_mouse_pos := Vector2.ZERO
 var _hovered_hex := Vector2i(-9999, -9999)
 var _selected_hex := Vector2i(-9999, -9999)
 var _active_order_mode: OrderMode = OrderMode.MOVE
+var _friendly_selection_cycle_by_hex: Dictionary = {}
 
 func _ready() -> void:
 	var dimensions := GameState.selected_map_dimensions
@@ -212,17 +213,16 @@ func _refresh_selected_hex_panel(hex: Vector2i) -> void:
 	selected_hex_terrain_label.text = "Terrain: %s" % TerrainCatalog.display_name(terrain_id)
 
 	var unit_lines: Array[String] = []
-	for unit_id in _units.keys():
-		var unit := _units[unit_id] as Dictionary
-		if not GameState.is_unit_alive(unit):
-			continue
-		if (unit.get("hex", Vector2i.ZERO) as Vector2i) != hex:
-			continue
-		var line := "%s (owner %d)" % [String(unit.get("id", unit_id)), int(unit.get("owner", -1))]
+	for entry in _units_at_hex(hex):
+		var unit := entry.get("unit", {}) as Dictionary
+		var unit_id := String(entry.get("id", ""))
+		var line := "%s (owner %d)" % [String(unit.get("id", unit_id)), int(entry.get("owner", -1))]
 		if unit.has("unit_type"):
 			line += " - %s" % String(unit.get("unit_type", ""))
 		if unit.has("status"):
 			line += " [%s]" % String(unit.get("status", ""))
+		if unit_id == _selected_unit_id:
+			line += " [SELECTED]"
 		unit_lines.append(line)
 
 	if unit_lines.is_empty():
@@ -283,18 +283,28 @@ func _draw() -> void:
 	for i in range(_active_order_arrow_count):
 		_draw_order_arrow(_order_arrow_pool[i])
 
-	for unit_id in _units.keys():
-		var unit := _units[unit_id] as Dictionary
-		if not GameState.is_unit_alive(unit):
-			continue
-		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
-		var center := _world_to_screen(_hex_center(hex.x, hex.y))
-		if not visible_rect.has_point(center):
-			continue
-		var color := Color(0.24, 0.43, 0.92, 1.0) if int(unit.get("owner", 0)) == 0 else Color(0.89, 0.29, 0.27, 1.0)
-		if String(unit_id) == _selected_unit_id:
-			color = color.lightened(0.25)
-		_collect_unit_marker(center, color, String(unit_id))
+	for row in range(GRID_ROWS):
+		for column in range(GRID_COLUMNS):
+			var hex := Vector2i(column, row)
+			var stack := _units_at_hex(hex)
+			if stack.is_empty():
+				continue
+			var base_center := _world_to_screen(_hex_center(hex.x, hex.y))
+			if not visible_rect.has_point(base_center):
+				continue
+			for index in range(stack.size()):
+				var entry := stack[index] as Dictionary
+				var unit := entry.get("unit", {}) as Dictionary
+				var unit_id := String(entry.get("id", ""))
+				var marker_offset := _stack_offset_for_index(index, stack.size())
+				var center := base_center + marker_offset
+				var color := Color(0.24, 0.43, 0.92, 1.0) if int(entry.get("owner", 0)) == 0 else Color(0.89, 0.29, 0.27, 1.0)
+				if unit_id == _selected_unit_id:
+					color = color.lightened(0.25)
+				var is_selected := unit_id == _selected_unit_id
+				_collect_unit_marker(center, color, unit_id, stack.size(), is_selected)
+				if unit.has("status") and String(unit.get("status", "")).to_lower() == "dead":
+					continue
 
 	for i in range(_active_unit_marker_count):
 		_draw_unit_marker(_unit_marker_pool[i])
@@ -337,33 +347,42 @@ func _draw_order_arrow(entry: Dictionary) -> void:
 		draw_line(center + Vector2(-8, -8), center + Vector2(8, 8), color, 2.0)
 		draw_line(center + Vector2(8, -8), center + Vector2(-8, 8), color, 2.0)
 
-func _collect_unit_marker(center: Vector2, color: Color, unit_id: String) -> void:
+func _collect_unit_marker(center: Vector2, color: Color, unit_id: String, stack_size: int, is_selected: bool) -> void:
 	var idx := _active_unit_marker_count
 	if idx >= _unit_marker_pool.size():
 		_unit_marker_pool.append({})
 	_unit_marker_pool[idx] = {
 		"center": center,
 		"color": color,
-		"id": unit_id
+		"id": unit_id,
+		"stack_size": stack_size,
+		"is_selected": is_selected
 	}
 	_active_unit_marker_count += 1
 
 func _draw_unit_marker(marker: Dictionary) -> void:
 	var center := marker.get("center", Vector2.ZERO) as Vector2
+	var is_selected := bool(marker.get("is_selected", false))
 	draw_circle(center, UNIT_MARKER_RADIUS, marker.get("color", Color.WHITE))
+	if is_selected:
+		draw_arc(center, UNIT_MARKER_RADIUS + 3.0, 0.0, TAU, 24, Color(1.0, 1.0, 0.45, 0.95), 2.5)
 	draw_string(get_theme_default_font(), center + Vector2(-12, 4), String(marker.get("id", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+	var stack_size := int(marker.get("stack_size", 1))
+	if stack_size > 1:
+		var badge_radius := 8.0
+		var badge_center := center + Vector2(UNIT_MARKER_RADIUS * 0.7, -UNIT_MARKER_RADIUS * 0.7)
+		draw_circle(badge_center, badge_radius, Color(0.07, 0.08, 0.1, 0.95))
+		draw_string(get_theme_default_font(), badge_center + Vector2(-4, 4), str(stack_size), HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
 
 func _pick_friendly_unit_at(screen_position: Vector2) -> String:
-	for unit_id in _units.keys():
-		var unit := _units[unit_id] as Dictionary
-		if not GameState.is_unit_alive(unit):
-			continue
-		if int(unit.get("owner", -1)) != _active_player:
-			continue
-		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
-		var marker_center := _world_to_screen(_hex_center(hex.x, hex.y))
-		if marker_center.distance_to(screen_position) <= UNIT_MARKER_RADIUS:
-			return String(unit_id)
+	var clicked_hex_dict := _find_hex(screen_position)
+	if clicked_hex_dict.is_empty():
+		return ""
+	var clicked_hex := Vector2i(clicked_hex_dict["q"], clicked_hex_dict["r"])
+	var marker_center := _world_to_screen(_hex_center(clicked_hex.x, clicked_hex.y))
+	if marker_center.distance_to(screen_position) > UNIT_MARKER_RADIUS * 1.9:
+		return ""
+	return _next_friendly_unit_for_hex(clicked_hex)
 	return ""
 
 func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
@@ -708,31 +727,54 @@ func _delete_path_at(hex: Vector2i) -> bool:
 	return false
 
 
-func _units_at_hex(hex: Vector2i) -> Array[Dictionary]:
+func _units_at_hex(hex: Vector2i, owner: int = -1) -> Array[Dictionary]:
 	var units_at_hex: Array[Dictionary] = []
 	for unit_id in _units.keys():
 		var unit := _units[unit_id] as Dictionary
 		if not GameState.is_unit_alive(unit):
 			continue
+		var unit_owner := int(unit.get("owner", -1))
+		if owner >= 0 and unit_owner != owner:
+			continue
 		if unit.get("hex", Vector2i.ZERO) != hex:
 			continue
 		units_at_hex.append({
 			"id": String(unit_id),
-			"owner": int(unit.get("owner", -1)),
+			"owner": unit_owner,
 			"unit": unit
 		})
+	units_at_hex.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return String(a.get("id", "")) < String(b.get("id", ""))
+	)
 	return units_at_hex
 
 func _unit_at_hex(hex: Vector2i, owner: int) -> String:
-	for unit_id in _units.keys():
-		var unit := _units[unit_id] as Dictionary
-		if not GameState.is_unit_alive(unit):
-			continue
-		if int(unit.get("owner", -1)) != owner:
-			continue
-		if unit.get("hex", Vector2i.ZERO) == hex:
-			return String(unit_id)
+	var matches := _units_at_hex(hex, owner)
+	if not matches.is_empty():
+		return String(matches[0].get("id", ""))
 	return ""
+
+func _next_friendly_unit_for_hex(hex: Vector2i) -> String:
+	var friendly := _units_at_hex(hex, _active_player)
+	if friendly.is_empty():
+		return ""
+	var key := "%d,%d" % [hex.x, hex.y]
+	var previous_index := int(_friendly_selection_cycle_by_hex.get(key, -1))
+	var next_index := posmod(previous_index + 1, friendly.size())
+	_friendly_selection_cycle_by_hex[key] = next_index
+	return String(friendly[next_index].get("id", ""))
+
+func _stack_offset_for_index(index: int, stack_size: int) -> Vector2:
+	if stack_size <= 1:
+		return Vector2.ZERO
+	var columns := mini(stack_size, 3)
+	var rows := int(ceil(float(stack_size) / float(columns)))
+	var column := index % columns
+	var row := index / columns
+	var spacing := UNIT_MARKER_RADIUS * 1.1
+	var width := float(columns - 1) * spacing
+	var height := float(rows - 1) * spacing
+	return Vector2((float(column) * spacing) - (width * 0.5), (float(row) * spacing) - (height * 0.5))
 
 func _hex_center(column: int, row: int) -> Vector2:
 	var x := HEX_ORIGIN.x + (float(column) * HEX_HORIZONTAL_SPACING) + (HEX_HORIZONTAL_SPACING * 0.5 if row % 2 == 1 else 0.0)
