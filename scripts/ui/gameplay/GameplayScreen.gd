@@ -5,6 +5,7 @@ const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
 const TurnResolver = preload("res://scripts/systems/TurnResolver.gd")
 const CombatLog = preload("res://scripts/systems/CombatLog.gd")
 const TerrainCatalog = preload("res://scripts/core/TerrainCatalog.gd")
+const Rules = preload("res://scripts/core/Rules.gd")
 
 var GRID_COLUMNS: int = MapGridConfig.default_columns()
 var GRID_ROWS: int = MapGridConfig.default_rows()
@@ -357,6 +358,10 @@ func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 		info_label.text = "%s is dead and cannot receive orders." % unit_id
 		return false
 	var start_hex := (_units[unit_id] as Dictionary).get("hex", Vector2i.ZERO) as Vector2i
+	var stack_validation := _validate_move_destination_stack(unit_id, target_hex)
+	if not bool(stack_validation.get("ok", false)):
+		info_label.text = String(stack_validation.get("reason", "Illegal destination stack."))
+		return false
 	var blocked := _blocked_cells(unit_id)
 	var path := Pathfinding.find_path(start_hex, target_hex, GameState.terrain_map, blocked)
 	if path.is_empty():
@@ -586,6 +591,11 @@ func _recalculate_preview_path() -> void:
 		return
 	_preview_target_hex = target
 	var start_hex := (_units[_selected_unit_id] as Dictionary).get("hex", Vector2i.ZERO) as Vector2i
+	var stack_validation := _validate_move_destination_stack(_selected_unit_id, target)
+	if not bool(stack_validation.get("ok", false)):
+		_preview_path.clear()
+		queue_redraw()
+		return
 	var blocked := _blocked_cells(_selected_unit_id)
 	var path := Pathfinding.find_path(start_hex, target, GameState.terrain_map, blocked)
 	_preview_path.clear()
@@ -601,9 +611,29 @@ func _blocked_cells(selected_unit_id: String) -> Dictionary:
 		var unit := _units[unit_id] as Dictionary
 		if not GameState.is_unit_alive(unit):
 			continue
+		if int(unit.get("owner", -1)) == _active_player:
+			continue
 		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
 		blocked["%d,%d" % [hex.x, hex.y]] = true
 	return blocked
+
+func _validate_move_destination_stack(unit_id: String, target_hex: Vector2i) -> Dictionary:
+	if not _units.has(unit_id):
+		return {"ok": false, "reason": "Unknown unit for move order."}
+	var moving := _units[unit_id] as Dictionary
+	var occupants: Array[Dictionary] = []
+	for other_id in _units.keys():
+		var other := _units[other_id] as Dictionary
+		if not GameState.is_unit_alive(other):
+			continue
+		if String(other_id) == unit_id:
+			continue
+		if int(other.get("owner", -1)) != int(moving.get("owner", -1)):
+			continue
+		if (other.get("hex", Vector2i.ZERO) as Vector2i) != target_hex:
+			continue
+		occupants.append(other)
+	return Rules.can_enter_stack(moving, occupants)
 
 func _delete_path_at(hex: Vector2i) -> bool:
 	for unit_id in _orders.keys():
