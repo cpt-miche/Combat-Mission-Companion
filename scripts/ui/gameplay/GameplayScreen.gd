@@ -171,6 +171,10 @@ func _handle_left_release(position: Vector2) -> void:
 		_preview_target_hex = Vector2i(-9999, -9999)
 		_pending_preview_target_hex = Vector2i(-9999, -9999)
 	elif not _drag_candidate_unit_id.is_empty() and total_drag <= DRAG_START_THRESHOLD:
+		var clicked_hex := _find_hex(position)
+		if not clicked_hex.is_empty():
+			_selected_hex = Vector2i(clicked_hex["q"], clicked_hex["r"])
+			_refresh_selected_hex_panel(_selected_hex)
 		_selected_unit_id = _drag_candidate_unit_id
 		info_label.text = "Selected %s" % _selected_unit_id
 	_drag_candidate_unit_id = ""
