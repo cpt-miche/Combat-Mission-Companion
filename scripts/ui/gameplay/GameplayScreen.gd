@@ -396,7 +396,7 @@ func _issue_dig_in_order(unit_id: String) -> void:
 		_update_info_label("Only friendly units can dig in.")
 		return
 	var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
-	_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_move_order(unit_id, [hex, hex]))
+	_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_dig_in_order(unit_id))
 	_update_info_label("Dig In order created for %s." % unit_id)
 	queue_redraw()
 

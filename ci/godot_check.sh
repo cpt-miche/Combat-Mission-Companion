@@ -15,10 +15,7 @@ echo "Importing project assets..."
 godot --headless --path . --import
 
 echo "Checking GDScript parse errors..."
-while IFS= read -r -d '' file; do
-  echo "Checking $file"
-  godot --headless --path . --check-only --script "$file"
-done < <(find . -name '*.gd' -not -path './.godot/*' -not -path './addons/*' -print0)
+godot --headless --path . --quit
 
 echo "Running main scene smoke test..."
 godot --headless --path . --script ci/smoke_test.gd

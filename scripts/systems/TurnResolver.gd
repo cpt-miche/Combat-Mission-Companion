@@ -68,8 +68,9 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 
 		var unit_state := units[unit_id] as Dictionary
 		var owner := int(unit_state.get("owner", 0))
+		var order_type := int(order.get("type", OrderSystem.OrderType.MOVE))
 		var path := order.get("path", []) as Array[Vector2i]
-		if path.is_empty():
+		if order_type != OrderSystem.OrderType.DIG_IN and path.is_empty():
 			_add_anomaly(trace_anomalies, turn_trace, "invalid_order", {
 				"reason": "order path is empty",
 				"unit_id": unit_id
@@ -107,13 +108,23 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 					break
 			units[unit_id] = unit_state
 
-		var order_type := int(order.get("type", OrderSystem.OrderType.MOVE))
-		if order_type != OrderSystem.OrderType.MOVE and order_type != OrderSystem.OrderType.ATTACK:
+		if order_type != OrderSystem.OrderType.MOVE and order_type != OrderSystem.OrderType.ATTACK and order_type != OrderSystem.OrderType.DIG_IN:
 			_add_anomaly(trace_anomalies, turn_trace, "invalid_order", {
 				"reason": "unknown order type",
 				"unit_id": unit_id,
 				"order_type": order_type
 			})
+			continue
+
+		if order_type == OrderSystem.OrderType.DIG_IN:
+			unit_state["dug_in"] = true
+			units[unit_id] = unit_state
+			var dig_in_payload := {
+				"unit_id": unit_id,
+				"hex": _hex_to_dict(unit_state.get("hex", Vector2i.ZERO))
+			}
+			_add_trace_event(trace_events, turn_trace, "dig_in_applied", dig_in_payload)
+			combat_log.add_entry("%s dug in at %d,%d." % [unit_id, int(dig_in_payload["hex"]["q"]), int(dig_in_payload["hex"]["r"])], dig_in_payload)
 			continue
 
 		if order_type == OrderSystem.OrderType.ATTACK:
