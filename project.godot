@@ -22,3 +22,11 @@ window/size/mode=0
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+
+[input]
+
+debug_toggle={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":80,"physical_keycode":80,"key_label":80,"unicode":112,"location":0,"echo":false,"script":null)
+]
+}

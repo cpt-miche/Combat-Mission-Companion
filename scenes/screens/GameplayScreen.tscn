@@ -105,3 +105,19 @@ unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 3
 text = "Units: None"
+
+[node name="DebugLevelDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Enable Debug Mode"
+ok_button_text = "Enable"
+
+[node name="DebugLevelVBox" type="VBoxContainer" parent="DebugLevelDialog"]
+layout_mode = 2
+
+[node name="DebugLevelLabel" type="Label" parent="DebugLevelDialog/DebugLevelVBox"]
+layout_mode = 2
+text = "Select debug level:"
+
+[node name="DebugLevelOptionButton" type="OptionButton" parent="DebugLevelDialog/DebugLevelVBox"]
+unique_name_in_owner = true
+layout_mode = 2

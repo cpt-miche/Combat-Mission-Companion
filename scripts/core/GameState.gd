@@ -47,6 +47,8 @@ var scout_intel_by_observer: Dictionary = {}
 var operational_ai_enabled: bool = false
 var ai_debug_enabled: bool = false
 var ai_debug_level: int = AIDebugTypes.DebugLevel.OFF
+var debug_mode_enabled: bool = false
+var debug_mode_level: int = 0
 
 func set_phase(phase: Phase) -> void:
 	if current_phase == phase:
@@ -77,7 +79,28 @@ func reset() -> void:
 	operational_ai_enabled = false
 	ai_debug_enabled = false
 	ai_debug_level = AIDebugTypes.DebugLevel.OFF
+	disable_debug_mode()
 	emit_signal("phase_changed", current_phase)
+
+
+func enable_debug_mode(level: int) -> void:
+	debug_mode_level = clampi(level, 1, 3)
+	debug_mode_enabled = true
+
+func disable_debug_mode() -> void:
+	debug_mode_enabled = false
+	debug_mode_level = 0
+
+func toggle_debug_mode_with_level(level: int) -> void:
+	if debug_mode_enabled:
+		disable_debug_mode()
+		return
+	enable_debug_mode(level)
+
+func get_debug_mode_label() -> String:
+	if not debug_mode_enabled:
+		return "OFF"
+	return "L%d" % debug_mode_level
 
 func get_ai_debug_config() -> Dictionary:
 	return {
