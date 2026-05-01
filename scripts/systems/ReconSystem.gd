@@ -60,20 +60,20 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 		_resolve_visible_intel(intel, enemy_units, unit_intel_by_id, rng)
 		next_hex_intel[enemy_hex_key] = intel
 
-		for enemy_hex_id in next_hex_intel.keys():
-			if String(enemy_hex_id) == UNIT_INTEL_KEY:
-				continue
-			if adjacent_enemy_hexes.has(enemy_hex_id):
-				continue
-			var stale_intel: Dictionary = next_hex_intel[enemy_hex_id]
-			var known_enemy_units_variant = stale_intel.get("knownEnemyUnits", [])
-			var prior_known_count: int = 0
-			if known_enemy_units_variant is Array:
-				prior_known_count = int((known_enemy_units_variant as Array).size())
-			_trace("contact_loss_clear hex=%s prior_scout=%d prior_known=%d" % [String(enemy_hex_id), int(stale_intel.get("scoutLevel", SCOUT_LEVEL_MIN)), prior_known_count])
-			stale_intel["knownEnemyUnits"] = []
-			stale_intel["scoutLevel"] = SCOUT_LEVEL_MIN
-			next_hex_intel[enemy_hex_id] = stale_intel
+	for prior_enemy_hex_id in next_hex_intel.keys():
+		if String(prior_enemy_hex_id) == UNIT_INTEL_KEY:
+			continue
+		if adjacent_enemy_hexes.has(prior_enemy_hex_id):
+			continue
+		var stale_intel: Dictionary = next_hex_intel[prior_enemy_hex_id]
+		var known_enemy_units_variant = stale_intel.get("knownEnemyUnits", [])
+		var prior_known_count: int = 0
+		if known_enemy_units_variant is Array:
+			prior_known_count = int((known_enemy_units_variant as Array).size())
+		_trace("contact_loss_clear hex=%s prior_scout=%d prior_known=%d" % [String(prior_enemy_hex_id), int(stale_intel.get("scoutLevel", SCOUT_LEVEL_MIN)), prior_known_count])
+		stale_intel["knownEnemyUnits"] = []
+		stale_intel["scoutLevel"] = SCOUT_LEVEL_MIN
+		next_hex_intel[prior_enemy_hex_id] = stale_intel
 
 	next_hex_intel[UNIT_INTEL_KEY] = unit_intel_by_id
 	return next_hex_intel
