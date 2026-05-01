@@ -28,12 +28,33 @@ static func format_unit(unit: Dictionary, options: Dictionary = {}) -> String:
 		platoon_number = maxi(int(unit.get("platoon_number", 0)), 0)
 	var bn_reg := _bn_reg(battalion_number, regiment_number)
 	if bn_reg.is_empty():
-		return String(unit.get("short_name", unit.get("display_name", unit.get("id", "Unit"))))
+		push_warning("UnitNotationFormatter: missing battalion/regiment for %s unit '%s'. Using fallback label." % [size, String(unit.get("id", "Unit"))])
 
 	if unit_type == "headquarters" and size == "battalion":
+		if bn_reg.is_empty():
+			return "HQ/?"
 		return "HQ/%s" % bn_reg
-	if size == "company" and not company_letter.is_empty():
+	if size == "company":
+		if company_letter.is_empty():
+			push_warning("UnitNotationFormatter: company unit '%s' missing company letter. Using fallback label." % String(unit.get("id", "Unit")))
+			company_letter = "?"
+		if bn_reg.is_empty():
+			return "%s/?" % company_letter
 		return "%s/%s" % [company_letter, bn_reg]
+	if size == "platoon":
+		if platoon_number <= 0:
+			push_warning("UnitNotationFormatter: platoon unit '%s' missing platoon number. Using fallback label." % String(unit.get("id", "Unit")))
+		if company_letter.is_empty():
+			push_warning("UnitNotationFormatter: platoon unit '%s' missing parent company letter. Using fallback label." % String(unit.get("id", "Unit")))
+		var platoon_text := str(platoon_number) if platoon_number > 0 else "?"
+		var company_text := company_letter if not company_letter.is_empty() else "?"
+		if bn_reg.is_empty():
+			return "%s/%s/?" % [platoon_text, company_text]
+		return "%s/%s/%s" % [platoon_text, company_text, bn_reg]
+
+	if bn_reg.is_empty():
+		return String(unit.get("short_name", unit.get("display_name", unit.get("id", "Unit"))))
+
 	if size == "platoon" and platoon_number > 0 and not company_letter.is_empty():
 		return "%d/%s/%s" % [platoon_number, company_letter, bn_reg]
 
