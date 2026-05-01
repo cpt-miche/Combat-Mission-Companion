@@ -3,9 +3,16 @@ extends RefCounted
 
 enum DebugLevel {
 	OFF,
-	ERROR,
-	NORMAL,
-	VERBOSE
+	L1,
+	L2,
+	L3
+}
+
+const DEBUG_LEVEL_LABELS := {
+	DebugLevel.OFF: "OFF",
+	DebugLevel.L1: "L1",
+	DebugLevel.L2: "L2",
+	DebugLevel.L3: "L3"
 }
 
 const REQUIRED_TRACE_FIELDS := [
@@ -18,6 +25,7 @@ const REQUIRED_TRACE_FIELDS := [
 	"debug_level",
 	"inputs_hash",
 	"events",
+	"line_log_path",
 	"outputs",
 	"anomalies",
 	"timings_ms"

@@ -111,7 +111,7 @@ func get_ai_debug_config() -> Dictionary:
 		"level": ai_debug_level
 	}
 
-func is_ai_debug_active(required_level: int = AIDebugTypes.DebugLevel.ERROR) -> bool:
+func is_ai_debug_active(required_level: int = AIDebugTypes.DebugLevel.L1) -> bool:
 	if not ai_debug_enabled:
 		return false
 	return ai_debug_level >= required_level
