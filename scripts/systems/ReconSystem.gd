@@ -164,6 +164,13 @@ static func _collect_contact_enemy_unit_ids(adjacent_enemy_hexes: Dictionary, en
 
 static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids: Dictionary) -> Dictionary:
 	var unit_intel_by_id: Dictionary = {}
+	for prior_unit_id in prior_unit_intel.keys():
+		var prior_key: String = String(prior_unit_id)
+		if contact_unit_ids.has(prior_key):
+			continue
+		var stale_known: Variant = prior_unit_intel.get(prior_key, null)
+		if stale_known is Dictionary:
+			_clear_reported_contact(stale_known as Dictionary)
 	for unit_id in contact_unit_ids.keys():
 		var key: String = String(unit_id)
 		var existing: Variant = prior_unit_intel.get(key, null)
@@ -172,6 +179,14 @@ static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids
 		else:
 			unit_intel_by_id[key] = _new_known_enemy(key)
 	return unit_intel_by_id
+
+static func _clear_reported_contact(known: Dictionary) -> void:
+	known["reportedUnitType"] = ""
+	known["reportedType"] = ""
+	known["reportedSize"] = ""
+	known["typeKnown"] = false
+	known["sizeKnown"] = false
+	known["sizeReportLocked"] = false
 
 static func _apply_automatic_floor(current_level: int, adjacent_friendlies: Array) -> int:
 	var level: int = current_level
