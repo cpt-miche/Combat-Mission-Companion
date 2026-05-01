@@ -51,9 +51,11 @@ const AI_SCOUT_COVERAGE := {
 		"default_support": 1
 	},
 	"weights": {
-		"coverage": 1.0,
+		"expected_scout_level": 1.0,
+		"neighboring_hex_importance": 0.8,
+		"objective_relevance": 0.8,
 		"uncertainty_reduction": 1.0,
-		"critical_low_intel_penalty": 2.0
+		"critical_low_intel_penalty": 2.4
 	},
 	"ranges": {
 		"critical_importance_threshold": 0.75
