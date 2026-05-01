@@ -1,4 +1,5 @@
 extends Control
+const UnitNotationFormatter = preload("res://scripts/domain/units/UnitNotationFormatter.gd")
 
 
 @onready var nation_selector: OptionButton = %NationSelector
@@ -791,6 +792,13 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 	var company_letter := String(designation.get("company_letter", ""))
 	var platoon_number := int(designation.get("platoon_number", 0))
 	if unit.type == UnitType.Value.HEADQUARTERS:
+		if size == UnitSize.Value.BATTALION:
+			var battalion_hq := UnitNotationFormatter.format_unit({
+				"type": "headquarters",
+				"size": "battalion",
+				"designation": designation
+			})
+			return {"display_name": battalion_hq, "short_name": battalion_hq}
 		return {
 			"display_name": "%s HQ" % UnitSize.display_name(size),
 			"short_name": "%s HQ" % UnitSize.display_name(size)
@@ -802,12 +810,14 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 		}
 	match size:
 		UnitSize.Value.BATTALION:
-			return {"display_name": "%d Battalion" % max(battalion_number,1), "short_name": "%d BN" % max(battalion_number,1)}
+			var bn_notation := UnitNotationFormatter.format_unit({"type": type_label.to_lower(), "size": "battalion", "designation": designation})
+			return {"display_name": bn_notation, "short_name": bn_notation}
 		UnitSize.Value.COMPANY:
-			var letter := company_letter if not company_letter.is_empty() else _alphabet_designation(max(battalion_number,1))
-			return {"display_name": "%s Company" % letter, "short_name": "%s Co" % letter}
+			var company_notation := UnitNotationFormatter.format_unit({"type": type_label.to_lower(), "size": "company", "designation": designation})
+			return {"display_name": company_notation, "short_name": company_notation}
 		UnitSize.Value.PLATOON:
-			return {"display_name": "%d Platoon" % max(platoon_number,1), "short_name": "%d PLT" % max(platoon_number,1)}
+			var platoon_notation := UnitNotationFormatter.format_unit({"type": type_label.to_lower(), "size": "platoon", "designation": designation})
+			return {"display_name": platoon_notation, "short_name": platoon_notation}
 		_:
 			return {"display_name": "%s %s" % [nth, UnitSize.display_name(size)], "short_name": "%s" % nth}
 
