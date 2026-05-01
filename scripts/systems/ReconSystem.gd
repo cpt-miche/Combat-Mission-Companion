@@ -1,29 +1,18 @@
 extends RefCounted
 class_name ReconSystem
 const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
+const ReconAIConfig = preload("res://scripts/core/ReconAIConfig.gd")
 
-const SCOUT_LEVEL_MIN := 0
-const SCOUT_LEVEL_MAX := 4
+const SCOUT_LEVEL_MIN := ReconAIConfig.SCOUT_LEVEL_MIN
+const SCOUT_LEVEL_MAX := ReconAIConfig.SCOUT_LEVEL_MAX
 const UNIT_INTEL_KEY := "__unitIntelById"
 
-const COMBAT_TYPES := {"infantry": true, "tank": true, "mechanized": true, "motorized": true}
-const SUPPORT_TYPES := {"recon": true, "antiTank": true, "weapons": true, "artillery": true}
+const COMBAT_TYPES := ReconAIConfig.UNIT_CATEGORIES["combat"]
+const SUPPORT_TYPES := ReconAIConfig.UNIT_CATEGORIES["support"]
 
-const FLOOR_BY_TYPE := {
-	"infantry": 1,
-	"tank": 1,
-	"mechanized": 1,
-	"motorized": 1,
-	"recon": 3
-}
+const FLOOR_BY_TYPE := ReconAIConfig.AUTOMATIC_SCOUT_FLOOR_BY_TYPE
 
-const ROLL_DENOMINATOR_BY_TYPE := {
-	"recon": 2,
-	"infantry": 4,
-	"tank": 4,
-	"mechanized": 4,
-	"motorized": 4
-}
+const ROLL_DENOMINATOR_BY_TYPE := ReconAIConfig.SCOUT_PROGRESSION_DENOMINATOR_BY_TYPE
 
 const SIZE_ORDER := ["platoon", "company", "battalion", "regiment"]
 
@@ -218,7 +207,7 @@ static func _apply_level_type_visibility(level: int, known: Dictionary, enemy_un
 	if level <= 0:
 		return
 	if level == 1:
-		if not bool(known.get("typeKnown", false)) and rng.randi_range(1, 4) == 1:
+		if not bool(known.get("typeKnown", false)) and rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_1_type_known_denominator"])) == 1:
 			known["reportedUnitType"] = unit_type
 			known["typeKnown"] = true
 		return
@@ -226,7 +215,7 @@ static func _apply_level_type_visibility(level: int, known: Dictionary, enemy_un
 		if COMBAT_TYPES.has(unit_type):
 			known["reportedUnitType"] = unit_type
 			known["typeKnown"] = true
-		elif unit_type in ["recon", "antiTank", "weapons"] and not bool(known.get("typeKnown", false)) and rng.randi_range(1, 4) == 1:
+		elif unit_type in ["recon", "antiTank", "weapons", "artillery"] and not bool(known.get("typeKnown", false)) and rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_2_support_type_known_denominator"])) == 1:
 			known["reportedUnitType"] = unit_type
 			known["typeKnown"] = true
 		return
@@ -243,14 +232,15 @@ static func _apply_level_size_visibility(level: int, known: Dictionary, enemy_un
 	if level == 3:
 		if not COMBAT_TYPES.has(unit_type):
 			return
-		if rng.randi_range(1, 4) != 1:
+		if rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_3_combat_size_known_denominator"])) != 1:
 			return
-		var drift_roll: int = rng.randi_range(1, 4)
-		var drift: int = -1 if drift_roll == 1 else (1 if drift_roll == 4 else 0)
+		var drift_roll: int = rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_3_size_drift_roll_denominator"]))
+		var drift_max: int = int(ReconAIConfig.DISCOVERY_ODDS["level_3_size_drift_roll_denominator"])
+		var drift: int = -1 if drift_roll == 1 else (1 if drift_roll == drift_max else 0)
 		known["reportedSize"] = _shift_size(true_size, drift)
 	elif level >= 4:
-		if rng.randi_range(1, 8) == 1:
-			var direction: int = -1 if rng.randi_range(1, 2) == 1 else 1
+		if rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_4_size_drift_denominator"])) == 1:
+			var direction: int = -1 if rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_4_size_drift_direction_denominator"])) == 1 else 1
 			known["reportedSize"] = _shift_size(true_size, direction)
 		else:
 			known["reportedSize"] = true_size
