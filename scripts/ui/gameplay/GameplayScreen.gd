@@ -161,10 +161,16 @@ func _handle_left_release(position: Vector2) -> void:
 			var hex := Vector2i(clicked_hex["q"], clicked_hex["r"])
 			_selected_hex = hex
 			_refresh_selected_hex_panel(_selected_hex)
-			var friendly_at_hex := _unit_at_hex(hex, _active_player)
 			if _delete_path_at(hex):
 				queue_redraw()
 				_update_info_label("Order deleted.")
+				return
+			var friendly_at_hex := _unit_at_hex(hex, _active_player)
+			if not _selected_unit_id.is_empty() and _active_order_mode == OrderMode.MOVE and friendly_at_hex.is_empty():
+				if _issue_move_order(_selected_unit_id, hex):
+					_update_info_label("Move order created for %s." % _selected_unit_id)
+					_update_order_action_panel()
+					queue_redraw()
 				return
 			_selected_unit_id = friendly_at_hex
 			_preview_path.clear()
