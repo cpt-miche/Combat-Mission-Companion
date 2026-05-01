@@ -259,7 +259,7 @@ func _refresh_selected_hex_panel(hex: Vector2i) -> void:
 	selected_hex_terrain_label.text = "Terrain: %s" % TerrainCatalog.display_name(terrain_id)
 
 	var unit_lines: Array[String] = []
-	for entry in _units_at_hex(hex):
+	for entry in _units_at_hex(hex, -1, true):
 		var unit := entry.get("unit", {}) as Dictionary
 		var unit_id := String(entry.get("id", ""))
 		var line := "%s (owner %d)" % [String(unit.get("id", unit_id)), int(entry.get("owner", -1))]
@@ -304,6 +304,7 @@ func _draw() -> void:
 	for row in range(GRID_ROWS):
 		for column in range(GRID_COLUMNS):
 			var axial := Vector2i(column, row)
+			var tile_visible := _is_hex_visible_to_active_player(axial)
 			var world_center := _hex_center(column, row)
 			var center := _world_to_screen(world_center)
 			if not visible_rect.has_point(center):
@@ -312,8 +313,10 @@ func _draw() -> void:
 			var points := PackedVector2Array()
 			for point in world_points:
 				points.append(_world_to_screen(point))
-			draw_colored_polygon(points, Color(0.15, 0.18, 0.2, 0.9))
-			draw_polyline(points + PackedVector2Array([points[0]]), Color(0.35, 0.4, 0.45, 1.0), 1.5)
+			var fill_color := Color(0.15, 0.18, 0.2, 0.9) if tile_visible else Color(0.05, 0.06, 0.07, 0.97)
+			var edge_color := Color(0.35, 0.4, 0.45, 1.0) if tile_visible else Color(0.14, 0.15, 0.16, 0.95)
+			draw_colored_polygon(points, fill_color)
+			draw_polyline(points + PackedVector2Array([points[0]]), edge_color, 1.5)
 
 	for order in _orders.values():
 		if typeof(order) != TYPE_DICTIONARY:
@@ -332,7 +335,7 @@ func _draw() -> void:
 	for row in range(GRID_ROWS):
 		for column in range(GRID_COLUMNS):
 			var hex := Vector2i(column, row)
-			var stack := _units_at_hex(hex)
+			var stack := _units_at_hex(hex, -1, true)
 			if stack.is_empty():
 				continue
 			var base_center := _world_to_screen(_hex_center(hex.x, hex.y))
@@ -790,13 +793,16 @@ func _delete_path_at(hex: Vector2i) -> bool:
 	return false
 
 
-func _units_at_hex(hex: Vector2i, owner: int = -1) -> Array[Dictionary]:
+func _units_at_hex(hex: Vector2i, owner: int = -1, apply_visibility_filter: bool = false) -> Array[Dictionary]:
 	var units_at_hex: Array[Dictionary] = []
+	var hex_visible := _is_hex_visible_to_active_player(hex)
 	for unit_id in _units.keys():
 		var unit := _units[unit_id] as Dictionary
 		if not GameState.is_unit_alive(unit):
 			continue
 		var unit_owner := int(unit.get("owner", -1))
+		if apply_visibility_filter and not _is_unit_visible_to_active_player(unit_owner, hex_visible):
+			continue
 		if owner >= 0 and unit_owner != owner:
 			continue
 		if unit.get("hex", Vector2i.ZERO) != hex:
@@ -811,8 +817,36 @@ func _units_at_hex(hex: Vector2i, owner: int = -1) -> Array[Dictionary]:
 	)
 	return units_at_hex
 
+func _is_fog_visibility_overridden() -> bool:
+	return bool(GameState.debug_mode_enabled)
+
+func _is_hex_visible_to_active_player(hex: Vector2i) -> bool:
+	if _is_fog_visibility_overridden():
+		return true
+	for unit in _units.values():
+		if not (unit is Dictionary):
+			continue
+		var unit_dict := unit as Dictionary
+		if not GameState.is_unit_alive(unit_dict):
+			continue
+		if int(unit_dict.get("owner", -1)) != _active_player:
+			continue
+		var friendly_hex := unit_dict.get("hex", Vector2i.ZERO) as Vector2i
+		if friendly_hex == hex:
+			return true
+		if Pathfinding.are_adjacent(friendly_hex, hex):
+			return true
+	return false
+
+func _is_unit_visible_to_active_player(unit_owner: int, hex_visible: bool) -> bool:
+	if unit_owner == _active_player:
+		return true
+	if _is_fog_visibility_overridden():
+		return true
+	return hex_visible
+
 func _unit_at_hex(hex: Vector2i, owner: int) -> String:
-	var matches := _units_at_hex(hex, owner)
+	var matches := _units_at_hex(hex, owner, true)
 	if not matches.is_empty():
 		return String(matches[0].get("id", ""))
 	return ""
