@@ -22,6 +22,7 @@ enum MapFlow {
 }
 
 signal phase_changed(new_phase: Phase)
+signal debug_mode_changed(enabled: bool, level: int)
 const MAP_PAYLOAD_VERSION_CURRENT := 1
 const AIDebugTypes = preload("res://scripts/systems/ai_debug/AIDebugTypes.gd")
 
@@ -86,10 +87,12 @@ func reset() -> void:
 func enable_debug_mode(level: int) -> void:
 	debug_mode_level = clampi(level, 1, 3)
 	debug_mode_enabled = true
+	emit_signal("debug_mode_changed", debug_mode_enabled, debug_mode_level)
 
 func disable_debug_mode() -> void:
 	debug_mode_enabled = false
 	debug_mode_level = 0
+	emit_signal("debug_mode_changed", debug_mode_enabled, debug_mode_level)
 
 func toggle_debug_mode_with_level(level: int) -> void:
 	if debug_mode_enabled:
