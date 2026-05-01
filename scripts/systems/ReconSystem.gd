@@ -205,7 +205,16 @@ static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, un
 		_apply_level_type_visibility(level, known, enemy_unit, rng)
 		_apply_level_size_visibility(level, known, enemy_unit, rng)
 		unit_intel_by_id[unit_id] = known.duplicate(true)
-		next_known.append(known)
+		if level >= 2:
+			next_known.append(known)
+	if level == 1 and not enemy_units.is_empty():
+		next_known.append({
+			"presenceKnown": true,
+			"reportedType": "",
+			"typeKnown": false,
+			"reportedSize": "",
+			"sizeKnown": false
+		})
 	hex_intel["knownEnemyUnits"] = next_known
 
 static func _known_for_unit(unit_id: String, unit_intel_by_id: Dictionary) -> Dictionary:
