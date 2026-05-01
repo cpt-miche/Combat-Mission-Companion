@@ -16,6 +16,8 @@ const ROLL_DENOMINATOR_BY_TYPE := ReconAIConfig.SCOUT_PROGRESSION_DENOMINATOR_BY
 
 const SIZE_ORDER := ["platoon", "company", "battalion", "regiment"]
 
+const TRACE_PREFIX := "[ReconTrace]"
+
 static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, prior_hex_intel: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
 	var prior_unit_intel: Dictionary = _extract_prior_unit_intel(prior_hex_intel)
 	var next_hex_intel: Dictionary = _extract_prior_hex_intel(prior_hex_intel)
@@ -29,7 +31,10 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 		var enemy_hex_key: String = String(enemy_hex_id)
 		var intel_for_floor: Dictionary = _ensure_hex_intel(next_hex_intel, enemy_hex_key)
 		var adjacent_friendlies: Array = adjacent_enemy_hexes[enemy_hex_key]
-		intel_for_floor["scoutLevel"] = _apply_automatic_floor(int(intel_for_floor.get("scoutLevel", SCOUT_LEVEL_MIN)), adjacent_friendlies)
+		var level_before_floor: int = int(intel_for_floor.get("scoutLevel", SCOUT_LEVEL_MIN))
+		var floored_level: int = _apply_automatic_floor(level_before_floor, adjacent_friendlies)
+		intel_for_floor["scoutLevel"] = floored_level
+		_trace("floor_applied hex=%s before=%d after=%d friendlies=%s" % [enemy_hex_key, level_before_floor, floored_level, _friendly_unit_ids(adjacent_friendlies)])
 		next_hex_intel[enemy_hex_key] = intel_for_floor
 
 	for enemy_hex_id in adjacent_enemy_hexes.keys():
@@ -43,7 +48,9 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 		var intel_for_gain: Dictionary = _ensure_hex_intel(next_hex_intel, enemy_hex_key)
 		var prior_level: int = int(intel_for_gain.get("scoutLevel", SCOUT_LEVEL_MIN))
 		var level_gain: int = int(resolved_levels_by_hex.get(enemy_hex_key, 0))
-		intel_for_gain["scoutLevel"] = int(clamp(prior_level + level_gain, SCOUT_LEVEL_MIN, SCOUT_LEVEL_MAX))
+		var resulting_level: int = int(clamp(prior_level + level_gain, SCOUT_LEVEL_MIN, SCOUT_LEVEL_MAX))
+		intel_for_gain["scoutLevel"] = resulting_level
+		_trace("resulting_scout_level hex=%s prior=%d gain=%d result=%d" % [enemy_hex_key, prior_level, level_gain, resulting_level])
 		next_hex_intel[enemy_hex_key] = intel_for_gain
 
 	for enemy_hex_id in adjacent_enemy_hexes.keys():
@@ -59,6 +66,7 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 		if adjacent_enemy_hexes.has(enemy_hex_id):
 			continue
 		var stale_intel: Dictionary = next_hex_intel[enemy_hex_id]
+		_trace("contact_loss_clear hex=%s prior_scout=%d prior_known=%d" % [String(enemy_hex_id), int(stale_intel.get("scoutLevel", SCOUT_LEVEL_MIN)), int((stale_intel.get("knownEnemyUnits", []) as Array).size())])
 		stale_intel["knownEnemyUnits"] = []
 		stale_intel["scoutLevel"] = SCOUT_LEVEL_MIN
 		next_hex_intel[enemy_hex_id] = stale_intel
@@ -170,6 +178,7 @@ static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids
 			continue
 		var stale_known: Variant = prior_unit_intel.get(prior_key, null)
 		if stale_known is Dictionary:
+			_trace("contact_loss_clear unit=%s" % prior_key)
 			_clear_reported_contact(stale_known as Dictionary)
 	for unit_id in contact_unit_ids.keys():
 		var key: String = String(unit_id)
@@ -205,7 +214,11 @@ static func _roll_scout_progression(adjacent_friendlies: Array, rng: RandomNumbe
 		var denominator: int = int(ROLL_DENOMINATOR_BY_TYPE.get(_normalized_type(unit as Dictionary), 0))
 		if denominator <= 0:
 			continue
-		if rng.randi_range(1, denominator) == 1:
+		var roll: int = rng.randi_range(1, denominator)
+		var unit_id: String = String((unit as Dictionary).get("id", "unknown"))
+		var succeeded: bool = roll == 1
+		_trace("roll_outcome unit=%s denominator=%d roll=%d success=%s" % [unit_id, denominator, roll, str(succeeded)])
+		if succeeded:
 			gain += 1
 	return gain
 
@@ -222,6 +235,16 @@ static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, un
 		var known: Dictionary = _known_for_unit(unit_id, unit_intel_by_id)
 		_apply_level_type_visibility(level, known, enemy_unit, rng)
 		_apply_level_size_visibility(level, known, enemy_unit, rng)
+		_trace("intel_reveal unit=%s hex=%s level=%d type_known=%s reported_type=%s size_known=%s reported_size=%s size_locked=%s" % [
+			unit_id,
+			String(hex_intel.get("hexId", "")),
+			level,
+			str(bool(known.get("typeKnown", false))),
+			String(known.get("reportedType", "")),
+			str(bool(known.get("sizeKnown", false))),
+			String(known.get("reportedSize", "")),
+			str(bool(known.get("sizeReportLocked", false)))
+		])
 		unit_intel_by_id[unit_id] = known.duplicate(true)
 		if level >= 2:
 			next_known.append(known)
@@ -285,6 +308,18 @@ static func _apply_level_size_visibility(level: int, known: Dictionary, enemy_un
 			_set_reported_size(known, true_size)
 	known["sizeKnown"] = true
 	known["sizeReportLocked"] = true
+	_trace("size_lock unit=%s level=%d reported_size=%s" % [String(known.get("unitId", "")), level, String(known.get("reportedSize", ""))])
+
+static func _friendly_unit_ids(adjacent_friendlies: Array) -> Array[String]:
+	var ids: Array[String] = []
+	for unit in adjacent_friendlies:
+		if not (unit is Dictionary):
+			continue
+		ids.append(String((unit as Dictionary).get("id", "unknown")))
+	return ids
+
+static func _trace(message: String) -> void:
+	print("%s %s" % [TRACE_PREFIX, message])
 
 static func _band_for(score: int) -> String:
 	if score < 20:
