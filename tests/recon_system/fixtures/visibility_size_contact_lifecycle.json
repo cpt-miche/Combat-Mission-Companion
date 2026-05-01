@@ -283,6 +283,55 @@
       }
     },
     {
+      "id": "size_lock_persists_across_adjacent_hex_movement",
+      "seed": 15,
+      "units": [
+        {
+          "id": "obs_recon",
+          "owner": 1,
+          "unit_type": "recon",
+          "size": "platoon",
+          "hex": [
+            1,
+            2
+          ]
+        },
+        {
+          "id": "enemy_combat",
+          "owner": 2,
+          "unit_type": "infantry",
+          "size": "battalion",
+          "hex": [
+            2,
+            2
+          ]
+        },
+        {
+          "id": "enemy_support",
+          "owner": 2,
+          "unit_type": "antiTank",
+          "size": "company",
+          "hex": [
+            2,
+            2
+          ]
+        }
+      ],
+      "expected": {
+        "hexLevels": {
+          "2,2": 4
+        },
+        "knownByUnit": {
+          "enemy_combat": {
+            "sizeReportLocked": true
+          },
+          "enemy_support": {
+            "sizeReportLocked": true
+          }
+        }
+      }
+    },
+    {
       "id": "contact_lost_clears_hex_and_unit_intel",
       "seed": 17,
       "units": [
