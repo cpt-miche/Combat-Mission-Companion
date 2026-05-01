@@ -655,6 +655,7 @@ func _unit_to_dict(unit: UnitModel) -> Dictionary:
 		"template_id": unit.template_id,
 		"display_name": unit.display_name,
 		"short_name": unit.short_name,
+		"designation": _normalize_designation_payload(unit.get_meta("designation_payload", {}), unit),
 		"nation": unit.nation,
 		"type": int(unit.type),
 		"size": _serialize_unit_size(unit.size),
@@ -694,6 +695,7 @@ func _dict_to_unit(data: Variant) -> UnitModel:
 	unit.template_id = String(raw.get("template_id", ""))
 	unit.display_name = String(raw.get("display_name", ""))
 	unit.short_name = String(raw.get("short_name", ""))
+	unit.set_meta("designation_payload", _designation_from_raw(raw, unit))
 	unit.nation = String(raw.get("nation", ""))
 	unit.type = _parse_unit_type(raw.get("type", UnitType.Value.INFANTRY), raw)
 	var raw_size: Variant = raw.get("size", UnitSize.Value.PLATOON)
@@ -727,86 +729,136 @@ func _assign_unit_names_recursive(unit: UnitModel, parent: UnitModel) -> void:
 	if parent != null:
 		sibling_index = _sibling_index_for_naming(parent, unit)
 
-	var names := _name_for_echelon(unit, sibling_index)
+	var designation := _designation_for_echelon(unit, sibling_index, parent)
+	unit.set_meta("designation_payload", designation)
+	var names := _display_names_for_designation(unit, designation)
 	unit.display_name = String(names.get("display_name", "Unit"))
 	unit.short_name = String(names.get("short_name", ""))
 
 	for child in unit.children:
 		_assign_unit_names_recursive(child, unit)
 
-func _name_for_echelon(unit: UnitModel, sibling_index: int) -> Dictionary:
-	var nth := _ordinal(sibling_index)
+func _designation_for_echelon(unit: UnitModel, sibling_index: int, parent: UnitModel) -> Dictionary:
 	var size := unit.size
+	var regiment_number := 0
+	var battalion_number := 0
+	var company_letter := ""
+	var platoon_number := 0
+	if parent != null:
+		var parent_designation := parent.get_meta("designation_payload", {}) as Dictionary
+		regiment_number = int(parent_designation.get("regiment_number", 0))
+		battalion_number = int(parent_designation.get("battalion_number", 0))
+		company_letter = String(parent_designation.get("company_letter", ""))
+	match size:
+		UnitSize.Value.REGIMENT:
+			regiment_number = sibling_index
+		UnitSize.Value.BATTALION:
+			battalion_number = sibling_index
+		UnitSize.Value.COMPANY:
+			company_letter = _alphabet_designation(sibling_index)
+		UnitSize.Value.PLATOON:
+			platoon_number = sibling_index
+	return _normalize_designation_payload({
+		"regiment_number": regiment_number,
+		"battalion_number": battalion_number,
+		"company_letter": company_letter,
+		"platoon_number": platoon_number,
+		"role_echelon": UnitSize.display_name(size)
+	}, unit)
+
+
+func _display_names_for_designation(unit: UnitModel, designation: Dictionary) -> Dictionary:
+	var size := unit.size
+	var designation_nth := 1
+	match size:
+		UnitSize.Value.DIVISION:
+			designation_nth = max(int(designation.get("regiment_number", 0)), 1)
+		UnitSize.Value.REGIMENT:
+			designation_nth = max(int(designation.get("regiment_number", 0)), 1)
+		UnitSize.Value.BATTALION:
+			designation_nth = max(int(designation.get("battalion_number", 0)), 1)
+		UnitSize.Value.SECTION:
+			designation_nth = max(int(designation.get("platoon_number", 0)), 1)
+		UnitSize.Value.SQUAD:
+			designation_nth = max(int(designation.get("platoon_number", 0)), 1)
+		_:
+			designation_nth = max(int(designation.get("battalion_number", 0)), 1)
+	var nth := _ordinal(designation_nth)
 	var type_label := UnitType.display_name(unit.type)
 	var is_auto_hq := unit.template_id.begins_with("auto_hq_")
+	var battalion_number := int(designation.get("battalion_number", 0))
+	var regiment_number := int(designation.get("regiment_number", 0))
+	var company_letter := String(designation.get("company_letter", ""))
+	var platoon_number := int(designation.get("platoon_number", 0))
 	if unit.type == UnitType.Value.HEADQUARTERS:
 		return {
 			"display_name": "%s HQ" % UnitSize.display_name(size),
 			"short_name": "%s HQ" % UnitSize.display_name(size)
 		}
+	if is_auto_hq and (size == UnitSize.Value.REGIMENT or size == UnitSize.Value.DIVISION):
+		return {
+			"display_name": "%s HQ" % UnitSize.display_name(size),
+			"short_name": "%s HQ" % UnitSize.display_name(size)
+		}
 	match size:
-		UnitSize.Value.ARMY:
-			return {
-				"display_name": "Field Army HQ",
-				"short_name": "Army HQ"
-			}
-		UnitSize.Value.DIVISION:
-			if is_auto_hq:
-				return {
-					"display_name": "%s Division HQ" % nth,
-					"short_name": "%s Div HQ" % nth
-				}
-			return {
-				"display_name": "%s %s Division" % [nth, type_label],
-				"short_name": "%s Div" % nth
-			}
-		UnitSize.Value.REGIMENT:
-			if is_auto_hq:
-				return {
-					"display_name": "%s Regiment HQ" % nth,
-					"short_name": "%s Regt HQ" % nth
-				}
-			return {
-				"display_name": "%s Regiment" % nth,
-				"short_name": "%s Regt" % nth
-			}
 		UnitSize.Value.BATTALION:
-			return {
-				"display_name": "%s Battalion" % nth,
-				"short_name": "%s BN" % nth
-			}
+			return {"display_name": "%d Battalion" % max(battalion_number,1), "short_name": "%d BN" % max(battalion_number,1)}
 		UnitSize.Value.COMPANY:
-			var company_letter := _alphabet_designation(sibling_index)
-			return {
-				"display_name": "%s Company" % company_letter,
-				"short_name": "%s Co" % company_letter
-			}
+			var letter := company_letter if not company_letter.is_empty() else _alphabet_designation(max(battalion_number,1))
+			return {"display_name": "%s Company" % letter, "short_name": "%s Co" % letter}
 		UnitSize.Value.PLATOON:
-			return {
-				"display_name": "%s Platoon" % nth,
-				"short_name": "%s PLT" % nth
-			}
-		UnitSize.Value.SECTION:
-			var is_weapons := unit.type == UnitType.Value.ARTILLERY or unit.type == UnitType.Value.ANTI_TANK or unit.type == UnitType.Value.AIR_DEFENSE
-			if is_weapons:
-				return {
-					"display_name": "Weapons Section",
-					"short_name": "Wpns Sec"
-				}
-			return {
-				"display_name": "%s Section" % nth,
-				"short_name": "%s Sec" % nth
-			}
-		UnitSize.Value.SQUAD:
-			return {
-				"display_name": "%s Squad" % nth,
-				"short_name": "%s SQD" % nth
-			}
+			return {"display_name": "%d Platoon" % max(platoon_number,1), "short_name": "%d PLT" % max(platoon_number,1)}
 		_:
-			return {
-				"display_name": "%s %s" % [nth, UnitSize.display_name(size)],
-				"short_name": "%s" % nth
-			}
+			return {"display_name": "%s %s" % [nth, UnitSize.display_name(size)], "short_name": "%s" % nth}
+
+func _designation_from_raw(raw: Dictionary, unit: UnitModel) -> Dictionary:
+	var existing: Variant = raw.get("designation", {})
+	if typeof(existing) == TYPE_DICTIONARY and not (existing as Dictionary).is_empty():
+		return _normalize_designation_payload(existing as Dictionary, unit)
+	return _migrate_designation_from_legacy_names(String(raw.get("display_name", "")), String(raw.get("short_name", "")), unit)
+
+func _normalize_designation_payload(raw_designation: Dictionary, unit: UnitModel) -> Dictionary:
+	return {
+		"regiment_number": maxi(int(raw_designation.get("regiment_number", 0)), 0),
+		"battalion_number": maxi(int(raw_designation.get("battalion_number", 0)), 0),
+		"company_letter": String(raw_designation.get("company_letter", "")).strip_edges().to_upper(),
+		"platoon_number": maxi(int(raw_designation.get("platoon_number", 0)), 0),
+		"role_echelon": String(raw_designation.get("role_echelon", UnitSize.display_name(unit.size))).strip_edges()
+	}
+
+func _migrate_designation_from_legacy_names(display_name: String, short_name: String, unit: UnitModel) -> Dictionary:
+	var merged := (display_name + " " + short_name).strip_edges()
+	var company_letter := ""
+	var platoon_number := 0
+	var battalion_number := 0
+	var regiment_number := 0
+	var company_match := RegEx.new()
+	company_match.compile("([A-Z]{1,2})\\s*(?:CO|COMPANY)")
+	var cm := company_match.search(merged.to_upper())
+	if cm != null:
+		company_letter = cm.get_string(1)
+	var platoon_match := RegEx.new()
+	platoon_match.compile("(\\d+)\\s*(?:PLT|PLATOON)")
+	var pm := platoon_match.search(merged.to_upper())
+	if pm != null:
+		platoon_number = int(pm.get_string(1))
+	var bn_match := RegEx.new()
+	bn_match.compile("(\\d+)\\s*(?:BN|BATTALION)")
+	var bm := bn_match.search(merged.to_upper())
+	if bm != null:
+		battalion_number = int(bm.get_string(1))
+	var reg_match := RegEx.new()
+	reg_match.compile("(\\d+)\\s*(?:REGT|REGIMENT)")
+	var rm := reg_match.search(merged.to_upper())
+	if rm != null:
+		regiment_number = int(rm.get_string(1))
+	return _normalize_designation_payload({
+		"regiment_number": regiment_number,
+		"battalion_number": battalion_number,
+		"company_letter": company_letter,
+		"platoon_number": platoon_number,
+		"role_echelon": UnitSize.display_name(unit.size)
+	}, unit)
 
 func _sibling_index_for_naming(parent: UnitModel, unit: UnitModel) -> int:
 	var same_size_index := 0
