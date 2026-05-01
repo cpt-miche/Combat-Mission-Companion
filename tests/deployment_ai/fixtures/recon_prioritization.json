@@ -1,0 +1,99 @@
+{
+  "id": "recon_prioritization",
+  "elements": [
+    {
+      "id": "u_inf_a",
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_inf_b",
+      "role": "infantry",
+      "size": "company"
+    },
+    {
+      "id": "u_recon_1",
+      "role": "recon",
+      "size": "platoon"
+    }
+  ],
+  "hexes": [
+    {
+      "id": "0,0",
+      "q": 0,
+      "r": 0,
+      "terrain": "open",
+      "owner": 0,
+      "neighborIds": [
+        "1,0",
+        "0,1"
+      ]
+    },
+    {
+      "id": "1,0",
+      "q": 1,
+      "r": 0,
+      "terrain": "open",
+      "owner": 0,
+      "neighborIds": [
+        "0,0",
+        "1,1"
+      ]
+    },
+    {
+      "id": "0,1",
+      "q": 0,
+      "r": 1,
+      "terrain": "open",
+      "owner": 0,
+      "neighborIds": [
+        "0,0",
+        "1,1"
+      ]
+    },
+    {
+      "id": "1,1",
+      "q": 1,
+      "r": 1,
+      "terrain": "open",
+      "owner": 0,
+      "neighborIds": [
+        "1,0",
+        "0,1"
+      ]
+    }
+  ],
+  "sectorModel": {
+    "frontlineHexes": [
+      "0,0",
+      "1,0"
+    ],
+    "contestedArea": [
+      "0,1"
+    ],
+    "rearArea": [
+      "1,1"
+    ],
+    "hexScores": {
+      "0,0": {
+        "priority": 10.0
+      },
+      "1,0": {
+        "priority": 2.0
+      },
+      "0,1": {
+        "priority": 1.0
+      },
+      "1,1": {
+        "priority": 0.5
+      }
+    }
+  },
+  "options": {
+    "objectiveMode": "attack-only"
+  },
+  "expected": {
+    "reconUnitId": "u_recon_1",
+    "reconAttachHex": "0,0"
+  }
+}
