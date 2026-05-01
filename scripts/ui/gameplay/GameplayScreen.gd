@@ -262,11 +262,7 @@ func _refresh_selected_hex_panel(hex: Vector2i) -> void:
 	for entry in _units_at_hex(hex, -1, true):
 		var unit := entry.get("unit", {}) as Dictionary
 		var unit_id := String(entry.get("id", ""))
-		var line := "%s (owner %d)" % [String(unit.get("id", unit_id)), int(entry.get("owner", -1))]
-		if unit.has("unit_type"):
-			line += " - %s" % String(unit.get("unit_type", ""))
-		if unit.has("status"):
-			line += " [%s]" % String(unit.get("status", ""))
+		var line := _unit_summary_line(unit, unit_id, int(entry.get("owner", -1)))
 		if unit_id == _selected_unit_id:
 			line += " [SELECTED]"
 		unit_lines.append(line)
@@ -275,6 +271,69 @@ func _refresh_selected_hex_panel(hex: Vector2i) -> void:
 		selected_hex_units_label.text = "Units: None"
 		return
 	selected_hex_units_label.text = "Units:\n%s" % "\n".join(unit_lines)
+
+func _unit_summary_line(unit: Dictionary, fallback_unit_id: String, owner: int) -> String:
+	var unit_name := String(unit.get("id", fallback_unit_id))
+	var line := "%s (owner %d)" % [unit_name, owner]
+	if unit.has("unit_type"):
+		line += " - %s" % _friendly_unit_type_label(String(unit.get("unit_type", "")))
+	if _should_show_full_unit_debug(unit):
+		line += " | HP %d/%d" % [_unit_hp_value(unit), _unit_max_hp_value(unit)]
+		line += " | Status: %s" % _friendly_status_text(String(unit.get("status", "alive")))
+		line += " | State: %s" % _friendly_state_summary(unit)
+		return line
+	if unit.has("status"):
+		line += " [%s]" % _friendly_status_text(String(unit.get("status", "")))
+	return line
+
+func _friendly_unit_type_label(unit_type: String) -> String:
+	var normalized := unit_type.strip_edges().to_lower()
+	if normalized.is_empty():
+		return "Unknown"
+	return normalized.capitalize()
+
+func _friendly_status_text(status: String) -> String:
+	var normalized := status.strip_edges().to_lower()
+	if normalized.is_empty():
+		return "Unknown"
+	return normalized.capitalize()
+
+func _friendly_state_summary(unit: Dictionary) -> String:
+	var states: Array[String] = []
+	if unit.has("is_alive"):
+		states.append("Alive: %s" % ("Yes" if bool(unit.get("is_alive", true)) else "No"))
+	if unit.has("moved"):
+		states.append("Moved: %s" % ("Yes" if bool(unit.get("moved", false)) else "No"))
+	if unit.has("acted"):
+		states.append("Acted: %s" % ("Yes" if bool(unit.get("acted", false)) else "No"))
+	if unit.has("concealment"):
+		states.append("Concealment: %d" % int(unit.get("concealment", 0)))
+	if states.is_empty():
+		return "No extra state"
+	return ", ".join(states)
+
+func _should_show_full_unit_debug(unit: Dictionary) -> bool:
+	if not bool(GameState.debug_mode_enabled):
+		return false
+	var owner := int(unit.get("owner", -1))
+	if owner == _active_player:
+		return true
+	return true
+
+func _unit_hp_value(unit: Dictionary) -> int:
+	var hp_keys := ["hp", "health", "strength", "current_hp", "current_health"]
+	for key in hp_keys:
+		if unit.has(key):
+			return maxi(0, int(unit.get(key, 0)))
+	return int(unit.get("steps", 0))
+
+func _unit_max_hp_value(unit: Dictionary) -> int:
+	var max_hp_keys := ["max_hp", "max_health", "hp_max", "health_max", "max_strength"]
+	for key in max_hp_keys:
+		if unit.has(key):
+			return maxi(0, int(unit.get(key, 0)))
+	var hp_value := _unit_hp_value(unit)
+	return maxi(hp_value, int(unit.get("steps", hp_value)))
 
 func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
 	if _is_panning:
@@ -422,6 +481,21 @@ func _draw_unit_marker(marker: Dictionary) -> void:
 		var badge_center := center + Vector2(UNIT_MARKER_RADIUS * 0.7, -UNIT_MARKER_RADIUS * 0.7)
 		draw_circle(badge_center, badge_radius, Color(0.07, 0.08, 0.1, 0.95))
 		draw_string(get_theme_default_font(), badge_center + Vector2(-4, 4), str(stack_size), HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
+	if bool(GameState.debug_mode_enabled):
+		_draw_debug_unit_overlay(center, String(marker.get("id", "")))
+
+func _draw_debug_unit_overlay(center: Vector2, unit_id: String) -> void:
+	if unit_id.is_empty() or not _units.has(unit_id):
+		return
+	var unit := _units[unit_id] as Dictionary
+	var status_text := _friendly_status_text(String(unit.get("status", "alive")))
+	var hp_text := "HP %d/%d" % [_unit_hp_value(unit), _unit_max_hp_value(unit)]
+	var status_badge_center := center + Vector2(0, -UNIT_MARKER_RADIUS - 12.0)
+	draw_circle(status_badge_center, 10.0, Color(0.08, 0.09, 0.11, 0.94))
+	draw_string(get_theme_default_font(), status_badge_center + Vector2(-8, 4), status_text.left(2), HORIZONTAL_ALIGNMENT_LEFT, -1, 10)
+	var hp_badge_center := center + Vector2(0, UNIT_MARKER_RADIUS + 12.0)
+	draw_circle(hp_badge_center, 14.0, Color(0.08, 0.09, 0.11, 0.94))
+	draw_string(get_theme_default_font(), hp_badge_center + Vector2(-12, 4), hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10)
 
 func _pick_friendly_unit_at(screen_position: Vector2) -> String:
 	var clicked_hex_dict := _find_hex(screen_position)
