@@ -30,6 +30,8 @@ enum OrderMode { MOVE, ATTACK, DIG_IN }
 @onready var selected_hex_title_label: Label = %SelectedHexTitleLabel
 @onready var selected_hex_terrain_label: Label = %SelectedHexTerrainLabel
 @onready var selected_hex_units_label: Label = %SelectedHexUnitsLabel
+@onready var debug_level_dialog: ConfirmationDialog = %DebugLevelDialog
+@onready var debug_level_option_button: OptionButton = %DebugLevelOptionButton
 
 var _units: Dictionary = {}
 var _orders: Dictionary = {}
@@ -75,6 +77,9 @@ func _ready() -> void:
 	_update_order_action_panel()
 	_update_hovered_terrain_label(TerrainCatalog.default_terrain_id())
 	_refresh_selected_hex_panel(_selected_hex)
+	debug_level_dialog.confirmed.connect(_on_debug_level_confirmed)
+	debug_level_dialog.canceled.connect(_on_debug_level_canceled)
+	_configure_debug_level_options()
 
 func _process(_delta: float) -> void:
 	if _preview_recalc_due_at_msec <= 0:
@@ -83,6 +88,36 @@ func _process(_delta: float) -> void:
 		return
 	_preview_recalc_due_at_msec = 0
 	_recalculate_preview_path()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("debug_toggle"):
+		_handle_debug_toggle()
+		get_viewport().set_input_as_handled()
+
+func _configure_debug_level_options() -> void:
+	debug_level_option_button.clear()
+	debug_level_option_button.add_item("Level 1", 1)
+	debug_level_option_button.add_item("Level 2", 2)
+	debug_level_option_button.add_item("Level 3", 3)
+
+func _handle_debug_toggle() -> void:
+	if GameState.debug_mode_enabled:
+		GameState.disable_debug_mode()
+		_update_info_label("Debug mode OFF")
+		return
+	debug_level_option_button.select(0)
+	debug_level_dialog.popup_centered()
+
+func _on_debug_level_confirmed() -> void:
+	var selected_level := debug_level_option_button.get_selected_id()
+	if selected_level <= 0:
+		selected_level = 1
+	GameState.enable_debug_mode(selected_level)
+	_update_info_label("Debug mode %s" % GameState.get_debug_mode_label())
+
+func _on_debug_level_canceled() -> void:
+	_update_info_label("Debug mode unchanged (%s)" % GameState.get_debug_mode_label())
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
