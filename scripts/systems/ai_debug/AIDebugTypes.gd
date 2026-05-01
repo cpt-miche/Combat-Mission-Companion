@@ -15,6 +15,9 @@ const DEBUG_LEVEL_LABELS := {
 	DebugLevel.L3: "L3"
 }
 
+static func gameplay_debug_to_ai_level(gameplay_debug_level: int) -> int:
+	return clampi(gameplay_debug_level, DebugLevel.L1, DebugLevel.L3)
+
 const REQUIRED_TRACE_FIELDS := [
 	"trace_id",
 	"timestamp_unix",
