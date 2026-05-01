@@ -83,7 +83,8 @@ static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], 
 			"support": [],
 			"artillery": [],
 			"reserve": []
-		}
+		},
+		"unitById": {}
 	}
 
 	var unit_ordered := elements.duplicate(true)
@@ -92,6 +93,7 @@ static func _build_state(elements: Array[Dictionary], hexes: Array[Dictionary], 
 	)
 
 	for unit in unit_ordered:
+		state["unitById"][String(unit.get("id", ""))] = unit
 		var role: String = String(unit.get("role", DeploymentTypes.ROLE_INFANTRY))
 		if role == DeploymentTypes.ROLE_ARTILLERY_SUPPORT:
 			(state["units"]["artillery"] as Array).append(unit)
@@ -177,9 +179,11 @@ static func _stage_b_attach_support(state: Dictionary, orders: Array[Dictionary]
 			var candidate_meta := {}
 			if role == DeploymentTypes.ROLE_RECON:
 				var expected_floor := _expected_intel_floor_for_role(role, false)
+				var recon_components := _recon_stack_heuristic_components(state, hex_id)
 				candidate_meta = {
 					"expectedIntelFloor": expected_floor,
-					"intelComponents": _intel_score_components(state, hex_id, expected_floor)
+					"intelComponents": _intel_score_components(state, hex_id, expected_floor),
+					"reconHeuristicComponents": recon_components
 				}
 			_emit_candidate_scored(state, "B", unit, hex_id, candidate_score, "support_stack_score", "Stage B: scored support attachment candidate.", candidate_meta)
 			if role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT and bool(state["stackHasAttackByHex"].get(hex_id, false)):
@@ -417,7 +421,8 @@ static func _support_stack_score(state: Dictionary, unit: Dictionary, hex_id: St
 	if role == DeploymentTypes.ROLE_RECON:
 		role_bonus = 1.0 if stance == "attack" else 0.6
 		var intel_components := _intel_score_components(state, hex_id, _expected_intel_floor_for_role(role, false))
-		return base_priority + role_bonus + float(intel_components.get("total", 0.0))
+		var recon_components := _recon_stack_heuristic_components(state, hex_id)
+		return base_priority + role_bonus + float(intel_components.get("total", 0.0)) + float(recon_components.get("total", 0.0))
 	elif role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT:
 		role_bonus = -2.0 if has_attack else (1.0 if stance == "defense" else 0.6)
 	elif role == DeploymentTypes.ROLE_WEAPONS:
@@ -492,6 +497,35 @@ static func _intel_score_components(state: Dictionary, anchor_hex_id: String, ex
 		"uncertaintyReduction": uncertainty_reduction,
 		"criticalLowIntelPenalty": critical_penalty,
 		"total": floor_effect + neighboring_importance_effect + objective_relevance_effect + uncertainty_reduction - critical_penalty
+	}
+
+static func _recon_stack_heuristic_components(state: Dictionary, hex_id: String) -> Dictionary:
+	var critical_importance := _critical_adjacent_importance(state, hex_id)
+	var objective_importance := _adjacent_enemy_importance(state, hex_id)
+	var distance_to_frontline := _distance_to_frontline(hex_id, state)
+	var has_combat_stack := int(state["combatLoad"].get(hex_id, 0)) > 0
+
+	var stacked_combat_bonus := 0.0
+	if has_combat_stack and critical_importance > 0.0:
+		stacked_combat_bonus = critical_importance * 1.8
+
+	var behind_line_no_intel_penalty := 0.0
+	if objective_importance <= 0.0 and distance_to_frontline >= 2:
+		behind_line_no_intel_penalty = float(distance_to_frontline - 1) * 1.4
+
+	var isolated_critical_frontline_penalty := 0.0
+	if not has_combat_stack and bool(state["frontline"].get(hex_id, false)) and critical_importance > 0.0:
+		isolated_critical_frontline_penalty = critical_importance * 2.6
+
+	return {
+		"criticalAdjacentImportance": critical_importance,
+		"objectiveImportance": objective_importance,
+		"distanceToFrontline": distance_to_frontline,
+		"hasCombatStack": has_combat_stack,
+		"stackedCombatNearCriticalBonus": stacked_combat_bonus,
+		"behindLineNoIntelPenalty": behind_line_no_intel_penalty,
+		"isolatedCriticalFrontlinePenalty": isolated_critical_frontline_penalty,
+		"total": stacked_combat_bonus - behind_line_no_intel_penalty - isolated_critical_frontline_penalty
 	}
 
 static func _frontline_coverage_from(hex_id: String, state: Dictionary) -> int:
@@ -593,8 +627,15 @@ static func _reason_stage_b(unit: Dictionary, hex_id: String, state: Dictionary)
 	var meta := {"supportSlotsNow": support_now, "supportCapacity": MAX_SUPPORT_CAPACITY}
 	if role == DeploymentTypes.ROLE_RECON:
 		var expected_floor := _expected_intel_floor_for_role(role, false)
+		var recon_components := _recon_stack_heuristic_components(state, hex_id)
 		meta["expectedIntelFloor"] = expected_floor
 		meta["intelComponents"] = _intel_score_components(state, hex_id, expected_floor)
+		meta["reconHeuristicComponents"] = recon_components
+		return {
+			"reason": "Stage B: attached recon to %s; support slots now %d/%d; critical-stack bonus %.2f, rear-no-intel penalty %.2f, isolated-critical-frontline penalty %.2f." % [hex_id, support_now, MAX_SUPPORT_CAPACITY, float(recon_components.get("stackedCombatNearCriticalBonus", 0.0)), float(recon_components.get("behindLineNoIntelPenalty", 0.0)), float(recon_components.get("isolatedCriticalFrontlinePenalty", 0.0))],
+			"reason_code": "recon_support_attached_with_intel_heuristics",
+			"meta": meta
+		}
 	return {
 		"reason": "Stage B: attached %s to combat stack at %s; support slots now %d/%d." % [role, hex_id, support_now, MAX_SUPPORT_CAPACITY],
 		"reason_code": "support_attached_to_stack",
