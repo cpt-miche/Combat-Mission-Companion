@@ -278,7 +278,9 @@ func _unit_summary_line(unit: Dictionary, fallback_unit_id: String, owner: int) 
 	if unit.has("unit_type"):
 		line += " - %s" % _friendly_unit_type_label(String(unit.get("unit_type", "")))
 	if _should_show_full_unit_debug(unit):
-		line += " | HP %d/%d" % [_unit_hp_value(unit), _unit_max_hp_value(unit)]
+		var sub_unit_summary := _live_sub_units_summary(unit)
+		if not sub_unit_summary.is_empty():
+			line += " | Sub-units %s" % sub_unit_summary
 		line += " | Status: %s" % _friendly_status_text(String(unit.get("status", "alive")))
 		line += " | State: %s" % _friendly_state_summary(unit)
 		return line
@@ -489,13 +491,29 @@ func _draw_debug_unit_overlay(center: Vector2, unit_id: String) -> void:
 		return
 	var unit := _units[unit_id] as Dictionary
 	var status_text := _friendly_status_text(String(unit.get("status", "alive")))
-	var hp_text := "HP %d/%d" % [_unit_hp_value(unit), _unit_max_hp_value(unit)]
+	var sub_units_text := _live_sub_units_summary(unit)
 	var status_badge_center := center + Vector2(0, -UNIT_MARKER_RADIUS - 12.0)
 	draw_circle(status_badge_center, 10.0, Color(0.08, 0.09, 0.11, 0.94))
 	draw_string(get_theme_default_font(), status_badge_center + Vector2(-8, 4), status_text.left(2), HORIZONTAL_ALIGNMENT_LEFT, -1, 10)
-	var hp_badge_center := center + Vector2(0, UNIT_MARKER_RADIUS + 12.0)
-	draw_circle(hp_badge_center, 14.0, Color(0.08, 0.09, 0.11, 0.94))
-	draw_string(get_theme_default_font(), hp_badge_center + Vector2(-12, 4), hp_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10)
+	if not sub_units_text.is_empty():
+		var sub_units_badge_center := center + Vector2(0, UNIT_MARKER_RADIUS + 12.0)
+		draw_circle(sub_units_badge_center, 14.0, Color(0.08, 0.09, 0.11, 0.94))
+		draw_string(get_theme_default_font(), sub_units_badge_center + Vector2(-12, 4), sub_units_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10)
+
+func _live_sub_units_summary(unit: Dictionary) -> String:
+	var live_keys := ["live_sub_units", "sub_units_alive", "alive_sub_units", "current_sub_units"]
+	var max_keys := ["max_sub_units", "sub_units_max", "total_sub_units"]
+	var live_value: Variant = _first_int_for_keys(unit, live_keys)
+	var max_value: Variant = _first_int_for_keys(unit, max_keys)
+	if live_value == null or max_value == null:
+		return ""
+	return "%d/%d" % [maxi(0, int(live_value)), maxi(0, int(max_value))]
+
+func _first_int_for_keys(unit: Dictionary, keys: Array[String]) -> Variant:
+	for key in keys:
+		if unit.has(key):
+			return int(unit.get(key, 0))
+	return null
 
 func _pick_friendly_unit_at(screen_position: Vector2) -> String:
 	var clicked_hex_dict := _find_hex(screen_position)
