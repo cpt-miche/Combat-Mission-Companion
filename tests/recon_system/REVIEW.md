@@ -15,9 +15,10 @@ Use `scripts/tools/ReconFixtureReplay.gd`:
 | Independent per-unit progression rolls | `fixtures/floor_progression_and_cap.json` (`progressionChecks`) |
 | Multi-success same-turn increments | `fixtures/floor_progression_and_cap.json` (`progressionChecks.minGain=2`) |
 | Scout level cap at 4 | `fixtures/floor_progression_and_cap.json` |
-| Level 1/2/3/4 visibility and size reporting invariants | `fixtures/visibility_size_contact_lifecycle.json` |
+| Level 1/2/3/4 discovery behavior and visibility invariants | `fixtures/visibility_size_contact_lifecycle.json` |
+| Size accuracy/clamp by scout level and wrong-size lock prevention | `fixtures/visibility_size_contact_lifecycle.json` |
 | Size lock persistence while in contact | `fixtures/visibility_size_contact_lifecycle.json` |
-| Intel clear and re-discovery after contact loss/regain | `fixtures/visibility_size_contact_lifecycle.json` |
+| Contact-loss hard reset (hex + unit intel) and re-discovery after regain | `fixtures/visibility_size_contact_lifecycle.json` |
 | RNG-seeded repeatability assertions | both fixtures (`deterministicChecks`) |
 
 ## Notes

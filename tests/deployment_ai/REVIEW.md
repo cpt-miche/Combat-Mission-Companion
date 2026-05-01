@@ -23,6 +23,7 @@ Replay output includes concise diff buckets:
 - **Artillery range coverage**: `artillery_coverage.json`
 - **Reserve anti-clumping**: `reserve_anti_clumping.json`
 - **Sanity repair triggers**: `sanity_repair_triggers.json`
+- **Deployment AI recon prioritization**: `recon_prioritization.json`
 
 Each file includes:
 - Deterministic `elements`, `hexes`, and `sectorModel`
