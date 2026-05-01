@@ -787,10 +787,6 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 	var nth := _ordinal(designation_nth)
 	var type_label := UnitType.display_name(unit.type)
 	var is_auto_hq := unit.template_id.begins_with("auto_hq_")
-	var battalion_number := int(designation.get("battalion_number", 0))
-	var regiment_number := int(designation.get("regiment_number", 0))
-	var company_letter := String(designation.get("company_letter", ""))
-	var platoon_number := int(designation.get("platoon_number", 0))
 	if unit.type == UnitType.Value.HEADQUARTERS:
 		if size == UnitSize.Value.BATTALION:
 			var battalion_hq := UnitNotationFormatter.format_unit({
@@ -810,16 +806,38 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 		}
 	match size:
 		UnitSize.Value.BATTALION:
-			var bn_notation := UnitNotationFormatter.format_unit({"type": type_label.to_lower(), "size": "battalion", "designation": designation})
+			var bn_notation := UnitNotationFormatter.format_unit({
+				"type": type_label.to_lower(),
+				"size": "battalion",
+				"designation": designation,
+				"short_name": unit.short_name,
+				"display_name": unit.display_name,
+				"id": unit.id
+			})
 			return {"display_name": bn_notation, "short_name": bn_notation}
 		UnitSize.Value.COMPANY:
-			var company_notation := UnitNotationFormatter.format_unit({"type": type_label.to_lower(), "size": "company", "designation": designation})
+			var company_notation := UnitNotationFormatter.format_unit({
+				"type": type_label.to_lower(),
+				"size": "company",
+				"designation": designation,
+				"short_name": unit.short_name,
+				"display_name": unit.display_name,
+				"id": unit.id
+			})
 			return {"display_name": company_notation, "short_name": company_notation}
 		UnitSize.Value.PLATOON:
-			var platoon_notation := UnitNotationFormatter.format_unit({"type": type_label.to_lower(), "size": "platoon", "designation": designation})
+			var platoon_notation := UnitNotationFormatter.format_unit({
+				"type": type_label.to_lower(),
+				"size": "platoon",
+				"designation": designation,
+				"short_name": unit.short_name,
+				"display_name": unit.display_name,
+				"id": unit.id
+			})
 			return {"display_name": platoon_notation, "short_name": platoon_notation}
 		_:
 			return {"display_name": "%s %s" % [nth, UnitSize.display_name(size)], "short_name": "%s" % nth}
+	return {"display_name": "%s %s" % [nth, UnitSize.display_name(size)], "short_name": "%s" % nth}
 
 func _designation_from_raw(raw: Dictionary, unit: UnitModel) -> Dictionary:
 	var existing: Variant = raw.get("designation", {})
