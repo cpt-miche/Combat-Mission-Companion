@@ -235,7 +235,8 @@ static func _apply_level_size_visibility(level: int, known: Dictionary, enemy_un
 		if rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_3_combat_size_known_denominator"])) != 1:
 			return
 		var drift_roll: int = rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_3_size_drift_roll_denominator"]))
-		var drift: int = -1 if drift_roll == 1 else (1 if drift_roll == 4 else 0)
+		var drift_max: int = int(ReconAIConfig.DISCOVERY_ODDS["level_3_size_drift_roll_denominator"])
+		var drift: int = -1 if drift_roll == 1 else (1 if drift_roll == drift_max else 0)
 		known["reportedSize"] = _shift_size(true_size, drift)
 	elif level >= 4:
 		if rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_4_size_drift_denominator"])) == 1:
