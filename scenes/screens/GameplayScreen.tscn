@@ -1,6 +1,23 @@
 [gd_scene format=3 uid="uid://gameplayscreen"]
 
 [ext_resource type="Script" path="res://scripts/ui/gameplay/GameplayScreen.gd" id="1_game"]
+[ext_resource type="PackedScene" path="res://scenes/ui/DebugLevelModal.tscn" id="2_debug_modal"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_debug"]
+bg_color = Color(0, 0, 0, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.8)
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
 
 [node name="GameplayScreen" type="Control"]
 layout_mode = 3
@@ -69,6 +86,23 @@ offset_right = 1008.0
 offset_bottom = 44.0
 text = "Hovered Terrain: Light Terrain"
 
+[node name="DebugStatusContainer" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 840.0
+offset_top = 16.0
+offset_right = 1008.0
+offset_bottom = 50.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_debug")
+
+[node name="DebugStatusLabel" type="Label" parent="DebugStatusContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+horizontal_alignment = 1
+text = "DEBUG L1"
+
 [node name="CombatLogLabel" type="RichTextLabel" parent="."]
 unique_name_in_owner = true
 layout_mode = 0
@@ -106,18 +140,5 @@ layout_mode = 2
 autowrap_mode = 3
 text = "Units: None"
 
-[node name="DebugLevelDialog" type="ConfirmationDialog" parent="."]
+[node name="DebugLevelModal" parent="." instance=ExtResource("2_debug_modal")]
 unique_name_in_owner = true
-title = "Enable Debug Mode"
-ok_button_text = "Enable"
-
-[node name="DebugLevelVBox" type="VBoxContainer" parent="DebugLevelDialog"]
-layout_mode = 2
-
-[node name="DebugLevelLabel" type="Label" parent="DebugLevelDialog/DebugLevelVBox"]
-layout_mode = 2
-text = "Select debug level:"
-
-[node name="DebugLevelOptionButton" type="OptionButton" parent="DebugLevelDialog/DebugLevelVBox"]
-unique_name_in_owner = true
-layout_mode = 2
