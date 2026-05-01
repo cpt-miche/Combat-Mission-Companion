@@ -16,7 +16,7 @@ func start_trace(context: Dictionary) -> Dictionary:
 	var turn: int = int(context.get("turn", -1))
 	var player_id: int = int(context.get("player_id", -1))
 	var ai_version: String = str(context.get("ai_version", DEFAULT_AI_VERSION))
-	var debug_level: int = int(context.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
+	var debug_level: int = int(context.get("debug_level", AIDebugTypes.DebugLevel.L2))
 	var inputs_hash: String = str(context.get("inputs_hash", DEFAULT_INPUTS_HASH))
 
 	return AIDebugTypes.make_trace_contract(
@@ -69,16 +69,16 @@ static func _capture_timestamp_unix() -> int:
 
 func _should_drop_event(trace: Dictionary, payload: Dictionary) -> bool:
 	var event_level: int = _normalize_debug_level(
-		int(payload.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
+		int(payload.get("debug_level", AIDebugTypes.DebugLevel.L2))
 	)
 	var trace_level: int = _normalize_debug_level(
-		int(trace.get("debug_level", AIDebugTypes.DebugLevel.NORMAL))
+		int(trace.get("debug_level", AIDebugTypes.DebugLevel.L2))
 	)
 	return trace_level < event_level
 
 
 func _normalize_debug_level(raw_level: int) -> int:
-	return clampi(raw_level, AIDebugTypes.DebugLevel.OFF, AIDebugTypes.DebugLevel.VERBOSE)
+	return clampi(raw_level, AIDebugTypes.DebugLevel.OFF, AIDebugTypes.DebugLevel.L3)
 
 
 func _normalize_event_shape(event_type: String, payload: Dictionary) -> Dictionary:

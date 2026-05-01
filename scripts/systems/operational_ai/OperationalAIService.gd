@@ -4,6 +4,7 @@ class_name OperationalAIService
 const OperationalEvaluator = preload("res://scripts/systems/operational_ai/OperationalEvaluator.gd")
 const OperationalMapAnalyzer = preload("res://scripts/systems/operational_ai/OperationalMapAnalyzer.gd")
 const AIDebugTracer = preload("res://scripts/systems/ai_debug/AIDebugTracer.gd")
+const AIDebugFormatter = preload("res://scripts/systems/ai_debug/AIDebugFormatter.gd")
 
 static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 	var ai_player_index: int = int(GameState.active_player)
@@ -43,6 +44,7 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 			"snapshot": {}
 		}, {"evaluation_ms": 0})
 		GameState.operational_ai_debug["player_%d" % ai_player_index] = _legacy_debug_from_trace(disabled_trace)
+		_persist_trace(disabled_trace)
 		return {"ok": true, "reason": "feature_flag_disabled", "enabled": false, "assessment": {}}
 
 	var snapshot: Dictionary = _build_operational_snapshot(ai_player_index)
@@ -84,6 +86,7 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 		"traceId": String(finished_trace.get("trace_id", ""))
 	}
 	GameState.operational_ai_debug["player_%d" % ai_player_index] = _legacy_debug_from_trace(finished_trace)
+	_persist_trace(finished_trace)
 	return {"ok": true, "reason": "assessed", "enabled": true, "assessment": assessment}
 
 static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
@@ -323,3 +326,9 @@ static func _legacy_debug_from_trace(final_trace: Dictionary) -> Dictionary:
 	legacy["events"] = (final_trace.get("events", []) as Array).duplicate(true)
 	legacy["eventCount"] = int(final_trace.get("event_count", (final_trace.get("events", []) as Array).size()))
 	return legacy
+
+static func _persist_trace(final_trace: Dictionary) -> void:
+	var trace_payload := final_trace.duplicate(true)
+	trace_payload["line_entries"] = AIDebugFormatter.format_trace_lines(final_trace)
+	trace_payload["line_log_path"] = SaveManager.AI_TRACE_LINE_LOG_PATH
+	SaveManager.save_ai_trace(trace_payload)

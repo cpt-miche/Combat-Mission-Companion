@@ -4,7 +4,12 @@ const CURRENT_GAME_SAVE_PATH := "user://current_game.save"
 const DIVISION_TEMPLATES_DIR := "user://division_templates"
 const MAPS_DIR := "user://maps"
 const AI_DEBUG_DIR := "user://ai_debug"
+# user:// resolves per-platform. Typical paths:
+# - Windows: %APPDATA%/Godot/app_userdata/<project_name>/ai_debug
+# - macOS: ~/Library/Application Support/Godot/app_userdata/<project_name>/ai_debug
+# - Linux: ~/.local/share/godot/app_userdata/<project_name>/ai_debug
 const AI_TRACE_FILE_PREFIX := "ai_trace_"
+const AI_TRACE_LINE_LOG_PATH := "%s/ai_trace_lines.log" % AI_DEBUG_DIR
 const AI_TRACE_INDEX_PATH := "%s/index.json" % AI_DEBUG_DIR
 const AI_TRACE_MAX_TOTAL_BYTES := 20 * 1024 * 1024
 const AI_TRACE_DEFAULT_MAX_FILES := 100
@@ -221,7 +226,15 @@ func save_ai_trace(trace: Dictionary) -> bool:
 
 	var retention_count := int(trace.get("retention_max_files", AI_TRACE_DEFAULT_MAX_FILES))
 	prune_ai_traces(retention_count)
-	return true
+	var line_append_succeeded := true
+	if trace.has("line_entries") and trace.get("line_entries") is PackedStringArray:
+		line_append_succeeded = append_ai_trace_lines(trace.get("line_entries") as PackedStringArray)
+	elif trace.has("line_entries") and trace.get("line_entries") is Array:
+		var normalized_lines := PackedStringArray()
+		for line in (trace.get("line_entries") as Array):
+			normalized_lines.append(String(line))
+		line_append_succeeded = append_ai_trace_lines(normalized_lines)
+	return line_append_succeeded
 
 func list_ai_traces() -> PackedStringArray:
 	_ensure_ai_debug_dir()
@@ -294,3 +307,22 @@ func prune_ai_traces(max_files: int) -> void:
 
 	index["traces"] = filtered
 	_save_ai_trace_index(index)
+
+
+func get_ai_debug_help_text() -> String:
+	return "AI debug traces are written to %s (line log: %s). On Windows/macOS/Linux this maps to each platform's app_userdata folder." % [AI_DEBUG_DIR, AI_TRACE_LINE_LOG_PATH]
+
+func append_ai_trace_lines(lines: PackedStringArray) -> bool:
+	if lines.is_empty():
+		return true
+	_ensure_ai_debug_dir()
+	var file := FileAccess.open(AI_TRACE_LINE_LOG_PATH, FileAccess.READ_WRITE)
+	if file == null:
+		file = FileAccess.open(AI_TRACE_LINE_LOG_PATH, FileAccess.WRITE)
+		if file == null:
+			push_warning("Could not open AI line log for writing: %s" % AI_TRACE_LINE_LOG_PATH)
+			return false
+	file.seek_end()
+	for line in lines:
+		file.store_line(String(line))
+	return true

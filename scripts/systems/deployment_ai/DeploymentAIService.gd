@@ -5,6 +5,7 @@ const DeploymentDataConverter = preload("res://scripts/domain/deployment_ai/Depl
 const DeploymentPlanner = preload("res://scripts/systems/deployment_ai/DeploymentPlanner.gd")
 const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValidator.gd")
 const AIDebugTracer = preload("res://scripts/systems/ai_debug/AIDebugTracer.gd")
+const AIDebugFormatter = preload("res://scripts/systems/ai_debug/AIDebugFormatter.gd")
 
 static func run_for_player(ai_player_index: int) -> Dictionary:
 	if ai_player_index < 0 or ai_player_index >= GameState.players.size():
@@ -40,6 +41,7 @@ static func run_for_player(ai_player_index: int) -> Dictionary:
 		}
 		var finished_trace := tracer.finish_trace(trace, outputs, {"planner_ms": 0})
 		GameState.deployment_ai_debug["player_%d" % ai_player_index] = _legacy_debug_from_trace(finished_trace)
+		_persist_trace(finished_trace)
 		return {"ok": true, "reason": "no_elements", "deployments": {}}
 
 	var hexes := DeploymentDataConverter.map_payload_to_hexes(GameState.terrain_map, GameState.territory_map)
@@ -79,6 +81,7 @@ static func run_for_player(ai_player_index: int) -> Dictionary:
 	}
 	var finished_trace := tracer.finish_trace(trace, outputs, {"planner_ms": 0})
 	GameState.deployment_ai_debug["player_%d" % ai_player_index] = _legacy_debug_from_trace(finished_trace)
+	_persist_trace(finished_trace)
 	return {"ok": true, "reason": "planned", "deployments": deployments, "plan": plan}
 
 static func _legacy_debug_from_trace(final_trace: Dictionary) -> Dictionary:
@@ -289,3 +292,9 @@ static func _context_for_mode(mode: String) -> String:
 
 static func _territory_owner_for_player(player_index: int) -> int:
 	return GameState.TerritoryOwnership.PLAYER_1 if player_index == 0 else GameState.TerritoryOwnership.PLAYER_2
+
+static func _persist_trace(final_trace: Dictionary) -> void:
+	var trace_payload := final_trace.duplicate(true)
+	trace_payload["line_entries"] = AIDebugFormatter.format_trace_lines(final_trace)
+	trace_payload["line_log_path"] = SaveManager.AI_TRACE_LINE_LOG_PATH
+	SaveManager.save_ai_trace(trace_payload)
