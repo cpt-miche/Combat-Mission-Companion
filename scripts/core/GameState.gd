@@ -87,11 +87,18 @@ func reset() -> void:
 func enable_debug_mode(level: int) -> void:
 	debug_mode_level = clampi(level, 1, 3)
 	debug_mode_enabled = true
+	ai_debug_enabled = true
+	ai_debug_level = AIDebugTypes.gameplay_debug_to_ai_level(debug_mode_level)
 	emit_signal("debug_mode_changed", debug_mode_enabled, debug_mode_level)
 
 func disable_debug_mode() -> void:
 	debug_mode_enabled = false
 	debug_mode_level = 0
+	ai_debug_enabled = false
+	ai_debug_level = AIDebugTypes.DebugLevel.OFF
+	deployment_ai_debug.clear()
+	operational_ai_debug.clear()
+	operational_ai_state.clear()
 	emit_signal("debug_mode_changed", debug_mode_enabled, debug_mode_level)
 
 func toggle_debug_mode_with_level(level: int) -> void:

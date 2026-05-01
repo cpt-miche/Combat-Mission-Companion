@@ -108,6 +108,20 @@ func _apply_loaded_payload(payload: Dictionary) -> void:
 	GameState.apply_map_payload(payload)
 	GameState.pending_casualties = (payload.get("casualties", {}) as Dictionary).duplicate(true)
 	GameState.gameplay_units = _deserialize_units(payload.get("units", {}) as Dictionary)
+	_apply_ai_debug_payload(payload.get("ai_debug", {}))
+
+func _apply_ai_debug_payload(raw_ai_debug: Variant) -> void:
+	var ai_debug_payload := raw_ai_debug as Dictionary
+	if ai_debug_payload == null:
+		GameState.disable_debug_mode()
+		return
+
+	var mode_enabled := bool(ai_debug_payload.get("mode_enabled", ai_debug_payload.get("enabled", false)))
+	var mode_level := clampi(int(ai_debug_payload.get("mode_level", ai_debug_payload.get("level", 1))), 1, 3)
+	if mode_enabled:
+		GameState.enable_debug_mode(mode_level)
+		return
+	GameState.disable_debug_mode()
 
 func _configure_map_mode_selector() -> void:
 	map_mode_selector.clear()

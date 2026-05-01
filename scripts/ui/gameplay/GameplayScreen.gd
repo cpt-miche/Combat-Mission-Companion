@@ -759,6 +759,12 @@ func _autosave_current_game() -> void:
 	var autosave_payload: Dictionary = {
 		"turn_number": GameState.current_turn,
 		"active_player": _active_player,
+		"ai_debug": {
+			"enabled": GameState.ai_debug_enabled,
+			"level": GameState.ai_debug_level,
+			"mode_enabled": GameState.debug_mode_enabled,
+			"mode_level": GameState.debug_mode_level
+		},
 		"map": {
 			"grid_columns": GRID_COLUMNS,
 			"grid_rows": GRID_ROWS,
