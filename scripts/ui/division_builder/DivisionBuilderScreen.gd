@@ -769,7 +769,21 @@ func _designation_for_echelon(unit: UnitModel, sibling_index: int, parent: UnitM
 
 func _display_names_for_designation(unit: UnitModel, designation: Dictionary) -> Dictionary:
 	var size := unit.size
-	var nth := _ordinal(max(int(designation.get("battalion_number", 0)), 1))
+	var designation_nth := 1
+	match size:
+		UnitSize.Value.DIVISION:
+			designation_nth = max(int(designation.get("regiment_number", 0)), 1)
+		UnitSize.Value.REGIMENT:
+			designation_nth = max(int(designation.get("regiment_number", 0)), 1)
+		UnitSize.Value.BATTALION:
+			designation_nth = max(int(designation.get("battalion_number", 0)), 1)
+		UnitSize.Value.SECTION:
+			designation_nth = max(int(designation.get("platoon_number", 0)), 1)
+		UnitSize.Value.SQUAD:
+			designation_nth = max(int(designation.get("platoon_number", 0)), 1)
+		_:
+			designation_nth = max(int(designation.get("battalion_number", 0)), 1)
+	var nth := _ordinal(designation_nth)
 	var type_label := UnitType.display_name(unit.type)
 	var is_auto_hq := unit.template_id.begins_with("auto_hq_")
 	var battalion_number := int(designation.get("battalion_number", 0))
@@ -777,6 +791,11 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 	var company_letter := String(designation.get("company_letter", ""))
 	var platoon_number := int(designation.get("platoon_number", 0))
 	if unit.type == UnitType.Value.HEADQUARTERS:
+		return {
+			"display_name": "%s HQ" % UnitSize.display_name(size),
+			"short_name": "%s HQ" % UnitSize.display_name(size)
+		}
+	if is_auto_hq and (size == UnitSize.Value.REGIMENT or size == UnitSize.Value.DIVISION):
 		return {
 			"display_name": "%s HQ" % UnitSize.display_name(size),
 			"short_name": "%s HQ" % UnitSize.display_name(size)
