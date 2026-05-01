@@ -226,14 +226,15 @@ func save_ai_trace(trace: Dictionary) -> bool:
 
 	var retention_count := int(trace.get("retention_max_files", AI_TRACE_DEFAULT_MAX_FILES))
 	prune_ai_traces(retention_count)
+	var line_append_succeeded := true
 	if trace.has("line_entries") and trace.get("line_entries") is PackedStringArray:
-		append_ai_trace_lines(trace.get("line_entries") as PackedStringArray)
+		line_append_succeeded = append_ai_trace_lines(trace.get("line_entries") as PackedStringArray)
 	elif trace.has("line_entries") and trace.get("line_entries") is Array:
 		var normalized_lines := PackedStringArray()
 		for line in (trace.get("line_entries") as Array):
 			normalized_lines.append(String(line))
-		append_ai_trace_lines(normalized_lines)
-	return true
+		line_append_succeeded = append_ai_trace_lines(normalized_lines)
+	return line_append_succeeded
 
 func list_ai_traces() -> PackedStringArray:
 	_ensure_ai_debug_dir()
