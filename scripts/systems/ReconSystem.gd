@@ -103,7 +103,10 @@ static func _collect_adjacent_enemy_hexes(units: Dictionary, observer_owner: int
 		if int(friendly.get("owner", -1)) != observer_owner:
 			continue
 		for enemy_hex_id in enemy_hex_to_units.keys():
-			if not Pathfinding.are_adjacent(friendly.get("hex", Vector2i.ZERO), _id_to_hex(String(enemy_hex_id))):
+			var enemy_hex: Vector2i = _id_to_hex(String(enemy_hex_id))
+			var friendly_hex: Vector2i = friendly.get("hex", Vector2i.ZERO)
+			var has_contact: bool = friendly_hex == enemy_hex or Pathfinding.are_adjacent(friendly_hex, enemy_hex)
+			if not has_contact:
 				continue
 			if not adjacent_enemy_hexes.has(enemy_hex_id):
 				adjacent_enemy_hexes[enemy_hex_id] = []
