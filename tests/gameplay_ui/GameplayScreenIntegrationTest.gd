@@ -12,6 +12,7 @@ func _run() -> void:
 	await process_frame
 	_test_selection_exposes_order_actions()
 	_test_mode_based_order_issuing()
+	_test_left_click_move_tile_issues_move_order()
 	_test_stack_cap_feedback()
 
 	if _failures.is_empty():
@@ -51,6 +52,22 @@ func _test_stack_cap_feedback() -> void:
 	var succeeded: bool = screen._issue_move_order("u1", Vector2i(1, 0))
 	_assert_true(not succeeded, "Move order should be blocked when destination stack cap exceeded")
 	_assert_true(String(screen.info_label.text).contains("Stack exceeds"), "Blocked stack move should explain stack-cap feedback")
+	_cleanup_screen(screen)
+
+func _test_left_click_move_tile_issues_move_order() -> void:
+	_reset_state()
+	var screen := _spawn_screen()
+	screen._selected_unit_id = "u1"
+	screen._set_order_mode(screen.OrderMode.MOVE)
+	var target_hex := Vector2i(0, 1)
+	var click_position: Vector2 = screen._world_to_screen(screen._hex_center(target_hex.x, target_hex.y))
+	screen._handle_left_press(click_position)
+	screen._handle_left_release(click_position)
+	_assert_true(screen._orders.has("u1"), "Left-clicking a destination in Move mode should issue a move order for selected unit")
+	var order := screen._orders["u1"] as Dictionary
+	_assert_equal(OrderSystem.OrderType.MOVE, int(order.get("type", -1)), "Left-click move should create MOVE order")
+	var path := order.get("path", []) as Array
+	_assert_true(path.size() >= 2, "Left-click move order should include a traversable path")
 	_cleanup_screen(screen)
 
 func _reset_state() -> void:
