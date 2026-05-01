@@ -93,15 +93,8 @@ static func _collect_adjacent_enemy_hexes(units: Dictionary, observer_owner: int
 
 static func _ensure_hex_intel(intel_store: Dictionary, enemy_hex_id: String) -> Dictionary:
 	if intel_store.has(enemy_hex_id) and intel_store[enemy_hex_id] is Dictionary:
-		var existing: Dictionary = intel_store[enemy_hex_id] as Dictionary
-		if not existing.has("hexId"):
-			existing["hexId"] = enemy_hex_id
-		if not existing.has("knownEnemyUnits"):
-			existing["knownEnemyUnits"] = []
-		if not existing.has("scoutLevel"):
-			existing["scoutLevel"] = SCOUT_LEVEL_MIN
-		return existing
-	return {"hexId": enemy_hex_id, "scoutLevel": SCOUT_LEVEL_MIN, "knownEnemyUnits": []}
+		return _normalize_hex_intel((intel_store[enemy_hex_id] as Dictionary).duplicate(true), enemy_hex_id)
+	return _new_hex_intel(enemy_hex_id)
 
 static func _extract_prior_hex_intel(prior_hex_intel: Dictionary) -> Dictionary:
 	var next_hex_intel: Dictionary = {}
@@ -208,18 +201,18 @@ static func _apply_level_type_visibility(level: int, known: Dictionary, enemy_un
 		return
 	if level == 1:
 		if not bool(known.get("typeKnown", false)) and rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_1_type_known_denominator"])) == 1:
-			known["reportedUnitType"] = unit_type
+			_set_reported_type(known, unit_type)
 			known["typeKnown"] = true
 		return
 	if level == 2:
 		if COMBAT_TYPES.has(unit_type):
-			known["reportedUnitType"] = unit_type
+			_set_reported_type(known, unit_type)
 			known["typeKnown"] = true
 		elif unit_type in ["recon", "antiTank", "weapons", "artillery"] and not bool(known.get("typeKnown", false)) and rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_2_support_type_known_denominator"])) == 1:
-			known["reportedUnitType"] = unit_type
+			_set_reported_type(known, unit_type)
 			known["typeKnown"] = true
 		return
-	known["reportedUnitType"] = unit_type
+	_set_reported_type(known, unit_type)
 	known["typeKnown"] = true
 
 static func _apply_level_size_visibility(level: int, known: Dictionary, enemy_unit: Dictionary, rng: RandomNumberGenerator) -> void:
@@ -237,13 +230,13 @@ static func _apply_level_size_visibility(level: int, known: Dictionary, enemy_un
 		var drift_roll: int = rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_3_size_drift_roll_denominator"]))
 		var drift_max: int = int(ReconAIConfig.DISCOVERY_ODDS["level_3_size_drift_roll_denominator"])
 		var drift: int = -1 if drift_roll == 1 else (1 if drift_roll == drift_max else 0)
-		known["reportedSize"] = _shift_size(true_size, drift)
+		_set_reported_size(known, _shift_size(true_size, drift))
 	elif level >= 4:
 		if rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_4_size_drift_denominator"])) == 1:
 			var direction: int = -1 if rng.randi_range(1, int(ReconAIConfig.DISCOVERY_ODDS["level_4_size_drift_direction_denominator"])) == 1 else 1
-			known["reportedSize"] = _shift_size(true_size, direction)
+			_set_reported_size(known, _shift_size(true_size, direction))
 		else:
-			known["reportedSize"] = true_size
+			_set_reported_size(known, true_size)
 	known["sizeKnown"] = true
 	known["sizeReportLocked"] = true
 
@@ -276,10 +269,35 @@ static func _known_enemy_lookup(raw_known_units: Variant) -> Dictionary:
 static func _new_known_enemy(unit_id: String) -> Dictionary:
 	return {
 		"unitId": unit_id,
+		"reportedType": "",
 		"typeKnown": false,
+		"reportedSize": "",
 		"sizeKnown": false,
 		"sizeReportLocked": false
 	}
+
+static func _new_hex_intel(hex_id: String) -> Dictionary:
+	return {
+		"hexId": hex_id,
+		"scoutLevel": SCOUT_LEVEL_MIN,
+		"knownEnemyUnits": []
+	}
+
+static func _normalize_hex_intel(intel: Dictionary, hex_id: String) -> Dictionary:
+	if not intel.has("hexId"):
+		intel["hexId"] = hex_id
+	if not intel.has("knownEnemyUnits"):
+		intel["knownEnemyUnits"] = []
+	if not intel.has("scoutLevel"):
+		intel["scoutLevel"] = SCOUT_LEVEL_MIN
+	return intel
+
+static func _set_reported_type(known: Dictionary, unit_type: String) -> void:
+	known["reportedUnitType"] = unit_type
+	known["reportedType"] = unit_type
+
+static func _set_reported_size(known: Dictionary, unit_size: String) -> void:
+	known["reportedSize"] = unit_size
 
 static func _normalized_type(unit: Dictionary) -> String:
 	var direct: String = String(unit.get("unit_type", unit.get("type", ""))).strip_edges()
