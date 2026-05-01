@@ -459,7 +459,7 @@ static func _critical_adjacent_importance(state: Dictionary, anchor_hex_id: Stri
 
 static func _expected_scout_coverage_score(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
 	var importance_sum := _adjacent_enemy_importance(state, anchor_hex_id)
-	return float(expected_floor) * importance_sum * float(ReconAIConfig.AI_SCOUT_COVERAGE["weights"]["coverage"])
+	return float(expected_floor) * importance_sum * float(ReconAIConfig.AI_SCOUT_COVERAGE["weights"]["expected_scout_level"])
 
 static func _critical_sector_low_intel_penalty(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
 	var critical_importance := _critical_adjacent_importance(state, anchor_hex_id)
@@ -479,13 +479,19 @@ static func _intel_score_components(state: Dictionary, anchor_hex_id: String, ex
 	var floor_effect := _expected_scout_coverage_score(state, anchor_hex_id, expected_floor)
 	var uncertainty_reduction := _uncertainty_reduction_score(state, anchor_hex_id, expected_floor)
 	var critical_penalty := _critical_sector_low_intel_penalty(state, anchor_hex_id, expected_floor)
+	var neighboring_importance_weight := float(ReconAIConfig.AI_SCOUT_COVERAGE["weights"]["neighboring_hex_importance"])
+	var objective_relevance_weight := float(ReconAIConfig.AI_SCOUT_COVERAGE["weights"]["objective_relevance"])
+	var neighboring_importance_effect := sector_importance * neighboring_importance_weight
+	var objective_relevance_effect := objective_importance * objective_relevance_weight
 	return {
 		"objectiveImportance": objective_importance,
 		"sectorImportance": sector_importance,
+		"neighboringImportanceEffect": neighboring_importance_effect,
+		"objectiveRelevanceEffect": objective_relevance_effect,
 		"expectedIntelFloorEffect": floor_effect,
 		"uncertaintyReduction": uncertainty_reduction,
 		"criticalLowIntelPenalty": critical_penalty,
-		"total": floor_effect + uncertainty_reduction - critical_penalty
+		"total": floor_effect + neighboring_importance_effect + objective_relevance_effect + uncertainty_reduction - critical_penalty
 	}
 
 static func _frontline_coverage_from(hex_id: String, state: Dictionary) -> int:
