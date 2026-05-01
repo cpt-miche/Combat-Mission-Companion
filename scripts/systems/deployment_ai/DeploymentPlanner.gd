@@ -1,6 +1,8 @@
 extends RefCounted
 class_name DeploymentPlanner
 
+const ReconAIConfig = preload("res://scripts/core/ReconAIConfig.gd")
+
 const MAX_COMBAT_CAPACITY := 9
 const MAX_SUPPORT_CAPACITY := 3
 const ARTILLERY_RANGE := 6
@@ -424,10 +426,10 @@ static func _support_stack_score(state: Dictionary, unit: Dictionary, hex_id: St
 
 static func _expected_intel_floor_for_role(role: String, is_combat: bool = false) -> int:
 	if is_combat:
-		return 1
+		return int(ReconAIConfig.AI_SCOUT_COVERAGE["expected_floor"]["combat"])
 	if role == DeploymentTypes.ROLE_RECON:
-		return 3
-	return 1
+		return int(ReconAIConfig.AI_SCOUT_COVERAGE["expected_floor"]["recon_support"])
+	return int(ReconAIConfig.AI_SCOUT_COVERAGE["expected_floor"]["default_support"])
 
 static func _adjacent_enemy_importance(state: Dictionary, anchor_hex_id: String) -> float:
 	var anchor: Vector2i = (state["hexCoords"] as Dictionary).get(anchor_hex_id, Vector2i.ZERO) as Vector2i
@@ -451,25 +453,25 @@ static func _critical_adjacent_importance(state: Dictionary, anchor_hex_id: Stri
 		if distance > 1:
 			continue
 		var importance: float = float(state["priorities"].get(enemy_hex_id, 0.0))
-		if importance >= 0.75:
+		if importance >= float(ReconAIConfig.AI_SCOUT_COVERAGE["ranges"]["critical_importance_threshold"]):
 			importance_sum += importance
 	return importance_sum
 
 static func _expected_scout_coverage_score(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
 	var importance_sum := _adjacent_enemy_importance(state, anchor_hex_id)
-	return float(expected_floor) * importance_sum
+	return float(expected_floor) * importance_sum * float(ReconAIConfig.AI_SCOUT_COVERAGE["weights"]["coverage"])
 
 static func _critical_sector_low_intel_penalty(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
 	var critical_importance := _critical_adjacent_importance(state, anchor_hex_id)
 	if expected_floor >= 3:
 		return 0.0
-	return 2.0 * critical_importance
+	return float(ReconAIConfig.AI_SCOUT_COVERAGE["weights"]["critical_low_intel_penalty"]) * critical_importance
 
 static func _uncertainty_reduction_score(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> float:
 	if expected_floor <= 1:
 		return 0.0
 	var importance_sum := _adjacent_enemy_importance(state, anchor_hex_id)
-	return float(expected_floor - 1) * importance_sum
+	return float(expected_floor - 1) * importance_sum * float(ReconAIConfig.AI_SCOUT_COVERAGE["weights"]["uncertainty_reduction"])
 
 static func _intel_score_components(state: Dictionary, anchor_hex_id: String, expected_floor: int) -> Dictionary:
 	var objective_importance := _adjacent_enemy_importance(state, anchor_hex_id)
