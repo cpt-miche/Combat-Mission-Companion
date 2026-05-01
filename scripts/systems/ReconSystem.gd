@@ -23,16 +23,35 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 	var adjacent_enemy_hexes: Dictionary = _collect_adjacent_enemy_hexes(units, observer_owner, enemy_hex_to_units)
 	var contact_unit_ids: Dictionary = _collect_contact_enemy_unit_ids(adjacent_enemy_hexes, enemy_hex_to_units)
 	var unit_intel_by_id: Dictionary = _reconcile_unit_intel(prior_unit_intel, contact_unit_ids)
+	var resolved_levels_by_hex: Dictionary = {}
 
 	for enemy_hex_id in adjacent_enemy_hexes.keys():
-		var intel: Dictionary = _ensure_hex_intel(next_hex_intel, enemy_hex_id)
-		var adjacent_friendlies: Array = adjacent_enemy_hexes[enemy_hex_id]
-		intel["scoutLevel"] = _apply_automatic_floor(int(intel.get("scoutLevel", SCOUT_LEVEL_MIN)), adjacent_friendlies)
+		var enemy_hex_key: String = String(enemy_hex_id)
+		var intel_for_floor: Dictionary = _ensure_hex_intel(next_hex_intel, enemy_hex_key)
+		var adjacent_friendlies: Array = adjacent_enemy_hexes[enemy_hex_key]
+		intel_for_floor["scoutLevel"] = _apply_automatic_floor(int(intel_for_floor.get("scoutLevel", SCOUT_LEVEL_MIN)), adjacent_friendlies)
+		next_hex_intel[enemy_hex_key] = intel_for_floor
+
+	for enemy_hex_id in adjacent_enemy_hexes.keys():
+		var enemy_hex_key: String = String(enemy_hex_id)
+		var adjacent_friendlies: Array = adjacent_enemy_hexes[enemy_hex_key]
 		var level_gain: int = _roll_scout_progression(adjacent_friendlies, rng)
-		intel["scoutLevel"] = int(clamp(int(intel.get("scoutLevel", SCOUT_LEVEL_MIN)) + level_gain, SCOUT_LEVEL_MIN, SCOUT_LEVEL_MAX))
-		var enemy_units: Array = enemy_hex_to_units.get(enemy_hex_id, [])
+		resolved_levels_by_hex[enemy_hex_key] = level_gain
+
+	for enemy_hex_id in adjacent_enemy_hexes.keys():
+		var enemy_hex_key: String = String(enemy_hex_id)
+		var intel_for_gain: Dictionary = _ensure_hex_intel(next_hex_intel, enemy_hex_key)
+		var prior_level: int = int(intel_for_gain.get("scoutLevel", SCOUT_LEVEL_MIN))
+		var level_gain: int = int(resolved_levels_by_hex.get(enemy_hex_key, 0))
+		intel_for_gain["scoutLevel"] = int(clamp(prior_level + level_gain, SCOUT_LEVEL_MIN, SCOUT_LEVEL_MAX))
+		next_hex_intel[enemy_hex_key] = intel_for_gain
+
+	for enemy_hex_id in adjacent_enemy_hexes.keys():
+		var enemy_hex_key: String = String(enemy_hex_id)
+		var intel: Dictionary = _ensure_hex_intel(next_hex_intel, enemy_hex_key)
+		var enemy_units: Array = enemy_hex_to_units.get(enemy_hex_key, [])
 		_resolve_visible_intel(intel, enemy_units, unit_intel_by_id, rng)
-		next_hex_intel[enemy_hex_id] = intel
+		next_hex_intel[enemy_hex_key] = intel
 
 	for enemy_hex_id in next_hex_intel.keys():
 		if String(enemy_hex_id) == UNIT_INTEL_KEY:
