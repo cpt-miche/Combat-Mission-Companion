@@ -6,6 +6,7 @@ const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 const ReconSystem = preload("res://scripts/systems/ReconSystem.gd")
 const OperationalAIService = preload("res://scripts/systems/operational_ai/OperationalAIService.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
+const MatchSetupTypes = preload("res://scripts/core/MatchSetupTypes.gd")
 
 static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: CombatLog, trace_context: Dictionary = {}) -> Dictionary:
 	var execution_queue: Array[Dictionary] = []
@@ -255,10 +256,16 @@ static func _resolve_turn_trace_context(orders: Dictionary, trace_context: Dicti
 		session_id = "session_%d" % now_unix
 	if trace_id.is_empty():
 		trace_id = session_id
+	var doctrine := MatchSetupTypes.sanitize_ai_doctrine(context.get("ai_doctrine", GameState.selected_ai_doctrine))
+	var difficulty := MatchSetupTypes.sanitize_difficulty(context.get("difficulty", GameState.selected_difficulty))
 	return {
 		"trace_id": trace_id,
 		"session_id": session_id,
-		"rng_seed": int(context.get("rng_seed", 0))
+		"rng_seed": int(context.get("rng_seed", 0)),
+		"ai_doctrine": doctrine,
+		"difficulty": difficulty,
+		"ai_doctrine_overridden": context.has("ai_doctrine"),
+		"difficulty_overridden": context.has("difficulty")
 	}
 
 static func _add_trace_event(trace_events: Array[Dictionary], trace_context: Dictionary, event_type: String, payload: Dictionary) -> void:

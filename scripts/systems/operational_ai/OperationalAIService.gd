@@ -5,6 +5,7 @@ const OperationalEvaluator = preload("res://scripts/systems/operational_ai/Opera
 const OperationalMapAnalyzer = preload("res://scripts/systems/operational_ai/OperationalMapAnalyzer.gd")
 const AIDebugTracer = preload("res://scripts/systems/ai_debug/AIDebugTracer.gd")
 const AIDebugFormatter = preload("res://scripts/systems/ai_debug/AIDebugFormatter.gd")
+const MatchSetupTypes = preload("res://scripts/core/MatchSetupTypes.gd")
 
 static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 	var ai_player_index: int = int(GameState.active_player)
@@ -15,6 +16,7 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 	if ai_player.is_empty():
 		return {"ok": false, "reason": "missing_player"}
 
+	var ai_config: Dictionary = _resolve_ai_config(ai_player, trace_context)
 	var tracer: AIDebugTracer = AIDebugTracer.new()
 	var trace: Dictionary = tracer.start_trace({
 		"phase": "operational_ai",
@@ -26,7 +28,9 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 			"activePlayer": ai_player_index,
 			"turn": int(GameState.current_turn),
 			"trace_id": String(trace_context.get("trace_id", "")),
-			"session_id": String(trace_context.get("session_id", ""))
+			"session_id": String(trace_context.get("session_id", "")),
+			"doctrine": String(ai_config.get("doctrine", "balanced")),
+			"difficulty": String(ai_config.get("difficulty", "medium"))
 		})
 	})
 
@@ -47,7 +51,7 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 		_persist_trace(disabled_trace)
 		return {"ok": true, "reason": "feature_flag_disabled", "enabled": false, "assessment": {}}
 
-	var snapshot: Dictionary = _build_operational_snapshot(ai_player_index)
+	var snapshot: Dictionary = _build_operational_snapshot(ai_player_index, ai_config)
 	tracer.add_event(trace, "input_snapshot_built", {
 		"stage": "operational_assessment",
 		"reason_code": "snapshot_ready",
@@ -56,7 +60,9 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 			"sector_count": (snapshot.get("sectors", []) as Array).size(),
 			"threat_count": (snapshot.get("threats", []) as Array).size(),
 			"breakthrough_count": (snapshot.get("breakthroughs", []) as Array).size(),
-			"enemy_adjacent_count": (snapshot.get("enemyAdjacentHexes", []) as Array).size()
+			"enemy_adjacent_count": (snapshot.get("enemyAdjacentHexes", []) as Array).size(),
+			"active_doctrine": String(ai_config.get("doctrine", "balanced")),
+			"active_difficulty": String(ai_config.get("difficulty", "medium"))
 		}
 	})
 
@@ -89,7 +95,7 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 	_persist_trace(finished_trace)
 	return {"ok": true, "reason": "assessed", "enabled": true, "assessment": assessment}
 
-static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
+static func _build_operational_snapshot(ai_player_index: int, ai_config: Dictionary = {}) -> Dictionary:
 	var ai_owner: int = _territory_owner_for_player(ai_player_index)
 	var enemy_player_index: int = 1 - ai_player_index
 	var enemy_owner: int = _territory_owner_for_player(enemy_player_index)
@@ -196,13 +202,14 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 				"overextensionRisk": clamp(pressure * 0.7, 0.0, 1.0)
 			})
 
-	var doctrine: String = _resolve_operational_doctrine(ai_player)
+	var doctrine: String = String(ai_config.get("doctrine", "balanced"))
+	var difficulty: String = String(ai_config.get("difficulty", "medium"))
 	return {
 		"operationId": "turn_%d_player_%d" % [int(GameState.current_turn), ai_player_index],
 		"turnIndex": int(GameState.current_turn),
 		"posture": "balanced",
 		"doctrine": doctrine,
-		"difficulty": MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty),
+		"difficulty": difficulty,
 		"threats": threats,
 		"breakthroughs": breakthroughs,
 		"sectors": sectors,
@@ -214,9 +221,28 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 			"activePlayer": ai_player_index,
 			"featureFlag": bool(GameState.operational_ai_enabled),
 			"doctrine": doctrine,
-		"difficulty": MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
+			"difficulty": difficulty
 		}
 	}
+
+
+
+static func _resolve_ai_config(ai_player: Dictionary, trace_context: Dictionary) -> Dictionary:
+	var default_doctrine := "balanced"
+	var default_difficulty := "medium"
+	var context_doctrine := _map_ai_doctrine_to_operational(String(trace_context.get("ai_doctrine", default_doctrine)))
+	var context_difficulty := MatchSetupTypes.sanitize_difficulty(trace_context.get("difficulty", default_difficulty))
+	var doctrine: String = _resolve_operational_doctrine(ai_player)
+	if bool(trace_context.get("ai_doctrine_overridden", false)):
+		doctrine = context_doctrine
+	if doctrine.strip_edges().is_empty():
+		doctrine = default_doctrine
+	var difficulty: String = MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
+	if bool(trace_context.get("difficulty_overridden", false)):
+		difficulty = context_difficulty
+	if difficulty.strip_edges().is_empty():
+		difficulty = default_difficulty
+	return {"doctrine": doctrine, "difficulty": difficulty}
 
 static func _resolve_operational_doctrine(ai_player: Dictionary) -> String:
 	var selected_ai_doctrine: String = MatchSetupTypes.sanitize_ai_doctrine(GameState.selected_ai_doctrine)
