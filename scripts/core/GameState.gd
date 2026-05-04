@@ -41,7 +41,8 @@ var selected_map_name: String = ""
 var selected_map_dimensions: Vector2i = Vector2i(MapGridConfig.default_columns(), MapGridConfig.default_rows())
 var map_columns: int = MapGridConfig.default_columns()
 var map_rows: int = MapGridConfig.default_rows()
-var selected_ai_doctrine: String = "balanced"
+var selected_ai_doctrine: String = MatchSetupTypes.DEFAULT_AI_DOCTRINE
+var selected_difficulty: String = MatchSetupTypes.DEFAULT_DIFFICULTY
 var deployment_ai_debug: Dictionary = {}
 var operational_ai_debug: Dictionary = {}
 var operational_ai_state: Dictionary = {}
@@ -74,7 +75,8 @@ func reset() -> void:
 	selected_map_dimensions = Vector2i(MapGridConfig.default_columns(), MapGridConfig.default_rows())
 	map_columns = MapGridConfig.default_columns()
 	map_rows = MapGridConfig.default_rows()
-	selected_ai_doctrine = "balanced"
+	selected_ai_doctrine = MatchSetupTypes.DEFAULT_AI_DOCTRINE
+	selected_difficulty = MatchSetupTypes.DEFAULT_DIFFICULTY
 	deployment_ai_debug.clear()
 	operational_ai_debug.clear()
 	operational_ai_state.clear()
@@ -133,7 +135,8 @@ func apply_map_payload(payload: Dictionary) -> void:
 	_apply_grid_payload(migrated_payload.get("grid", null))
 	terrain_map = _sanitize_terrain_map(migrated_payload.get("terrain", {}))
 	territory_map = _sanitize_territory_map(migrated_payload.get("territory", {}))
-	selected_ai_doctrine = _sanitize_ai_doctrine(migrated_payload.get("ai_doctrine", "balanced"))
+	selected_ai_doctrine = MatchSetupTypes.sanitize_ai_doctrine(migrated_payload.get("ai_doctrine", MatchSetupTypes.DEFAULT_AI_DOCTRINE))
+	selected_difficulty = MatchSetupTypes.sanitize_difficulty(migrated_payload.get("difficulty", MatchSetupTypes.DEFAULT_DIFFICULTY))
 
 func set_runtime_map_dimensions(columns: int, rows: int) -> void:
 	map_columns = maxi(columns, 1)
@@ -150,14 +153,6 @@ func validate_map_payload(payload: Dictionary) -> bool:
 	if payload.has("territory") and not (payload.get("territory") is Dictionary):
 		return false
 	return true
-
-func _sanitize_ai_doctrine(raw_doctrine: Variant) -> String:
-	var doctrine := String(raw_doctrine).strip_edges().to_lower()
-	match doctrine:
-		"balanced", "aggressive", "defensive":
-			return doctrine
-		_:
-			return "balanced"
 
 func _extract_map_payload(payload: Dictionary) -> Dictionary:
 	var map_container: Variant = payload.get("map", null)
