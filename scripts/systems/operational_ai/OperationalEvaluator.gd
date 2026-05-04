@@ -66,9 +66,11 @@ const DEFAULT_WEIGHTS := {
 
 static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionary:
 	var posture: String = String(input.get("posture", overrides.get("posture", "balanced")))
+	var doctrine: String = String(input.get("doctrine", input.get("metadata", {}).get("doctrine", overrides.get("doctrine", "balanced"))))
 	var cfg := _merge_dict(DEFAULT_WEIGHTS, overrides)
 	cfg.erase("posture")
-	cfg = OperationalScoringModel.weights_for_posture(posture, cfg)
+	cfg.erase("doctrine")
+	cfg = OperationalScoringModel.weights_for_doctrine(posture, doctrine, cfg)
 	var operation_id: String = String(input.get("operationId", ""))
 	var turn_index: int = int(input.get("turnIndex", 0))
 
@@ -118,6 +120,7 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	assessment["recommendedIntents"] = _sort_scored(recommended_intents)
 	assessment["warnings"] = _dedupe_sorted_strings(warnings)
 	assessment["posture"] = _normalize_posture(posture)
+	assessment["doctrine"] = _normalize_doctrine(doctrine)
 	return assessment
 
 static func _evaluate_enemy_adjacent_opportunities(candidate_hexes: Array, cfg: Dictionary) -> Dictionary:
@@ -301,6 +304,27 @@ static func _normalize_posture(posture: String) -> String:
 		"cautious": true,
 		"armorHeavy": true,
 		"infantryHeavy": true
+	}
+	if bool(allowed.get(trimmed, false)):
+		return trimmed
+	return "balanced"
+
+
+static func _normalize_doctrine(doctrine: String) -> String:
+	var trimmed := doctrine.strip_edges().to_lower()
+	if trimmed.is_empty():
+		return "balanced"
+	var aliases := {
+		"aggressive": "maneuver",
+		"defensive": "security"
+	}
+	if aliases.has(trimmed):
+		trimmed = String(aliases.get(trimmed, "balanced"))
+	var allowed := {
+		"balanced": true,
+		"maneuver": true,
+		"attrition": true,
+		"security": true
 	}
 	if bool(allowed.get(trimmed, false)):
 		return trimmed

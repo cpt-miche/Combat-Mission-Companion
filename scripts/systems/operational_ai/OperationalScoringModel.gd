@@ -207,23 +207,82 @@ const POSTURE_PROFILES := {
 }
 
 
+
+
+const DOCTRINE_PROFILES := {
+	"balanced": {},
+	"maneuver": {
+		"attackOpportunity": {
+			"components": {
+				"terrain_suitability": {"weight": 0.70},
+				"overextension_risk": {"weight": -0.80}
+			}
+		},
+		"counterattackOpportunity": {
+			"components": {
+				"terrain_suitability": {"weight": 0.58},
+				"overextension_risk": {"weight": -0.95}
+			}
+		}
+	},
+	"attrition": {
+		"friendlyStrength": {
+			"components": {
+				"support_strength": {"weight": 1.15},
+				"artillery_proximity": {"weight": 0.70}
+			}
+		},
+		"attackOpportunity": {
+			"components": {
+				"artillery_support": {"weight": 0.78},
+				"enemy_weakness_estimate": {"weight": 1.00}
+			}
+		}
+	},
+	"security": {
+		"sectorDanger": {
+			"components": {
+				"friendly_weakness": {"weight": 1.05},
+				"isolation": {"weight": 0.58}
+			}
+		},
+		"attackOpportunity": {
+			"components": {
+				"defensive_coherence_risk": {"weight": -0.95},
+				"overextension_risk": {"weight": -1.08}
+			}
+		}
+	}
+}
 static func scoring_config(overrides: Dictionary = {}) -> Dictionary:
 	return _deep_merge(DEFAULT_CONFIG, overrides)
 
 static func weights_for_posture(posture: String, base_config: Dictionary = {}) -> Dictionary:
+	return weights_for_doctrine(posture, "balanced", base_config)
+
+static func weights_for_doctrine(posture: String, doctrine: String, base_config: Dictionary = {}) -> Dictionary:
 	var normalized_posture := _normalize_posture(posture)
+	var normalized_doctrine := _normalize_doctrine(doctrine)
 	var posture_overrides: Dictionary = POSTURE_PROFILES.get(normalized_posture, {})
-	var merged := _deep_merge(posture_overrides, base_config)
-	if normalized_posture == "balanced":
+	var doctrine_overrides: Dictionary = DOCTRINE_PROFILES.get(normalized_doctrine, {})
+	var merged := _deep_merge(_deep_merge(posture_overrides, doctrine_overrides), base_config)
+	if normalized_posture == "balanced" and normalized_doctrine == "balanced":
 		return merged
 	var adjusted_components := _collect_adjusted_components(posture_overrides)
+	var doctrine_adjusted := _collect_adjusted_components(doctrine_overrides)
 	var adjusted_thresholds := _collect_adjusted_thresholds(posture_overrides)
+	adjusted_thresholds.append_array(_collect_adjusted_thresholds(doctrine_overrides))
+	adjusted_thresholds = _dedupe_sorted_strings(adjusted_thresholds)
 	return _deep_merge(merged, {
 		"shared": {
 			"postureMeta": {
 				"active": normalized_posture,
 				"adjustedComponents": adjusted_components,
 				"adjustedThresholds": adjusted_thresholds
+			},
+			"doctrineMeta": {
+				"active": normalized_doctrine,
+				"adjustedComponents": doctrine_adjusted
 			}
 		}
 	})
@@ -270,6 +329,10 @@ static func _score_from_section(section_key: String, context: Dictionary, overri
 	var active_posture := String(posture_meta.get("active", "balanced"))
 	var adjusted_components: Dictionary = posture_meta.get("adjustedComponents", {})
 	var section_adjusted: Dictionary = adjusted_components.get(section_key, {})
+	var doctrine_meta: Dictionary = cfg.get("shared", {}).get("doctrineMeta", {})
+	var active_doctrine := String(doctrine_meta.get("active", "balanced"))
+	var doctrine_adjusted_components: Dictionary = doctrine_meta.get("adjustedComponents", {})
+	var doctrine_section_adjusted: Dictionary = doctrine_adjusted_components.get(section_key, {})
 	for component_name in component_names:
 		var component_cfg: Dictionary = components.get(component_name, {})
 		var contribution := _component_contribution(component_cfg, defaults, context)
@@ -277,6 +340,8 @@ static func _score_from_section(section_key: String, context: Dictionary, overri
 		reasons.append(_reason(component_name, contribution))
 		if active_posture != "balanced" and bool(section_adjusted.get(component_name, false)):
 			reasons.append("posture_adjusted_component=%s:%s" % [active_posture, component_name])
+		if active_doctrine != "balanced" and bool(doctrine_section_adjusted.get(component_name, false)):
+			reasons.append("doctrine_adjusted_component=%s:%s" % [active_doctrine, component_name])
 
 	var bounded_score := _clamp_score(score, cfg)
 	return {
@@ -318,6 +383,25 @@ static func _normalize_posture(posture: String) -> String:
 		return trimmed
 	return "balanced"
 
+
+static func _normalize_doctrine(doctrine: String) -> String:
+	var trimmed := doctrine.strip_edges().to_lower()
+	if trimmed.is_empty():
+		return "balanced"
+	if DOCTRINE_PROFILES.has(trimmed):
+		return trimmed
+	return "balanced"
+
+static func _dedupe_sorted_strings(values: Array[String]) -> Array[String]:
+	var seen := {}
+	var result: Array[String] = []
+	for value in values:
+		if seen.has(value):
+			continue
+		seen[value] = true
+		result.append(value)
+	result.sort()
+	return result
 static func _collect_adjusted_components(overrides: Dictionary) -> Dictionary:
 	var adjusted := {}
 	for section_key_variant in overrides.keys():
