@@ -196,12 +196,7 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 				"overextensionRisk": clamp(pressure * 0.7, 0.0, 1.0)
 			})
 
-	var doctrine: String = MatchSetupTypes.sanitize_ai_doctrine(
-		ai_player.get(
-			"operationalDoctrine",
-			ai_player.get("doctrine", GameState.selected_ai_doctrine)
-		)
-	)
+	var doctrine: String = _resolve_operational_doctrine(ai_player)
 	return {
 		"operationId": "turn_%d_player_%d" % [int(GameState.current_turn), ai_player_index],
 		"turnIndex": int(GameState.current_turn),
@@ -220,6 +215,26 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 			"doctrine": doctrine
 		}
 	}
+
+static func _resolve_operational_doctrine(ai_player: Dictionary) -> String:
+	var selected_ai_doctrine: String = MatchSetupTypes.sanitize_ai_doctrine(GameState.selected_ai_doctrine)
+	var player_doctrine: String = MatchSetupTypes.sanitize_ai_doctrine(ai_player.get("doctrine", selected_ai_doctrine))
+	var raw_operational := String(ai_player.get("operationalDoctrine", "")).strip_edges().to_lower()
+	if not raw_operational.is_empty():
+		return _map_ai_doctrine_to_operational(raw_operational)
+	return _map_ai_doctrine_to_operational(player_doctrine)
+
+static func _map_ai_doctrine_to_operational(doctrine: String) -> String:
+	var normalized := doctrine.strip_edges().to_lower()
+	var doctrine_map := {
+		"balanced": "balanced",
+		"aggressive": "maneuver",
+		"defensive": "security",
+		"maneuver": "maneuver",
+		"attrition": "attrition",
+		"security": "security"
+	}
+	return String(doctrine_map.get(normalized, "balanced"))
 
 
 static func _observer_intel_for_player(ai_player_index: int, ai_owner: int) -> Dictionary:

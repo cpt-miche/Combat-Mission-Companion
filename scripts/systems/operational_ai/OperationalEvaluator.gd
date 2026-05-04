@@ -311,9 +311,15 @@ static func _normalize_posture(posture: String) -> String:
 
 
 static func _normalize_doctrine(doctrine: String) -> String:
-	var trimmed := doctrine.strip_edges()
+	var trimmed := doctrine.strip_edges().to_lower()
 	if trimmed.is_empty():
 		return "balanced"
+	var aliases := {
+		"aggressive": "maneuver",
+		"defensive": "security"
+	}
+	if aliases.has(trimmed):
+		trimmed = String(aliases.get(trimmed, "balanced"))
 	var allowed := {
 		"balanced": true,
 		"maneuver": true,
