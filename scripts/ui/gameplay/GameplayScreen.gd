@@ -769,11 +769,11 @@ func _autosave_current_game() -> void:
 			"grid_columns": GRID_COLUMNS,
 			"grid_rows": GRID_ROWS,
 			"hex_radius": HEX_RADIUS,
-			"hex_origin": {"x": HEX_ORIGIN.x, "y": HEX_ORIGIN.y}
+			"hex_origin": {"x": HEX_ORIGIN.x, "y": HEX_ORIGIN.y},
+			"ai_doctrine": String(GameState.selected_ai_doctrine)
 		},
 		"terrain": GameState.terrain_map.duplicate(true),
 		"territory": GameState.territory_map.duplicate(true),
-		"ai_doctrine": String(GameState.selected_ai_doctrine),
 		"units": _serialize_units(_units),
 		"orders": _serialize_orders(_orders),
 		"casualties": GameState.pending_casualties.duplicate(true)
