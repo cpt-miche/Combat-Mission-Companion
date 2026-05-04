@@ -202,6 +202,7 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 		"turnIndex": int(GameState.current_turn),
 		"posture": "balanced",
 		"doctrine": doctrine,
+		"difficulty": MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty),
 		"threats": threats,
 		"breakthroughs": breakthroughs,
 		"sectors": sectors,
@@ -212,7 +213,8 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 		"metadata": {
 			"activePlayer": ai_player_index,
 			"featureFlag": bool(GameState.operational_ai_enabled),
-			"doctrine": doctrine
+			"doctrine": doctrine,
+		"difficulty": MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
 		}
 	}
 
