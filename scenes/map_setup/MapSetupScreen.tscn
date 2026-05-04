@@ -115,6 +115,20 @@ layout_mode = 2
 text = "No map loaded."
 autowrap_mode = 2
 
+[node name="DoctrineHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
+layout_mode = 2
+text = "AI Doctrine"
+
+[node name="DoctrineSelector" type="OptionButton" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SetupSummaryLabel" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Setup Summary: Doctrine Balanced"
+autowrap_mode = 2
+
 [node name="PaletteHint" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 layout_mode = 2
 text = "LMB on hex: paint one/drag paint\nLMB on background: drag-pan\nRMB drag: reset to default\nMMB pan / wheel zoom\nClear All: reset entire map"

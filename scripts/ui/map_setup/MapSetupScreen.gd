@@ -28,11 +28,14 @@ extends Control
 @onready var load_map_button: Button = %LoadMapButton
 @onready var delete_map_button: Button = %DeleteMapButton
 @onready var map_status_label: Label = %MapStatusLabel
+@onready var doctrine_selector: OptionButton = get_node_or_null("%DoctrineSelector")
+@onready var setup_summary_label: Label = get_node_or_null("%SetupSummaryLabel")
 
 var _terrain_group := ButtonGroup.new()
 var _mode_group := ButtonGroup.new()
 var _terrain_buttons: Dictionary[String, BaseButton] = {}
 var _selected_terrain_id: String = TerrainCatalog.default_terrain_id()
+const AI_DOCTRINE_OPTIONS := ["balanced", "aggressive", "defensive"]
 
 func _ready() -> void:
 	_apply_selected_grid_dimensions()
@@ -55,6 +58,7 @@ func _ready() -> void:
 	_load_existing_map_data()
 	_refresh_saved_maps()
 	_configure_mode_buttons()
+	_build_doctrine_selector()
 	_refresh_ui()
 
 func _apply_selected_grid_dimensions() -> void:
@@ -174,6 +178,46 @@ func _refresh_ui() -> void:
 	confirm_territories_button.disabled = _mode != Mode.TERRITORY_P2
 	hex_map_view.mouse_filter = Control.MOUSE_FILTER_STOP
 	hex_map_view.set_territory_paint_mode(_is_territory_mode(), int(_ownership_for_mode()), _territory_map)
+	_refresh_setup_summary()
+
+func _build_doctrine_selector() -> void:
+	if doctrine_selector == null:
+		return
+	doctrine_selector.clear()
+	for doctrine in AI_DOCTRINE_OPTIONS:
+		doctrine_selector.add_item(_doctrine_display_name(doctrine))
+	doctrine_selector.item_selected.connect(_on_doctrine_selected)
+	_sync_doctrine_selector_from_state()
+
+func _sync_doctrine_selector_from_state() -> void:
+	if doctrine_selector == null:
+		return
+	var state_doctrine := _sanitize_doctrine(GameState.selected_ai_doctrine)
+	GameState.selected_ai_doctrine = state_doctrine
+	var target_index := AI_DOCTRINE_OPTIONS.find(state_doctrine)
+	if target_index < 0:
+		target_index = 0
+	doctrine_selector.select(target_index)
+
+func _on_doctrine_selected(index: int) -> void:
+	if index < 0 or index >= AI_DOCTRINE_OPTIONS.size():
+		return
+	GameState.selected_ai_doctrine = AI_DOCTRINE_OPTIONS[index]
+	_refresh_setup_summary()
+
+func _doctrine_display_name(doctrine: String) -> String:
+	return doctrine.capitalize()
+
+func _sanitize_doctrine(raw_doctrine: Variant) -> String:
+	var doctrine := String(raw_doctrine).strip_edges().to_lower()
+	if AI_DOCTRINE_OPTIONS.has(doctrine):
+		return doctrine
+	return AI_DOCTRINE_OPTIONS[0]
+
+func _refresh_setup_summary() -> void:
+	if setup_summary_label == null:
+		return
+	setup_summary_label.text = "Setup Summary: Doctrine %s" % _doctrine_display_name(_sanitize_doctrine(GameState.selected_ai_doctrine))
 
 func _mode_prompt_text() -> String:
 	match _mode:
@@ -206,6 +250,7 @@ func _persist_territory_map() -> void:
 func _sync_game_state_map_data() -> void:
 	GameState.terrain_map = hex_map_view.export_terrain_map()
 	GameState.territory_map = _territory_map.duplicate(true)
+	GameState.selected_ai_doctrine = _sanitize_doctrine(GameState.selected_ai_doctrine)
 
 func _sync_game_state_terrain_data() -> void:
 	GameState.terrain_map = hex_map_view.export_terrain_map()
@@ -223,7 +268,8 @@ func _build_map_payload(map_name: String) -> Dictionary:
 			"hex_vertical_spacing": HEX_VERTICAL_SPACING
 		},
 		"terrain": hex_map_view.export_terrain_map(),
-		"territory": _territory_map.duplicate(true)
+		"territory": _territory_map.duplicate(true),
+		"ai_doctrine": _sanitize_doctrine(GameState.selected_ai_doctrine)
 	}
 
 func _on_save_map_pressed() -> void:
@@ -271,6 +317,8 @@ func _apply_map_payload(payload: Dictionary) -> void:
 	hex_map_view.import_terrain_map(GameState.terrain_map.duplicate(true))
 	_territory_map = GameState.territory_map.duplicate(true)
 	hex_map_view.set_territory_paint_mode(_is_territory_mode(), int(_ownership_for_mode()), _territory_map)
+	_sync_doctrine_selector_from_state()
+	_refresh_setup_summary()
 
 func _refresh_saved_maps(preferred_name: String = "") -> void:
 	map_selector.clear()

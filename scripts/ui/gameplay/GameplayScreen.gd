@@ -773,6 +773,7 @@ func _autosave_current_game() -> void:
 		},
 		"terrain": GameState.terrain_map.duplicate(true),
 		"territory": GameState.territory_map.duplicate(true),
+		"ai_doctrine": String(GameState.selected_ai_doctrine),
 		"units": _serialize_units(_units),
 		"orders": _serialize_orders(_orders),
 		"casualties": GameState.pending_casualties.duplicate(true)
