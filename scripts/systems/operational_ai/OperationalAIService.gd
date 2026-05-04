@@ -196,7 +196,12 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 				"overextensionRisk": clamp(pressure * 0.7, 0.0, 1.0)
 			})
 
-	var doctrine: String = String(ai_player.get("operationalDoctrine", ai_player.get("doctrine", "balanced")))
+	var doctrine: String = MatchSetupTypes.sanitize_ai_doctrine(
+		ai_player.get(
+			"operationalDoctrine",
+			ai_player.get("doctrine", GameState.selected_ai_doctrine)
+		)
+	)
 	return {
 		"operationId": "turn_%d_player_%d" % [int(GameState.current_turn), ai_player_index],
 		"turnIndex": int(GameState.current_turn),
