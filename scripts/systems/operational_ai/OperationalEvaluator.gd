@@ -64,9 +64,41 @@ const DEFAULT_WEIGHTS := {
 	}
 }
 
+const DIFFICULTY_POLICY := {
+	"hard": {
+		"reaction_threshold_shift": -0.06,
+		"reserve_need_shift": -0.05,
+		"reinforcement_need_shift": -0.04,
+		"reserve_efficiency_bonus": 0.12,
+		"delay_urgency_penalty": 0.08,
+		"response_urgency_cap": 1.0,
+		"suboptimal_intent_rotation": 0
+	},
+	"medium": {
+		"reaction_threshold_shift": 0.0,
+		"reserve_need_shift": 0.0,
+		"reinforcement_need_shift": 0.0,
+		"reserve_efficiency_bonus": 0.0,
+		"delay_urgency_penalty": 0.0,
+		"response_urgency_cap": 1.0,
+		"suboptimal_intent_rotation": 0
+	},
+	"easy": {
+		"reaction_threshold_shift": 0.08,
+		"reserve_need_shift": 0.06,
+		"reinforcement_need_shift": 0.05,
+		"reserve_efficiency_bonus": -0.12,
+		"delay_urgency_penalty": 0.18,
+		"response_urgency_cap": 0.74,
+		"suboptimal_intent_rotation": 2
+	}
+}
+
 static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionary:
 	var posture: String = String(input.get("posture", overrides.get("posture", "balanced")))
 	var doctrine: String = String(input.get("doctrine", input.get("metadata", {}).get("doctrine", overrides.get("doctrine", "balanced"))))
+	var difficulty: String = _normalize_difficulty(String(input.get("difficulty", input.get("metadata", {}).get("difficulty", overrides.get("difficulty", "medium")))))
+	var difficulty_policy: Dictionary = DIFFICULTY_POLICY.get(difficulty, DIFFICULTY_POLICY["medium"])
 	var cfg := _merge_dict(DEFAULT_WEIGHTS, overrides)
 	cfg.erase("posture")
 	cfg.erase("doctrine")
@@ -75,7 +107,7 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	var turn_index: int = int(input.get("turnIndex", 0))
 
 	var threat_assessments: Array[Dictionary] = _evaluate_threats(input.get("threats", []), cfg)
-	var breakthrough_pipeline: Dictionary = _evaluate_breakthrough_pipeline(input.get("breakthroughs", []), cfg)
+	var breakthrough_pipeline: Dictionary = _evaluate_breakthrough_pipeline(input.get("breakthroughs", []), cfg, difficulty_policy)
 	var breakthrough_assessments: Array[Dictionary] = breakthrough_pipeline.get("breakthroughHexes", [])
 	var sector_assessments: Array[Dictionary] = _evaluate_sectors(input.get("sectors", []), cfg)
 	var reserve_requests: Array[Dictionary] = _evaluate_reserve_requests(input.get("reserveRequests", []), cfg)
@@ -91,7 +123,9 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 		opportunity_pipeline.get("counterattackOpportunities", []),
 		sector_assessments,
 		breakthrough_pipeline.get("breakthroughHexes", []),
-		cfg
+		cfg,
+		difficulty_policy,
+		turn_index
 	)
 	var warnings: Array[String] = breakthrough_pipeline.get("warnings", [])
 	warnings.append_array(reinforcement_pipeline.get("warnings", []))
@@ -121,6 +155,7 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	assessment["warnings"] = _dedupe_sorted_strings(warnings)
 	assessment["posture"] = _normalize_posture(posture)
 	assessment["doctrine"] = _normalize_doctrine(doctrine)
+	assessment["difficulty"] = difficulty
 	return assessment
 
 static func _evaluate_enemy_adjacent_opportunities(candidate_hexes: Array, cfg: Dictionary) -> Dictionary:
@@ -189,7 +224,9 @@ static func _derive_recommended_intents(
 	counterattack_opportunities: Array[Dictionary],
 	sector_assessments: Array[Dictionary],
 	breakthrough_hexes: Array[Dictionary],
-	cfg: Dictionary
+	cfg: Dictionary,
+	difficulty_policy: Dictionary,
+	turn_index: int
 ) -> Array[Dictionary]:
 	var intents: Array[Dictionary] = []
 	var thresholds: Dictionary = cfg.get("opportunityThresholds", {})
@@ -208,6 +245,7 @@ static func _derive_recommended_intents(
 	for assessment in sector_assessments:
 		var sector_id: String = String(assessment.get("sectorId", assessment.get("id", "")))
 		var urgency: float = clamp(float(assessment.get("urgency", assessment.get("score", 0.0))), 0.0, 1.0)
+		urgency = _apply_response_urgency_policy(urgency, difficulty_policy)
 		var details: Dictionary = assessment.get("details", {})
 		var quiet: bool = bool(details.get("quietSector", false))
 		if quiet and urgency <= float(thresholds.get("delay", 0.48)):
@@ -220,7 +258,7 @@ static func _derive_recommended_intents(
 				"pullFromQuietSector",
 				{"source": "sectorAssessment", "quietSector": true}
 			))
-		if urgency >= float(thresholds.get("reinforce", 0.58)):
+		if urgency >= _difficulty_adjusted_threshold(float(thresholds.get("reinforce", 0.58)), difficulty_policy):
 			intents.append(OperationalTypes.make_response_intent(
 				"reinforce_%s" % sector_id,
 				sector_id,
@@ -230,12 +268,13 @@ static func _derive_recommended_intents(
 				"reinforce",
 				{"source": "sectorAssessment"}
 			))
-		elif urgency >= float(thresholds.get("delay", 0.48)):
+		elif urgency >= _difficulty_adjusted_threshold(float(thresholds.get("delay", 0.48)), difficulty_policy):
+			var delay_urgency: float = _difficulty_adjust_delay_urgency(urgency, difficulty_policy)
 			intents.append(OperationalTypes.make_response_intent(
 				"delay_%s" % sector_id,
 				sector_id,
-				urgency,
-				urgency,
+				delay_urgency,
+				delay_urgency,
 				["sector_pressure_favors_delay=true"],
 				"delay",
 				{"source": "sectorAssessment"}
@@ -251,8 +290,8 @@ static func _derive_recommended_intents(
 				{"source": "sectorAssessment"}
 			))
 	for breakthrough in breakthrough_hexes:
-		var severity: float = clamp(float(breakthrough.get("urgency", breakthrough.get("score", 0.0))), 0.0, 1.0)
-		if severity < float(thresholds.get("withdraw", 0.68)):
+		var severity: float = _apply_response_urgency_policy(clamp(float(breakthrough.get("urgency", breakthrough.get("score", 0.0))), 0.0, 1.0), difficulty_policy)
+		if severity < _difficulty_adjusted_threshold(float(thresholds.get("withdraw", 0.68)), difficulty_policy):
 			continue
 		intents.append(OperationalTypes.make_response_intent(
 			"withdraw_%s" % String(breakthrough.get("id", "")),
@@ -263,7 +302,19 @@ static func _derive_recommended_intents(
 			"withdraw",
 			{"source": "breakthroughHexes"}
 		))
-	return _dedupe_intents(_sort_scored(intents))
+	return _dedupe_intents(_apply_suboptimal_rotation(_sort_scored(intents), difficulty_policy, turn_index))
+
+static func _apply_suboptimal_rotation(intents: Array[Dictionary], difficulty_policy: Dictionary, turn_index: int) -> Array[Dictionary]:
+	var rotation: int = maxi(int(difficulty_policy.get("suboptimal_intent_rotation", 0)), 0)
+	if rotation <= 0 or intents.size() <= 1:
+		return intents
+	if turn_index % 3 != 1:
+		return intents
+	var offset: int = mini(rotation, intents.size() - 1)
+	var rotated: Array[Dictionary] = intents.duplicate(true)
+	var moved = rotated.pop_at(0)
+	rotated.insert(offset, moved)
+	return rotated
 
 static func _make_advisory_intent(opportunity: Dictionary, action: String, confidence: float, reason: String) -> Dictionary:
 	return OperationalTypes.make_response_intent(
@@ -330,6 +381,23 @@ static func _normalize_doctrine(doctrine: String) -> String:
 		return trimmed
 	return "balanced"
 
+static func _normalize_difficulty(difficulty: String) -> String:
+	var trimmed := difficulty.strip_edges().to_lower()
+	if trimmed in ["easy", "medium", "hard"]:
+		return trimmed
+	return "medium"
+
+static func _difficulty_adjusted_threshold(threshold: float, difficulty_policy: Dictionary) -> float:
+	return clamp(threshold + float(difficulty_policy.get("reaction_threshold_shift", 0.0)), 0.0, 1.0)
+
+static func _apply_response_urgency_policy(urgency: float, difficulty_policy: Dictionary) -> float:
+	var capped := minf(urgency, float(difficulty_policy.get("response_urgency_cap", 1.0)))
+	return clamp(capped, 0.0, 1.0)
+
+static func _difficulty_adjust_delay_urgency(urgency: float, difficulty_policy: Dictionary) -> float:
+	var adjusted := urgency - float(difficulty_policy.get("delay_urgency_penalty", 0.0))
+	return _apply_response_urgency_policy(clamp(adjusted, 0.0, 1.0), difficulty_policy)
+
 static func _evaluate_threats(threats: Array, cfg: Dictionary) -> Array[Dictionary]:
 	var weights: Dictionary = cfg.get("threat", {})
 	var assessments: Array[Dictionary] = []
@@ -386,11 +454,11 @@ static func _evaluate_breakthroughs(breakthroughs: Array, cfg: Dictionary) -> Ar
 		))
 	return assessments
 
-static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionary) -> Dictionary:
+static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionary, difficulty_policy: Dictionary = {}) -> Dictionary:
 	var severity_weights: Dictionary = cfg.get("breakthroughSeverity", {})
 	var thresholds: Dictionary = cfg.get("breakthroughThresholds", {})
-	var reserve_threshold: float = clamp(float(thresholds.get("reserveNeed", 0.55)), 0.0, 1.0)
-	var reinforcement_threshold: float = clamp(float(thresholds.get("reinforcementRequest", 0.75)), 0.0, 1.0)
+	var reserve_threshold: float = clamp(float(thresholds.get("reserveNeed", 0.55)) + float(difficulty_policy.get("reserve_need_shift", 0.0)), 0.0, 1.0)
+	var reinforcement_threshold: float = clamp(float(thresholds.get("reinforcementRequest", 0.75)) + float(difficulty_policy.get("reinforcement_need_shift", 0.0)), 0.0, 1.0)
 	var breakthrough_hexes: Array[Dictionary] = []
 	var reserve_needs: Array[Dictionary] = []
 	var reinforcement_requests: Array[Dictionary] = []
@@ -445,7 +513,8 @@ static func _evaluate_breakthrough_pipeline(breakthroughs: Array, cfg: Dictionar
 			var reserve_id := "%s_reserve_need" % breakthrough_id
 			var reserve_reasons := reasons.duplicate()
 			reserve_reasons.append("trigger=breakthrough_severity>=%.2f" % reserve_threshold)
-			var requested_strength: float = clamp(severity * float(breakthrough.get("reserveStrengthScale", 1.0)), 0.1, 1.0)
+			var reserve_efficiency: float = 1.0 + float(difficulty_policy.get("reserve_efficiency_bonus", 0.0))
+			var requested_strength: float = clamp(severity * float(breakthrough.get("reserveStrengthScale", 1.0)) * reserve_efficiency, 0.1, 1.0)
 			reserve_needs.append(OperationalTypes.make_reserve_request(
 				reserve_id,
 				sector_id,
