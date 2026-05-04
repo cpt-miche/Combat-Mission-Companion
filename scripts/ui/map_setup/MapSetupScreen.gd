@@ -29,13 +29,13 @@ extends Control
 @onready var delete_map_button: Button = %DeleteMapButton
 @onready var map_status_label: Label = %MapStatusLabel
 @onready var doctrine_selector: OptionButton = get_node_or_null("%DoctrineSelector")
+@onready var difficulty_selector: OptionButton = get_node_or_null("%DifficultySelector")
 @onready var setup_summary_label: Label = get_node_or_null("%SetupSummaryLabel")
 
 var _terrain_group := ButtonGroup.new()
 var _mode_group := ButtonGroup.new()
 var _terrain_buttons: Dictionary[String, BaseButton] = {}
 var _selected_terrain_id: String = TerrainCatalog.default_terrain_id()
-const AI_DOCTRINE_OPTIONS := ["balanced", "aggressive", "defensive"]
 
 func _ready() -> void:
 	_apply_selected_grid_dimensions()
@@ -59,6 +59,7 @@ func _ready() -> void:
 	_refresh_saved_maps()
 	_configure_mode_buttons()
 	_build_doctrine_selector()
+	_build_difficulty_selector()
 	_refresh_ui()
 
 func _apply_selected_grid_dimensions() -> void:
@@ -184,7 +185,7 @@ func _build_doctrine_selector() -> void:
 	if doctrine_selector == null:
 		return
 	doctrine_selector.clear()
-	for doctrine in AI_DOCTRINE_OPTIONS:
+	for doctrine in MatchSetupTypes.AI_DOCTRINES:
 		doctrine_selector.add_item(_doctrine_display_name(doctrine))
 	doctrine_selector.item_selected.connect(_on_doctrine_selected)
 	_sync_doctrine_selector_from_state()
@@ -194,30 +195,52 @@ func _sync_doctrine_selector_from_state() -> void:
 		return
 	var state_doctrine := _sanitize_doctrine(GameState.selected_ai_doctrine)
 	GameState.selected_ai_doctrine = state_doctrine
-	var target_index := AI_DOCTRINE_OPTIONS.find(state_doctrine)
+	var target_index := MatchSetupTypes.AI_DOCTRINES.find(state_doctrine)
 	if target_index < 0:
 		target_index = 0
 	doctrine_selector.select(target_index)
 
 func _on_doctrine_selected(index: int) -> void:
-	if index < 0 or index >= AI_DOCTRINE_OPTIONS.size():
+	if index < 0 or index >= MatchSetupTypes.AI_DOCTRINES.size():
 		return
-	GameState.selected_ai_doctrine = AI_DOCTRINE_OPTIONS[index]
+	GameState.selected_ai_doctrine = MatchSetupTypes.AI_DOCTRINES[index]
 	_refresh_setup_summary()
 
 func _doctrine_display_name(doctrine: String) -> String:
-	return doctrine.capitalize()
+	return MatchSetupTypes.display_name(doctrine)
 
 func _sanitize_doctrine(raw_doctrine: Variant) -> String:
-	var doctrine := String(raw_doctrine).strip_edges().to_lower()
-	if AI_DOCTRINE_OPTIONS.has(doctrine):
-		return doctrine
-	return AI_DOCTRINE_OPTIONS[0]
+	return MatchSetupTypes.sanitize_ai_doctrine(raw_doctrine)
+
+func _build_difficulty_selector() -> void:
+	if difficulty_selector == null:
+		return
+	difficulty_selector.clear()
+	for difficulty in MatchSetupTypes.DIFFICULTIES:
+		difficulty_selector.add_item(MatchSetupTypes.display_name(difficulty))
+	difficulty_selector.item_selected.connect(_on_difficulty_selected)
+	_sync_difficulty_selector_from_state()
+
+func _sync_difficulty_selector_from_state() -> void:
+	if difficulty_selector == null:
+		return
+	var state_difficulty := MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
+	GameState.selected_difficulty = state_difficulty
+	var target_index := MatchSetupTypes.DIFFICULTIES.find(state_difficulty)
+	if target_index < 0:
+		target_index = 0
+	difficulty_selector.select(target_index)
+
+func _on_difficulty_selected(index: int) -> void:
+	if index < 0 or index >= MatchSetupTypes.DIFFICULTIES.size():
+		return
+	GameState.selected_difficulty = MatchSetupTypes.DIFFICULTIES[index]
+	_refresh_setup_summary()
 
 func _refresh_setup_summary() -> void:
 	if setup_summary_label == null:
 		return
-	setup_summary_label.text = "Setup Summary: Doctrine %s" % _doctrine_display_name(_sanitize_doctrine(GameState.selected_ai_doctrine))
+	setup_summary_label.text = "Setup Summary: Doctrine %s | Difficulty %s" % [_doctrine_display_name(_sanitize_doctrine(GameState.selected_ai_doctrine)), MatchSetupTypes.display_name(MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty))]
 
 func _mode_prompt_text() -> String:
 	match _mode:
@@ -251,6 +274,7 @@ func _sync_game_state_map_data() -> void:
 	GameState.terrain_map = hex_map_view.export_terrain_map()
 	GameState.territory_map = _territory_map.duplicate(true)
 	GameState.selected_ai_doctrine = _sanitize_doctrine(GameState.selected_ai_doctrine)
+	GameState.selected_difficulty = MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
 
 func _sync_game_state_terrain_data() -> void:
 	GameState.terrain_map = hex_map_view.export_terrain_map()
@@ -269,7 +293,8 @@ func _build_map_payload(map_name: String) -> Dictionary:
 		},
 		"terrain": hex_map_view.export_terrain_map(),
 		"territory": _territory_map.duplicate(true),
-		"ai_doctrine": _sanitize_doctrine(GameState.selected_ai_doctrine)
+		"ai_doctrine": _sanitize_doctrine(GameState.selected_ai_doctrine),
+		"difficulty": MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
 	}
 
 func _on_save_map_pressed() -> void:
@@ -318,6 +343,7 @@ func _apply_map_payload(payload: Dictionary) -> void:
 	_territory_map = GameState.territory_map.duplicate(true)
 	hex_map_view.set_territory_paint_mode(_is_territory_mode(), int(_ownership_for_mode()), _territory_map)
 	_sync_doctrine_selector_from_state()
+	_sync_difficulty_selector_from_state()
 	_refresh_setup_summary()
 
 func _refresh_saved_maps(preferred_name: String = "") -> void:

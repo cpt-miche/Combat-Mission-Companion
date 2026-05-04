@@ -123,10 +123,18 @@ text = "AI Doctrine"
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="DifficultyHeader" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
+layout_mode = 2
+text = "Difficulty"
+
+[node name="DifficultySelector" type="OptionButton" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="SetupSummaryLabel" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Setup Summary: Doctrine Balanced"
+text = "Setup Summary: Doctrine Balanced | Difficulty Medium"
 autowrap_mode = 2
 
 [node name="PaletteHint" type="Label" parent="RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox"]
