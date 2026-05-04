@@ -40,7 +40,7 @@ func _test_selected_profile_persists_into_match_state_and_operational_config() -
 	screen._on_doctrine_selected(MatchSetupTypes.AI_DOCTRINES.find("defensive"))
 	screen._on_difficulty_selected(MatchSetupTypes.DIFFICULTIES.find("easy"))
 	screen._sync_game_state_map_data()
-	var setup := screen._build_map_payload("integration-test-map")
+	var setup: Dictionary = screen._build_map_payload("integration-test-map")
 	_assert_equal("defensive", String(setup.get("ai_doctrine", "")), "Map payload should persist doctrine")
 	_assert_equal("easy", String(setup.get("difficulty", "")), "Map payload should persist difficulty")
 	GameState.players = [
