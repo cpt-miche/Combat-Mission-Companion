@@ -96,6 +96,9 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 	var sector_map: Array[Dictionary] = OperationalMapAnalyzer.analyze(GameState.territory_map, ai_owner, enemy_owner)
 	var units_by_hex: Dictionary = _units_by_hex()
 	var observer_intel: Dictionary = _observer_intel_for_player(ai_player_index, ai_owner)
+	var ai_player: Dictionary = {}
+	if ai_player_index >= 0 and ai_player_index < GameState.players.size():
+		ai_player = GameState.players[ai_player_index] as Dictionary
 
 	var threats: Array[Dictionary] = []
 	var breakthroughs: Array[Dictionary] = []
@@ -193,10 +196,12 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 				"overextensionRisk": clamp(pressure * 0.7, 0.0, 1.0)
 			})
 
+	var doctrine: String = String(ai_player.get("operationalDoctrine", ai_player.get("doctrine", "balanced")))
 	return {
 		"operationId": "turn_%d_player_%d" % [int(GameState.current_turn), ai_player_index],
 		"turnIndex": int(GameState.current_turn),
 		"posture": "balanced",
+		"doctrine": doctrine,
 		"threats": threats,
 		"breakthroughs": breakthroughs,
 		"sectors": sectors,
@@ -206,7 +211,8 @@ static func _build_operational_snapshot(ai_player_index: int) -> Dictionary:
 		"enemyAdjacentHexes": enemy_adjacent,
 		"metadata": {
 			"activePlayer": ai_player_index,
-			"featureFlag": bool(GameState.operational_ai_enabled)
+			"featureFlag": bool(GameState.operational_ai_enabled),
+			"doctrine": doctrine
 		}
 	}
 
