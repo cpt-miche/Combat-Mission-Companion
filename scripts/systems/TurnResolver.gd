@@ -263,7 +263,9 @@ static func _resolve_turn_trace_context(orders: Dictionary, trace_context: Dicti
 		"session_id": session_id,
 		"rng_seed": int(context.get("rng_seed", 0)),
 		"ai_doctrine": doctrine,
-		"difficulty": difficulty
+		"difficulty": difficulty,
+		"ai_doctrine_overridden": context.has("ai_doctrine"),
+		"difficulty_overridden": context.has("difficulty")
 	}
 
 static func _add_trace_event(trace_events: Array[Dictionary], trace_context: Dictionary, event_type: String, payload: Dictionary) -> void:

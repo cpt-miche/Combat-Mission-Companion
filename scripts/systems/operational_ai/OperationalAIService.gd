@@ -233,12 +233,12 @@ static func _resolve_ai_config(ai_player: Dictionary, trace_context: Dictionary)
 	var context_doctrine := _map_ai_doctrine_to_operational(String(trace_context.get("ai_doctrine", default_doctrine)))
 	var context_difficulty := MatchSetupTypes.sanitize_difficulty(trace_context.get("difficulty", default_difficulty))
 	var doctrine: String = _resolve_operational_doctrine(ai_player)
-	if trace_context.has("ai_doctrine"):
+	if bool(trace_context.get("ai_doctrine_overridden", false)):
 		doctrine = context_doctrine
 	if doctrine.strip_edges().is_empty():
 		doctrine = default_doctrine
 	var difficulty: String = MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
-	if trace_context.has("difficulty"):
+	if bool(trace_context.get("difficulty_overridden", false)):
 		difficulty = context_difficulty
 	if difficulty.strip_edges().is_empty():
 		difficulty = default_difficulty
