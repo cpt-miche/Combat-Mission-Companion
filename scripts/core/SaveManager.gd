@@ -89,11 +89,11 @@ func _build_ai_trace_metadata(trace: Dictionary, trace_file: String, timestamp: 
 	var metadata := {
 		"file": trace_file,
 		"timestamp": timestamp,
-		"trace_id": String(trace.get("trace_id", "")),
+		"trace_id": str(trace.get("trace_id", "")),
 		"turn": int(trace.get("turn", -1)),
-		"player": String(trace.get("player", "")),
-		"phase": String(trace.get("phase", "")),
-		"debug_level": String(trace.get("debug_level", "")),
+		"player": str(trace.get("player", trace.get("player_id", ""))),
+		"phase": str(trace.get("phase", "")),
+		"debug_level": str(trace.get("debug_level", "")),
 		"size_bytes": 0
 	}
 	metadata["size_bytes"] = _get_file_size_bytes("%s/%s" % [AI_DEBUG_DIR, trace_file])
@@ -203,7 +203,7 @@ func delete_map(map_name: String) -> bool:
 func save_ai_trace(trace: Dictionary) -> bool:
 	_ensure_ai_debug_dir()
 	var timestamp := int(Time.get_unix_time_from_system())
-	var trace_id := _safe_file_name(String(trace.get("trace_id", "")))
+	var trace_id := _safe_file_name(str(trace.get("trace_id", "")))
 	if trace_id.is_empty():
 		trace_id = str(Time.get_ticks_msec() % 1000000)
 	var trace_file := "%s%d_%s.json" % [AI_TRACE_FILE_PREFIX, timestamp, trace_id]

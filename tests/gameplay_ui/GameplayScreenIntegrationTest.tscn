@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://b7y4aoe3ouhac"]
+
+[ext_resource type="Script" path="res://tests/gameplay_ui/GameplayScreenIntegrationTest.gd" id="1_test"]
+
+[node name="GameplayScreenIntegrationTest" type="Node"]
+script = ExtResource("1_test")

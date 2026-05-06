@@ -3,6 +3,7 @@ extends Control
 const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
 const TurnResolver = preload("res://scripts/systems/TurnResolver.gd")
+const GameplayAIService = preload("res://scripts/systems/gameplay_ai/GameplayAIService.gd")
 const CombatLog = preload("res://scripts/systems/CombatLog.gd")
 const TerrainCatalog = preload("res://scripts/core/TerrainCatalog.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -612,16 +613,21 @@ func _update_info_label(status_message: String = "") -> void:
 	info_label.text = "%s %s" % [status_message, controls]
 
 func _on_end_turn_pressed() -> void:
+	if _is_active_player_ai_controlled():
+		_generate_ai_orders_for_active_player()
 	_orders = _prune_orders_for_dead_units(_orders)
 	var resolving_player := _active_player
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log, {
 		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true),
-		"active_owner": resolving_player
+		"active_owner": _active_player,
+		"map_dimensions": Vector2i(GRID_COLUMNS, GRID_ROWS),
+		"scout_intel": _active_player_scout_intel(),
+		"ignore_visibility": _is_fog_visibility_overridden()
 	})
 	_units = result.get("units", {})
 	GameState.scout_intel_by_observer = result.get("scout_intel_by_observer", GameState.scout_intel_by_observer).duplicate(true)
 	_persist_units_to_state()
-	_execution_queue = result.get("execution_queue", [])
+	_execution_queue = _typed_execution_queue(result.get("execution_queue", []))
 	GameState.combat_log_entries = _combat_log.entries.duplicate(true)
 	_pending_battle_payload = {
 		"resolving_player": resolving_player,
@@ -634,19 +640,68 @@ func _on_end_turn_pressed() -> void:
 	_preview_path.clear()
 	_preview_target_hex = Vector2i(-9999, -9999)
 	if _execution_queue.is_empty():
-		_finish_turn_resolution()
+		_complete_resolved_turn()
 		return
 	animation_timer.start()
 	end_turn_button.disabled = true
 
-func _finish_turn_resolution() -> void:
+
+func _typed_execution_queue(raw_queue: Variant) -> Array[Dictionary]:
+	var typed_queue: Array[Dictionary] = []
+	if typeof(raw_queue) != TYPE_ARRAY:
+		return typed_queue
+	for step_variant in raw_queue as Array:
+		if typeof(step_variant) == TYPE_DICTIONARY:
+			typed_queue.append((step_variant as Dictionary).duplicate(true))
+	return typed_queue
+
+func _is_active_player_ai_controlled() -> bool:
+	if _active_player < 0 or _active_player >= GameState.players.size():
+		return false
+	var player := GameState.players[_active_player] as Dictionary
+	return String(player.get("controller", "human")).strip_edges().to_lower() == "ai"
+
+func _generate_ai_orders_for_active_player() -> void:
+	_orders = GameplayAIService.generate_orders(_units.duplicate(true), _active_player, GameState.terrain_map.duplicate(true), GameState.operational_ai_state.duplicate(true), {
+		"trace_id": "gameplay_ai_turn_%d_player_%d" % [int(GameState.current_turn), _active_player],
+		"session_id": "gameplay_ai_turn_%d" % int(GameState.current_turn),
+		"active_owner": _active_player,
+		"map_dimensions": Vector2i(GRID_COLUMNS, GRID_ROWS),
+		"scout_intel": _active_player_scout_intel(),
+		"ignore_visibility": _is_fog_visibility_overridden()
+	})
+	_update_info_label("AI generated %d order(s) for Player %d." % [_orders.size(), _active_player + 1])
+	queue_redraw()
+
+
+func _active_player_scout_intel() -> Dictionary:
+	var key := str(_active_player)
+	var by_observer := GameState.scout_intel_by_observer
+	if by_observer.has(key) and by_observer[key] is Dictionary:
+		return (by_observer[key] as Dictionary).duplicate(true)
+	return {}
+
+func _prune_orders_for_dead_units(orders: Dictionary) -> Dictionary:
+	var next_orders := orders.duplicate(true)
+	for unit_id in orders.keys():
+		if not _units.has(unit_id):
+			next_orders.erase(unit_id)
+			continue
+		var unit := _units[unit_id] as Dictionary
+		if not GameState.is_unit_alive(unit):
+			next_orders.erase(unit_id)
+	return next_orders
+
+func _complete_resolved_turn() -> void:
+	animation_timer.stop()
+	end_turn_button.disabled = false
 	_active_player = 1 - _active_player
 	GameState.active_player = _active_player
 	GameState.current_turn += 1
 	_begin_player_turn()
 	_refresh_log()
 	if (_pending_battle_payload.get("engagements", []) as Array).is_empty():
-		_update_info_label("Turn finished with no declared battles.")
+		_finish_pending_battle()
 		return
 	_show_engagement_dialog()
 
@@ -706,26 +761,15 @@ func _on_battle_dialog_dismissed() -> void:
 func _finish_pending_battle() -> void:
 	if _pending_battle_payload.is_empty():
 		return
+	if engagement_dialog.visible:
+		engagement_dialog.hide()
 	GameState.pending_casualties = _pending_battle_payload.duplicate(true)
 	_pending_battle_payload.clear()
 	GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
 
-func _prune_orders_for_dead_units(orders: Dictionary) -> Dictionary:
-	var next_orders := orders.duplicate(true)
-	for unit_id in orders.keys():
-		if not _units.has(unit_id):
-			next_orders.erase(unit_id)
-			continue
-		var unit := _units[unit_id] as Dictionary
-		if not GameState.is_unit_alive(unit):
-			next_orders.erase(unit_id)
-	return next_orders
-
 func _on_animation_step() -> void:
 	if _execution_queue.is_empty():
-		animation_timer.stop()
-		end_turn_button.disabled = false
-		_finish_turn_resolution()
+		_complete_resolved_turn()
 		return
 	var step: Dictionary = _execution_queue.pop_front() as Dictionary
 	if String(step.get("type", "")) != "move":
@@ -828,6 +872,19 @@ func _normalized_unit_type(raw_type: Variant) -> String:
 
 func _begin_player_turn() -> void:
 	_autosave_current_game()
+	if _pending_battle_payload.is_empty() and _is_active_player_ai_controlled():
+		call_deferred("_run_ai_turn_if_still_active")
+
+func _run_ai_turn_if_still_active() -> void:
+	if GameState.current_phase != GameState.Phase.GAMEPLAY:
+		return
+	if _active_player != GameState.active_player:
+		return
+	if not _is_active_player_ai_controlled():
+		return
+	if end_turn_button.disabled:
+		return
+	_on_end_turn_pressed()
 
 func _autosave_current_game() -> void:
 	GameState.active_player = _active_player
