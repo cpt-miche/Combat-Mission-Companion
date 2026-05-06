@@ -3,6 +3,7 @@ extends Control
 const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
 const TurnResolver = preload("res://scripts/systems/TurnResolver.gd")
+const GameplayAIService = preload("res://scripts/systems/gameplay_ai/GameplayAIService.gd")
 const CombatLog = preload("res://scripts/systems/CombatLog.gd")
 const TerrainCatalog = preload("res://scripts/core/TerrainCatalog.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -605,10 +606,13 @@ func _update_info_label(status_message: String = "") -> void:
 	info_label.text = "%s %s" % [status_message, controls]
 
 func _on_end_turn_pressed() -> void:
+	if _is_active_player_ai_controlled():
+		_generate_ai_orders_for_active_player()
 	_orders = _prune_orders_for_dead_units(_orders)
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log, {
 		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true),
-		"active_owner": _active_player
+		"active_owner": _active_player,
+		"map_dimensions": Vector2i(GRID_COLUMNS, GRID_ROWS)
 	})
 	_units = result.get("units", {})
 	GameState.scout_intel_by_observer = result.get("scout_intel_by_observer", GameState.scout_intel_by_observer).duplicate(true)
@@ -629,6 +633,22 @@ func _on_end_turn_pressed() -> void:
 		return
 	animation_timer.start()
 	end_turn_button.disabled = true
+
+func _is_active_player_ai_controlled() -> bool:
+	if _active_player < 0 or _active_player >= GameState.players.size():
+		return false
+	var player := GameState.players[_active_player] as Dictionary
+	return String(player.get("controller", "human")).strip_edges().to_lower() == "ai"
+
+func _generate_ai_orders_for_active_player() -> void:
+	_orders = GameplayAIService.generate_orders(_units.duplicate(true), _active_player, GameState.terrain_map.duplicate(true), GameState.operational_ai_state.duplicate(true), {
+		"trace_id": "gameplay_ai_turn_%d_player_%d" % [int(GameState.current_turn), _active_player],
+		"session_id": "gameplay_ai_turn_%d" % int(GameState.current_turn),
+		"active_owner": _active_player,
+		"map_dimensions": Vector2i(GRID_COLUMNS, GRID_ROWS)
+	})
+	_update_info_label("AI generated %d order(s) for Player %d." % [_orders.size(), _active_player + 1])
+	queue_redraw()
 
 func _prune_orders_for_dead_units(orders: Dictionary) -> Dictionary:
 	var next_orders := orders.duplicate(true)
