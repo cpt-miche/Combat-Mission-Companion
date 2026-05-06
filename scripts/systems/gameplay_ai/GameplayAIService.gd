@@ -9,6 +9,7 @@ const THREAT_DISTANCE := 2
 
 static func generate_orders(units: Dictionary, active_player: int, terrain_map: Dictionary = {}, operational_ai_state: Dictionary = {}, trace_context: Dictionary = {}) -> Dictionary:
 	var orders: Dictionary = {}
+	var operational_state_for_orders := _operational_state_for_player(operational_ai_state, active_player)
 	var friendly_ids := _sorted_unit_ids(units, active_player)
 	var enemy_ids := _sorted_enemy_ids(units, active_player, trace_context)
 	var reserved_destinations: Dictionary = {}
@@ -27,7 +28,7 @@ static func generate_orders(units: Dictionary, active_player: int, terrain_map: 
 			orders = OrderSystem.upsert_order(orders, OrderSystem.create_dig_in_order(unit_id, _trace_context_for_order(trace_context, unit_id, "dig_in")))
 			continue
 
-		var move_order := _build_move_order(unit_id, unit, units, active_player, enemy_ids, terrain_map, operational_ai_state, reserved_destinations, trace_context)
+		var move_order := _build_move_order(unit_id, unit, units, active_player, enemy_ids, terrain_map, operational_state_for_orders, reserved_destinations, trace_context)
 		if not move_order.is_empty():
 			orders = OrderSystem.upsert_order(orders, move_order)
 			var path := move_order.get("path", []) as Array
@@ -35,6 +36,11 @@ static func generate_orders(units: Dictionary, active_player: int, terrain_map: 
 				reserved_destinations[_hex_key(path[path.size() - 1] as Vector2i)] = true
 
 	return orders
+
+static func _operational_state_for_player(operational_ai_state: Dictionary, active_player: int) -> Dictionary:
+	if int(operational_ai_state.get("playerIndex", -1)) != active_player:
+		return {}
+	return operational_ai_state
 
 static func _build_move_order(unit_id: String, unit: Dictionary, units: Dictionary, active_player: int, enemy_ids: Array[String], terrain_map: Dictionary, operational_ai_state: Dictionary, reserved_destinations: Dictionary, trace_context: Dictionary) -> Dictionary:
 	var start_hex := unit.get("hex", Vector2i.ZERO) as Vector2i

@@ -19,6 +19,7 @@ func _run() -> void:
 	_test_unthreatened_unit_generates_legal_move_order()
 	_test_hidden_enemy_does_not_trigger_threat_response()
 	_test_scouted_enemy_can_trigger_threat_response()
+	_test_mismatched_operational_snapshot_is_ignored_for_movement()
 
 	if _failures.is_empty():
 		print("GameplayAIService tests passed.")
@@ -43,6 +44,7 @@ func _configure_small_map() -> void:
 		"0,2": "light", "1,2": "light", "2,2": "light", "3,2": "light", "4,2": "light"
 	})
 	_game_state.set("operational_ai_state", {
+		"playerIndex": 1,
 		"snapshot": {
 			"sectors": [{"frontlineHexIds": ["2,0"], "objectiveHexIds": ["2,1"], "contestedHexIds": []}],
 			"enemyAdjacentHexes": []
@@ -113,6 +115,30 @@ func _test_scouted_enemy_can_trigger_threat_response() -> void:
 	var orders := GameplayAIService.generate_orders(units, 1, _game_state.get("terrain_map"), _game_state.get("operational_ai_state"), {"trace_id": "scouted_threat_test", "rng_seed": 505, "scout_intel": scout_intel})
 	var order := orders.get("ai_defender", {}) as Dictionary
 	_assert_equal(OrderSystem.OrderType.DIG_IN, int(order.get("type", -1)), "Scouted enemies inside threat range should trigger DIG_IN")
+
+func _test_mismatched_operational_snapshot_is_ignored_for_movement() -> void:
+	var units := {
+		"ai_mover": _unit("ai_mover", 1, Vector2i(0, 0))
+	}
+	var stale_operational_state := {
+		"playerIndex": 0,
+		"snapshot": {
+			"sectors": [{"frontlineHexIds": ["3,2"], "objectiveHexIds": ["4,2"], "contestedHexIds": []}],
+			"enemyAdjacentHexes": []
+		}
+	}
+	var orders := GameplayAIService.generate_orders(units, 1, _game_state.get("terrain_map"), stale_operational_state, {
+		"trace_id": "stale_operational_snapshot_test",
+		"rng_seed": 606,
+		"map_dimensions": Vector2i(5, 3)
+	})
+	var order := orders.get("ai_mover", {}) as Dictionary
+	_assert_equal(OrderSystem.OrderType.MOVE, int(order.get("type", -1)), "Unthreatened AI unit should still produce MOVE without matching operational state")
+	var path := order.get("path", []) as Array
+	_assert_true(path.size() >= 2, "Move order should include a path when mismatched operational state is ignored")
+	var destination := path[path.size() - 1] as Vector2i
+	_assert_equal(Vector2i(2, 1), destination, "Mismatched operational snapshot objectives/frontlines should be ignored in favor of fallback movement target")
+	_assert_true(destination != Vector2i(4, 2) and destination != Vector2i(3, 2), "Move order destination should not use the other player's stale operational targets")
 
 func _path_has_adjacent_steps(path: Array) -> bool:
 	if path.size() < 2:

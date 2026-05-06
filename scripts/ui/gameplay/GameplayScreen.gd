@@ -4,6 +4,7 @@ const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
 const TurnResolver = preload("res://scripts/systems/TurnResolver.gd")
 const GameplayAIService = preload("res://scripts/systems/gameplay_ai/GameplayAIService.gd")
+const OperationalAIService = preload("res://scripts/systems/operational_ai/OperationalAIService.gd")
 const CombatLog = preload("res://scripts/systems/CombatLog.gd")
 const TerrainCatalog = preload("res://scripts/core/TerrainCatalog.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -662,7 +663,16 @@ func _is_active_player_ai_controlled() -> bool:
 	return String(player.get("controller", "human")).strip_edges().to_lower() == "ai"
 
 func _generate_ai_orders_for_active_player() -> void:
-	_orders = GameplayAIService.generate_orders(_units.duplicate(true), _active_player, GameState.terrain_map.duplicate(true), GameState.operational_ai_state.duplicate(true), {
+	var operational_state_for_orders: Dictionary = {}
+	if bool(GameState.operational_ai_enabled) and int(GameState.operational_ai_state.get("playerIndex", -1)) != _active_player:
+		OperationalAIService.run_for_active_player({
+			"trace_id": "operational_ai_refresh_turn_%d_player_%d" % [int(GameState.current_turn), _active_player],
+			"session_id": "gameplay_ai_turn_%d" % int(GameState.current_turn)
+		})
+	if int(GameState.operational_ai_state.get("playerIndex", -1)) == _active_player:
+		operational_state_for_orders = GameState.operational_ai_state.duplicate(true)
+
+	_orders = GameplayAIService.generate_orders(_units.duplicate(true), _active_player, GameState.terrain_map.duplicate(true), operational_state_for_orders, {
 		"trace_id": "gameplay_ai_turn_%d_player_%d" % [int(GameState.current_turn), _active_player],
 		"session_id": "gameplay_ai_turn_%d" % int(GameState.current_turn),
 		"active_owner": _active_player,
