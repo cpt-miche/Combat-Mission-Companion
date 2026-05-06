@@ -13,6 +13,7 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 	var known_enemy_units: Array[String] = []
 	var own_casualties: Array[Dictionary] = []
 	var enemy_casualties: Array[Dictionary] = []
+	var engagements: Array[Dictionary] = []
 	var trace_events: Array[Dictionary] = []
 	var trace_anomalies: Array[Dictionary] = []
 	var base_units := units.duplicate(true)
@@ -154,43 +155,18 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 
 			var recon := ReconSystem.resolve_recon(unit_state, target, 0, rng)
 			known_enemy_units.append(target_id)
-			var rng_state_before := str(rng.state)
-			var enemy_losses := rng.randi_range(1, 12)
-			var own_a_losses := rng.randi_range(0, 4)
-			var own_b_losses := rng.randi_range(0, 4)
-			var rng_state_after := str(rng.state)
-
-			enemy_casualties.append({"unit_id": target_id, "losses": enemy_losses})
-			own_casualties.append({
-				"unit_id": unit_id,
-				"children": [
-					{"unit_id": unit_id, "segment": "A", "losses": own_a_losses},
-					{"unit_id": unit_id, "segment": "B", "losses": own_b_losses}
-				]
-			})
-
-			var attack_payload := {
-				"unit_id": unit_id,
-				"target_unit_id": target_id,
-				"recon_band": recon.get("band", "Unknown"),
-				"rng_seed": rng_seed,
-				"rng_state_before": rng_state_before,
-				"rng_state_after": rng_state_after
+			var engagement_payload := {
+				"attacker_unit_id": unit_id,
+				"defender_unit_id": target_id,
+				"attacker_owner": owner,
+				"defender_owner": int(target.get("owner", 1 - owner)),
+				"attacker_hex": _hex_to_dict(unit_state.get("hex", Vector2i.ZERO)),
+				"defender_hex": _hex_to_dict(target.get("hex", Vector2i.ZERO)),
+				"recon_band": recon.get("band", "Unknown")
 			}
-			_add_trace_event(trace_events, turn_trace, "attack_resolved", attack_payload)
-			_add_trace_event(trace_events, turn_trace, "casualties_generated", {
-				"unit_id": unit_id,
-				"target_unit_id": target_id,
-				"enemy_losses": enemy_losses,
-				"own_losses": {"A": own_a_losses, "B": own_b_losses},
-				"own_casualties_by_unit_id": {
-					unit_id: {
-						"total_losses": own_a_losses + own_b_losses,
-						"segments": {"A": own_a_losses, "B": own_b_losses}
-					}
-				}
-			})
-			combat_log.add_entry("%s attacked %s (%s)." % [unit_id, target_id, recon.get("band", "Unknown")], attack_payload)
+			engagements.append(engagement_payload.duplicate(true))
+			_add_trace_event(trace_events, turn_trace, "engagement_declared", engagement_payload)
+			combat_log.add_entry("%s engaged %s (%s)." % [unit_id, target_id, recon.get("band", "Unknown")], engagement_payload)
 
 	_detect_unexpected_state_mutations(base_units, units, turn_trace, trace_anomalies)
 
@@ -200,6 +176,7 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		"known_enemy_units": known_enemy_units,
 		"own_casualties": own_casualties,
 		"enemy_casualties": enemy_casualties,
+		"engagements": engagements,
 		"trace_id": String(turn_trace.get("trace_id", "")),
 		"session_id": String(turn_trace.get("session_id", "")),
 		"rng_seed": rng_seed,

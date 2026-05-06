@@ -15,6 +15,7 @@ func _run() -> void:
 	_test_legal_stacking_move_succeeds()
 	_test_illegal_stacking_move_halts_and_logs_anomaly()
 	_test_dig_in_modifies_unit_state()
+	_test_attack_declares_engagement_without_calculating_casualties()
 
 	if _failures.is_empty():
 		print("OrderSystem + TurnResolver tests passed.")
@@ -80,6 +81,26 @@ func _test_dig_in_modifies_unit_state() -> void:
 	_assert_true(bool(unit.get("dug_in", false)), "DIG_IN should set dug_in=true")
 	_assert_true(bool(unit.get("entrenched", false)), "DIG_IN should set entrenched=true")
 	_assert_true(log.entries.any(func(e: Dictionary) -> bool: return String(e.get("summary", "")).contains("dug in")), "DIG_IN should log combat entry")
+
+func _test_attack_declares_engagement_without_calculating_casualties() -> void:
+	var units := {
+		"attacker": _unit("attacker", 0, Vector2i(0, 0), "company"),
+		"defender": _unit("defender", 1, Vector2i(1, 0), "company")
+	}
+	var orders := {
+		"attacker": OrderSystem.create_attack_order("attacker", [Vector2i(0, 0), Vector2i(1, 0)], "defender")
+	}
+	var log := CombatLog.new()
+	var resolver := TurnResolverScript.new()
+	var result: Dictionary = resolver.call("resolve_turn", units, orders, log, {"rng_seed": 123, "active_owner": 0})
+	_assert_equal(0, (result.get("own_casualties", []) as Array).size(), "Attack declaration should not calculate own casualties")
+	_assert_equal(0, (result.get("enemy_casualties", []) as Array).size(), "Attack declaration should not calculate enemy casualties")
+	var engagements := result.get("engagements", []) as Array
+	_assert_equal(1, engagements.size(), "Attack declaration should produce one engagement for the combat popup")
+	var engagement := engagements[0] as Dictionary
+	_assert_equal("attacker", String(engagement.get("attacker_unit_id", "")), "Engagement should track attacker id")
+	_assert_equal("defender", String(engagement.get("defender_unit_id", "")), "Engagement should track defender id")
+	_assert_true(log.entries.any(func(e: Dictionary) -> bool: return String(e.get("summary", "")).contains("engaged")), "Attack declaration should log engagement instead of calculated combat")
 
 func _unit(id: String, owner: int, hex: Vector2i, size: String) -> Dictionary:
 	return {"id": id, "owner": owner, "hex": hex, "size": size, "status": "alive"}

@@ -34,6 +34,9 @@ enum OrderMode { MOVE, ATTACK, DIG_IN }
 @onready var debug_level_modal: DebugLevelModal = %DebugLevelModal
 @onready var debug_status_container: PanelContainer = %DebugStatusContainer
 @onready var debug_status_label: Label = %DebugStatusLabel
+@onready var engagement_dialog: AcceptDialog = %EngagementDialog
+@onready var friendly_engagement_list: VBoxContainer = %FriendlyEngagementList
+@onready var enemy_engagement_list: VBoxContainer = %EnemyEngagementList
 
 var _units: Dictionary = {}
 var _orders: Dictionary = {}
@@ -60,6 +63,7 @@ var _hovered_hex := Vector2i(-9999, -9999)
 var _selected_hex := Vector2i(-9999, -9999)
 var _active_order_mode: OrderMode = OrderMode.MOVE
 var _friendly_selection_cycle_by_hex: Dictionary = {}
+var _pending_battle_payload: Dictionary = {}
 
 func _ready() -> void:
 	var dimensions := GameState.selected_map_dimensions
@@ -83,6 +87,9 @@ func _ready() -> void:
 	debug_level_modal.canceled.connect(_on_debug_level_canceled)
 	if not GameState.is_connected("debug_mode_changed", _on_debug_mode_changed):
 		GameState.debug_mode_changed.connect(_on_debug_mode_changed)
+	engagement_dialog.confirmed.connect(_on_battle_finished_pressed)
+	engagement_dialog.canceled.connect(_on_battle_dialog_dismissed)
+	engagement_dialog.get_ok_button().text = "Battle is finished"
 	_refresh_debug_status_hud()
 
 func _process(_delta: float) -> void:
@@ -609,6 +616,7 @@ func _on_end_turn_pressed() -> void:
 	if _is_active_player_ai_controlled():
 		_generate_ai_orders_for_active_player()
 	_orders = _prune_orders_for_dead_units(_orders)
+	var resolving_player := _active_player
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log, {
 		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true),
 		"active_owner": _active_player,
@@ -619,10 +627,12 @@ func _on_end_turn_pressed() -> void:
 	_persist_units_to_state()
 	_execution_queue = _typed_execution_queue(result.get("execution_queue", []))
 	GameState.combat_log_entries = _combat_log.entries.duplicate(true)
-	GameState.pending_casualties = {
+	_pending_battle_payload = {
+		"resolving_player": resolving_player,
 		"own": result.get("own_casualties", []),
 		"enemy": result.get("enemy_casualties", []),
-		"known_enemy_units": result.get("known_enemy_units", [])
+		"known_enemy_units": result.get("known_enemy_units", []),
+		"engagements": result.get("engagements", [])
 	}
 	_orders.clear()
 	_preview_path.clear()

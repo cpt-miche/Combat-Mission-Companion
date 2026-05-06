@@ -140,5 +140,66 @@ layout_mode = 2
 autowrap_mode = 3
 text = "Units: None"
 
+[node name="EngagementDialog" type="AcceptDialog" parent="."]
+unique_name_in_owner = true
+title = "Battle Engagements"
+initial_position = 1
+size = Vector2i(760, 520)
+ok_button_text = "Battle is finished"
+dialog_text = ""
+
+[node name="DialogVBox" type="VBoxContainer" parent="EngagementDialog"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -56.0
+
+[node name="Instructions" type="Label" parent="EngagementDialog/DialogVBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "Declared engagements only. Resolve combat outside the game, then press Battle is finished to enter detailed casualties."
+
+[node name="Columns" type="HBoxContainer" parent="EngagementDialog/DialogVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="FriendlyColumn" type="VBoxContainer" parent="EngagementDialog/DialogVBox/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FriendlyHeader" type="Label" parent="EngagementDialog/DialogVBox/Columns/FriendlyColumn"]
+layout_mode = 2
+text = "Player units"
+
+[node name="FriendlyScroll" type="ScrollContainer" parent="EngagementDialog/DialogVBox/Columns/FriendlyColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="FriendlyEngagementList" type="VBoxContainer" parent="EngagementDialog/DialogVBox/Columns/FriendlyColumn/FriendlyScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EnemyColumn" type="VBoxContainer" parent="EngagementDialog/DialogVBox/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EnemyHeader" type="Label" parent="EngagementDialog/DialogVBox/Columns/EnemyColumn"]
+layout_mode = 2
+text = "Enemy units"
+
+[node name="EnemyScroll" type="ScrollContainer" parent="EngagementDialog/DialogVBox/Columns/EnemyColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="EnemyEngagementList" type="VBoxContainer" parent="EngagementDialog/DialogVBox/Columns/EnemyColumn/EnemyScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="DebugLevelModal" parent="." instance=ExtResource("2_debug_modal")]
 unique_name_in_owner = true
