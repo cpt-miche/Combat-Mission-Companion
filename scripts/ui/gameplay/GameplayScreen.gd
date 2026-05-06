@@ -620,7 +620,9 @@ func _on_end_turn_pressed() -> void:
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log, {
 		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true),
 		"active_owner": _active_player,
-		"map_dimensions": Vector2i(GRID_COLUMNS, GRID_ROWS)
+		"map_dimensions": Vector2i(GRID_COLUMNS, GRID_ROWS),
+		"scout_intel": _active_player_scout_intel(),
+		"ignore_visibility": _is_fog_visibility_overridden()
 	})
 	_units = result.get("units", {})
 	GameState.scout_intel_by_observer = result.get("scout_intel_by_observer", GameState.scout_intel_by_observer).duplicate(true)
@@ -664,10 +666,20 @@ func _generate_ai_orders_for_active_player() -> void:
 		"trace_id": "gameplay_ai_turn_%d_player_%d" % [int(GameState.current_turn), _active_player],
 		"session_id": "gameplay_ai_turn_%d" % int(GameState.current_turn),
 		"active_owner": _active_player,
-		"map_dimensions": Vector2i(GRID_COLUMNS, GRID_ROWS)
+		"map_dimensions": Vector2i(GRID_COLUMNS, GRID_ROWS),
+		"scout_intel": _active_player_scout_intel(),
+		"ignore_visibility": _is_fog_visibility_overridden()
 	})
 	_update_info_label("AI generated %d order(s) for Player %d." % [_orders.size(), _active_player + 1])
 	queue_redraw()
+
+
+func _active_player_scout_intel() -> Dictionary:
+	var key := str(_active_player)
+	var by_observer := GameState.scout_intel_by_observer
+	if by_observer.has(key) and by_observer[key] is Dictionary:
+		return (by_observer[key] as Dictionary).duplicate(true)
+	return {}
 
 func _prune_orders_for_dead_units(orders: Dictionary) -> Dictionary:
 	var next_orders := orders.duplicate(true)
@@ -688,6 +700,71 @@ func _complete_resolved_turn() -> void:
 	GameState.current_turn += 1
 	_begin_player_turn()
 	_refresh_log()
+	if (_pending_battle_payload.get("engagements", []) as Array).is_empty():
+		_finish_pending_battle()
+		return
+	_show_engagement_dialog()
+
+func _show_engagement_dialog() -> void:
+	_populate_engagement_dialog(_pending_battle_payload.get("engagements", []) as Array)
+	engagement_dialog.popup_centered_ratio(0.72)
+
+func _populate_engagement_dialog(engagements: Array) -> void:
+	_clear_children(friendly_engagement_list)
+	_clear_children(enemy_engagement_list)
+	if engagements.is_empty():
+		_add_engagement_row(friendly_engagement_list, "No friendly units engaged.")
+		_add_engagement_row(enemy_engagement_list, "No enemy units engaged.")
+		return
+	for engagement_variant in engagements:
+		if typeof(engagement_variant) != TYPE_DICTIONARY:
+			continue
+		var engagement := engagement_variant as Dictionary
+		var attacker_owner := int(engagement.get("attacker_owner", -1))
+		var defender_owner := int(engagement.get("defender_owner", -1))
+		var attacker_id := String(engagement.get("attacker_unit_id", "Unknown"))
+		var defender_id := String(engagement.get("defender_unit_id", "Unknown"))
+		var attacker_text := _engagement_side_line(attacker_id, attacker_owner, engagement.get("attacker_hex", {}), defender_id)
+		var defender_text := _engagement_side_line(defender_id, defender_owner, engagement.get("defender_hex", {}), attacker_id)
+		var resolving_player := int(_pending_battle_payload.get("resolving_player", 0))
+		if attacker_owner == resolving_player:
+			_add_engagement_row(friendly_engagement_list, attacker_text)
+			_add_engagement_row(enemy_engagement_list, defender_text)
+		else:
+			_add_engagement_row(friendly_engagement_list, defender_text)
+			_add_engagement_row(enemy_engagement_list, attacker_text)
+
+func _clear_children(container: Node) -> void:
+	for child in container.get_children():
+		child.queue_free()
+
+func _add_engagement_row(container: VBoxContainer, text: String) -> void:
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(label)
+
+func _engagement_side_line(unit_id: String, owner: int, raw_hex: Variant, opposing_unit_id: String) -> String:
+	var hex_text := "?,?"
+	if typeof(raw_hex) == TYPE_DICTIONARY:
+		var hex_dict := raw_hex as Dictionary
+		hex_text = "%d,%d" % [int(hex_dict.get("q", hex_dict.get("x", 0))), int(hex_dict.get("r", hex_dict.get("y", 0)))]
+	return "%s (Owner %d) at %s engaging %s" % [unit_id, owner, hex_text, opposing_unit_id]
+
+func _on_battle_finished_pressed() -> void:
+	_finish_pending_battle()
+
+func _on_battle_dialog_dismissed() -> void:
+	_finish_pending_battle()
+
+func _finish_pending_battle() -> void:
+	if _pending_battle_payload.is_empty():
+		return
+	if engagement_dialog.visible:
+		engagement_dialog.hide()
+	GameState.pending_casualties = _pending_battle_payload.duplicate(true)
+	_pending_battle_payload.clear()
 	GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
 
 func _on_animation_step() -> void:
@@ -795,6 +872,19 @@ func _normalized_unit_type(raw_type: Variant) -> String:
 
 func _begin_player_turn() -> void:
 	_autosave_current_game()
+	if _pending_battle_payload.is_empty() and _is_active_player_ai_controlled():
+		call_deferred("_run_ai_turn_if_still_active")
+
+func _run_ai_turn_if_still_active() -> void:
+	if GameState.current_phase != GameState.Phase.GAMEPLAY:
+		return
+	if _active_player != GameState.active_player:
+		return
+	if not _is_active_player_ai_controlled():
+		return
+	if end_turn_button.disabled:
+		return
+	_on_end_turn_pressed()
 
 func _autosave_current_game() -> void:
 	GameState.active_player = _active_player

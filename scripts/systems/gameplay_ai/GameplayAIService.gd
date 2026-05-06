@@ -10,7 +10,7 @@ const THREAT_DISTANCE := 2
 static func generate_orders(units: Dictionary, active_player: int, terrain_map: Dictionary = {}, operational_ai_state: Dictionary = {}, trace_context: Dictionary = {}) -> Dictionary:
 	var orders: Dictionary = {}
 	var friendly_ids := _sorted_unit_ids(units, active_player)
-	var enemy_ids := _sorted_enemy_ids(units, active_player)
+	var enemy_ids := _sorted_enemy_ids(units, active_player, trace_context)
 	var reserved_destinations: Dictionary = {}
 
 	for unit_id in friendly_ids:
@@ -119,14 +119,60 @@ static func _sorted_unit_ids(units: Dictionary, owner: int) -> Array[String]:
 	ids.sort()
 	return ids
 
-static func _sorted_enemy_ids(units: Dictionary, active_player: int) -> Array[String]:
+static func _sorted_enemy_ids(units: Dictionary, active_player: int, trace_context: Dictionary) -> Array[String]:
 	var ids: Array[String] = []
+	var ignore_visibility := bool(trace_context.get("ignore_visibility", false))
+	var scout_intel := trace_context.get("scout_intel", {}) as Dictionary
+	if scout_intel == null:
+		scout_intel = {}
 	for unit_id_variant in units.keys():
 		var unit := units[unit_id_variant] as Dictionary
-		if int(unit.get("owner", -1)) != active_player and _is_unit_alive(unit):
-			ids.append(String(unit_id_variant))
+		if int(unit.get("owner", -1)) == active_player or not _is_unit_alive(unit):
+			continue
+		var unit_id := String(unit_id_variant)
+		if ignore_visibility or _is_enemy_visible_or_scouted(unit_id, unit, units, active_player, scout_intel):
+			ids.append(unit_id)
 	ids.sort()
 	return ids
+
+static func _is_enemy_visible_or_scouted(unit_id: String, enemy_unit: Dictionary, units: Dictionary, active_player: int, scout_intel: Dictionary) -> bool:
+	var enemy_hex := enemy_unit.get("hex", Vector2i.ZERO) as Vector2i
+	if _is_hex_visible_to_player(units, active_player, enemy_hex):
+		return true
+	return _scout_intel_mentions_unit_or_hex(scout_intel, unit_id, _hex_key(enemy_hex))
+
+static func _is_hex_visible_to_player(units: Dictionary, active_player: int, hex: Vector2i) -> bool:
+	for unit in units.values():
+		if not (unit is Dictionary):
+			continue
+		var unit_dict := unit as Dictionary
+		if int(unit_dict.get("owner", -1)) != active_player or not _is_unit_alive(unit_dict):
+			continue
+		var friendly_hex := unit_dict.get("hex", Vector2i.ZERO) as Vector2i
+		if friendly_hex == hex or Pathfinding.are_adjacent(friendly_hex, hex):
+			return true
+	return false
+
+static func _scout_intel_mentions_unit_or_hex(scout_intel: Dictionary, unit_id: String, hex_key: String) -> bool:
+	var unit_intel: Variant = scout_intel.get("__unitIntelById", {})
+	if unit_intel is Dictionary and (unit_intel as Dictionary).has(unit_id):
+		var known: Variant = (unit_intel as Dictionary).get(unit_id, {})
+		if known is Dictionary and bool((known as Dictionary).get("presenceKnown", true)):
+			return true
+	if not scout_intel.has(hex_key) or not (scout_intel[hex_key] is Dictionary):
+		return false
+	var hex_intel := scout_intel[hex_key] as Dictionary
+	var known_units: Variant = hex_intel.get("knownEnemyUnits", [])
+	if not (known_units is Array):
+		return false
+	for known_variant in known_units as Array:
+		if not (known_variant is Dictionary):
+			continue
+		var known_unit := known_variant as Dictionary
+		var known_id := String(known_unit.get("unitId", known_unit.get("id", "")))
+		if known_id == unit_id or known_id.is_empty():
+			return true
+	return false
 
 static func _first_adjacent_enemy_id(unit_hex: Vector2i, enemy_ids: Array[String], units: Dictionary) -> String:
 	for enemy_id in enemy_ids:

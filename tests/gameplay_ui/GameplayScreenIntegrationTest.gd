@@ -15,6 +15,8 @@ func _run() -> void:
 	_test_left_click_move_tile_issues_move_order()
 	_test_stack_cap_feedback()
 	_test_empty_execution_queue_advances_turn()
+	_test_attack_order_shows_engagement_popup_payload()
+	_test_dismissing_engagement_popup_still_opens_casualty_entry()
 
 	if _failures.is_empty():
 		print("GameplayScreen integration tests passed.")
@@ -88,7 +90,7 @@ func _test_attack_order_shows_engagement_popup_payload() -> void:
 	_reset_state()
 	var screen := _spawn_screen()
 	screen._orders = {
-		"u1": OrderSystem.create_attack_order("u1", [Vector2i(0, 0), Vector2i(0, 1)], "enemy")
+		"u1": OrderSystem.create_attack_order("u1", [Vector2i(0, 0)], "enemy")
 	}
 	screen._on_end_turn_pressed()
 	var engagements := screen._pending_battle_payload.get("engagements", []) as Array
@@ -105,7 +107,7 @@ func _test_dismissing_engagement_popup_still_opens_casualty_entry() -> void:
 	_reset_state()
 	var screen := _spawn_screen()
 	screen._orders = {
-		"u1": OrderSystem.create_attack_order("u1", [Vector2i(0, 0), Vector2i(0, 1)], "enemy")
+		"u1": OrderSystem.create_attack_order("u1", [Vector2i(0, 0)], "enemy")
 	}
 	screen._on_end_turn_pressed()
 	_assert_true(screen.engagement_dialog.visible, "Battle popup should open before testing dismissal")
@@ -127,7 +129,8 @@ func _reset_state() -> void:
 		"a": {"id":"a","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
 		"b": {"id":"b","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
 		"c": {"id":"c","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
-		"d": {"id":"d","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"}
+		"d": {"id":"d","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
+		"enemy": {"id":"enemy","owner":1,"hex":Vector2i(0,1),"size":"company","status":"alive"}
 	}
 	GameState.terrain_map = {}
 

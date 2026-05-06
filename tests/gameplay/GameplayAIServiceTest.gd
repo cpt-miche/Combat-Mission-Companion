@@ -17,6 +17,8 @@ func _run() -> void:
 	_test_adjacent_enemy_generates_legal_attack_order()
 	_test_threatened_unit_generates_legal_dig_in_order()
 	_test_unthreatened_unit_generates_legal_move_order()
+	_test_hidden_enemy_does_not_trigger_threat_response()
+	_test_scouted_enemy_can_trigger_threat_response()
 
 	if _failures.is_empty():
 		print("GameplayAIService tests passed.")
@@ -64,7 +66,11 @@ func _test_threatened_unit_generates_legal_dig_in_order() -> void:
 		"ai_defender": _unit("ai_defender", 1, Vector2i(0, 0)),
 		"enemy_nearby": _unit("enemy_nearby", 0, Vector2i(2, 0))
 	}
-	var orders := GameplayAIService.generate_orders(units, 1, _game_state.get("terrain_map"), _game_state.get("operational_ai_state"), {"trace_id": "dig_test", "rng_seed": 202})
+	var orders := GameplayAIService.generate_orders(units, 1, _game_state.get("terrain_map"), _game_state.get("operational_ai_state"), {
+		"trace_id": "dig_test",
+		"rng_seed": 202,
+		"scout_intel": {"__unitIntelById": {"enemy_nearby": {"presenceKnown": true}}}
+	})
 	_assert_equal(1, orders.size(), "AI should create one dig-in order")
 	var order := orders.get("ai_defender", {}) as Dictionary
 	_assert_equal(OrderSystem.OrderType.DIG_IN, int(order.get("type", -1)), "Threatened unit should produce DIG_IN")
@@ -83,6 +89,30 @@ func _test_unthreatened_unit_generates_legal_move_order() -> void:
 	_assert_true(path.size() >= 2, "Move order should include a non-empty path with movement")
 	_assert_true(not path.has(Vector2i(4, 0)), "Move order should not path into the enemy occupied hex")
 	_assert_true(_path_has_adjacent_steps(path), "Move order path should contain only adjacent steps")
+
+
+func _test_hidden_enemy_does_not_trigger_threat_response() -> void:
+	var units := {
+		"ai_defender": _unit("ai_defender", 1, Vector2i(0, 0)),
+		"hidden_enemy": _unit("hidden_enemy", 0, Vector2i(2, 0))
+	}
+	var orders := GameplayAIService.generate_orders(units, 1, _game_state.get("terrain_map"), _game_state.get("operational_ai_state"), {"trace_id": "hidden_threat_test", "rng_seed": 404})
+	var order := orders.get("ai_defender", {}) as Dictionary
+	_assert_true(order.is_empty() or int(order.get("type", -1)) != OrderSystem.OrderType.DIG_IN, "Hidden enemies outside direct visibility should not trigger DIG_IN threat response")
+
+func _test_scouted_enemy_can_trigger_threat_response() -> void:
+	var units := {
+		"ai_defender": _unit("ai_defender", 1, Vector2i(0, 0)),
+		"scouted_enemy": _unit("scouted_enemy", 0, Vector2i(2, 0))
+	}
+	var scout_intel := {
+		"__unitIntelById": {
+			"scouted_enemy": {"presenceKnown": true}
+		}
+	}
+	var orders := GameplayAIService.generate_orders(units, 1, _game_state.get("terrain_map"), _game_state.get("operational_ai_state"), {"trace_id": "scouted_threat_test", "rng_seed": 505, "scout_intel": scout_intel})
+	var order := orders.get("ai_defender", {}) as Dictionary
+	_assert_equal(OrderSystem.OrderType.DIG_IN, int(order.get("type", -1)), "Scouted enemies inside threat range should trigger DIG_IN")
 
 func _path_has_adjacent_steps(path: Array) -> bool:
 	if path.size() < 2:
