@@ -1,28 +1,29 @@
-extends SceneTree
+extends Node
 
 const GAMEPLAY_SCREEN_SCENE := preload("res://scenes/screens/GameplayScreen.tscn")
 const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 
 var _failures: Array[String] = []
 
-func _init() -> void:
+func _ready() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	await process_frame
+	await get_tree().process_frame
 	_test_selection_exposes_order_actions()
 	_test_mode_based_order_issuing()
 	_test_left_click_move_tile_issues_move_order()
 	_test_stack_cap_feedback()
+	_test_empty_execution_queue_advances_turn()
 
 	if _failures.is_empty():
 		print("GameplayScreen integration tests passed.")
-		quit(0)
+		get_tree().quit(0)
 		return
 
 	for failure in _failures:
 		push_error(failure)
-	quit(1)
+	get_tree().quit(1)
 
 func _test_selection_exposes_order_actions() -> void:
 	_reset_state()
@@ -54,6 +55,19 @@ func _test_stack_cap_feedback() -> void:
 	_assert_true(String(screen.info_label.text).contains("Stack exceeds"), "Blocked stack move should explain stack-cap feedback")
 	_cleanup_screen(screen)
 
+
+func _test_empty_execution_queue_advances_turn() -> void:
+	_reset_state()
+	var screen := _spawn_screen()
+	screen._selected_unit_id = "u1"
+	screen._on_dig_in_mode_pressed()
+	screen._on_end_turn_pressed()
+	_assert_true(screen._execution_queue.is_empty(), "Dig-in-only resolution should have no animation steps")
+	_assert_equal(1, GameState.active_player, "Dig-in-only resolution should advance to the next player")
+	_assert_equal(2, GameState.current_turn, "Dig-in-only resolution should increment the turn counter")
+	_assert_equal(GameState.Phase.CASUALTY_ENTRY, GameState.current_phase, "Dig-in-only resolution should still show casualty entry")
+	_cleanup_screen(screen)
+
 func _test_left_click_move_tile_issues_move_order() -> void:
 	_reset_state()
 	var screen := _spawn_screen()
@@ -78,7 +92,7 @@ func _reset_state() -> void:
 		{"name":"P1","division_tree":{},"deployments":{},"controller":"human"},
 		{"name":"P2","division_tree":{},"deployments":{},"controller":"human"}
 	]
-	GameState.units = {
+	GameState.gameplay_units = {
 		"u1": {"id":"u1","owner":0,"hex":Vector2i(0,0),"size":"company","status":"alive"},
 		"a": {"id":"a","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
 		"b": {"id":"b","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
@@ -89,7 +103,7 @@ func _reset_state() -> void:
 
 func _spawn_screen() -> Control:
 	var screen: Control = GAMEPLAY_SCREEN_SCENE.instantiate()
-	get_root().add_child(screen)
+	get_tree().root.add_child(screen)
 	return screen
 
 func _cleanup_screen(screen: Control) -> void:

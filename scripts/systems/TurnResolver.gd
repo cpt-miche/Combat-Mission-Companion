@@ -70,7 +70,7 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		var unit_state := units[unit_id] as Dictionary
 		var owner := int(unit_state.get("owner", 0))
 		var order_type := int(order.get("type", OrderSystem.OrderType.MOVE))
-		var path := order.get("path", []) as Array[Vector2i]
+		var path: Array[Vector2i] = _typed_path(order.get("path", []))
 		if order_type != OrderSystem.OrderType.DIG_IN and path.is_empty():
 			_add_anomaly(trace_anomalies, turn_trace, "invalid_order", {
 				"reason": "order path is empty",
@@ -216,6 +216,16 @@ static func _resolve_active_owner(order_list: Array[Dictionary], units: Dictiona
 		var unit_state := units[unit_id] as Dictionary
 		return int(unit_state.get("owner", 0))
 	return fallback_owner
+
+
+static func _typed_path(raw_path: Variant) -> Array[Vector2i]:
+	var typed_path: Array[Vector2i] = []
+	if typeof(raw_path) != TYPE_ARRAY:
+		return typed_path
+	for hex_variant in raw_path as Array:
+		if hex_variant is Vector2i:
+			typed_path.append(hex_variant as Vector2i)
+	return typed_path
 
 static func _initiative_score(order: Dictionary, units: Dictionary) -> int:
 	var unit := units.get(order.get("unit_id", ""), {}) as Dictionary

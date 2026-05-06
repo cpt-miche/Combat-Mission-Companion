@@ -43,6 +43,8 @@ godot --headless --path . --script ci/unit_notation_check.gd
 echo "Running gameplay AI service test..."
 godot --headless --path . --scene tests/gameplay/GameplayAIServiceTest.tscn
 
+echo "Running gameplay screen integration test..."
+godot --headless --path . --scene tests/gameplay_ui/GameplayScreenIntegrationTest.tscn
 
 if [ -f export_presets.cfg ]; then
   mkdir -p build

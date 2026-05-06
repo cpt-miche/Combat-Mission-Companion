@@ -617,7 +617,7 @@ func _on_end_turn_pressed() -> void:
 	_units = result.get("units", {})
 	GameState.scout_intel_by_observer = result.get("scout_intel_by_observer", GameState.scout_intel_by_observer).duplicate(true)
 	_persist_units_to_state()
-	_execution_queue = result.get("execution_queue", [])
+	_execution_queue = _typed_execution_queue(result.get("execution_queue", []))
 	GameState.combat_log_entries = _combat_log.entries.duplicate(true)
 	GameState.pending_casualties = {
 		"own": result.get("own_casualties", []),
@@ -628,11 +628,20 @@ func _on_end_turn_pressed() -> void:
 	_preview_path.clear()
 	_preview_target_hex = Vector2i(-9999, -9999)
 	if _execution_queue.is_empty():
-		_refresh_log()
-		GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
+		_complete_resolved_turn()
 		return
 	animation_timer.start()
 	end_turn_button.disabled = true
+
+
+func _typed_execution_queue(raw_queue: Variant) -> Array[Dictionary]:
+	var typed_queue: Array[Dictionary] = []
+	if typeof(raw_queue) != TYPE_ARRAY:
+		return typed_queue
+	for step_variant in raw_queue as Array:
+		if typeof(step_variant) == TYPE_DICTIONARY:
+			typed_queue.append((step_variant as Dictionary).duplicate(true))
+	return typed_queue
 
 func _is_active_player_ai_controlled() -> bool:
 	if _active_player < 0 or _active_player >= GameState.players.size():
@@ -661,16 +670,19 @@ func _prune_orders_for_dead_units(orders: Dictionary) -> Dictionary:
 			next_orders.erase(unit_id)
 	return next_orders
 
+func _complete_resolved_turn() -> void:
+	animation_timer.stop()
+	end_turn_button.disabled = false
+	_active_player = 1 - _active_player
+	GameState.active_player = _active_player
+	GameState.current_turn += 1
+	_begin_player_turn()
+	_refresh_log()
+	GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
+
 func _on_animation_step() -> void:
 	if _execution_queue.is_empty():
-		animation_timer.stop()
-		end_turn_button.disabled = false
-		_active_player = 1 - _active_player
-		GameState.active_player = _active_player
-		GameState.current_turn += 1
-		_begin_player_turn()
-		_refresh_log()
-		GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
+		_complete_resolved_turn()
 		return
 	var step: Dictionary = _execution_queue.pop_front() as Dictionary
 	if String(step.get("type", "")) != "move":
