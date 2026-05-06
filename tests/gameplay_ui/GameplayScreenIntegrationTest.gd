@@ -15,6 +15,7 @@ func _run() -> void:
 	_test_left_click_move_tile_issues_move_order()
 	_test_stack_cap_feedback()
 	_test_attack_order_shows_engagement_popup_payload()
+	_test_dismissing_engagement_popup_still_opens_casualty_entry()
 
 	if _failures.is_empty():
 		print("GameplayScreen integration tests passed.")
@@ -86,6 +87,19 @@ func _test_attack_order_shows_engagement_popup_payload() -> void:
 	screen._on_battle_finished_pressed()
 	_assert_equal(GameState.Phase.CASUALTY_ENTRY, GameState.current_phase, "Battle finished button should advance to casualty entry")
 	_assert_equal(1, (GameState.pending_casualties.get("engagements", []) as Array).size(), "Casualty entry should receive engagement details")
+	_cleanup_screen(screen)
+
+func _test_dismissing_engagement_popup_still_opens_casualty_entry() -> void:
+	_reset_state()
+	var screen := _spawn_screen()
+	screen._orders = {
+		"u1": OrderSystem.create_attack_order("u1", [Vector2i(0, 0), Vector2i(0, 1)], "enemy")
+	}
+	screen._on_end_turn_pressed()
+	_assert_true(screen.engagement_dialog.visible, "Battle popup should open before testing dismissal")
+	screen._on_battle_dialog_dismissed()
+	_assert_equal(GameState.Phase.CASUALTY_ENTRY, GameState.current_phase, "Dismissing the battle popup should still advance to casualty entry")
+	_assert_equal(1, (GameState.pending_casualties.get("engagements", []) as Array).size(), "Dismissed battle popup should preserve engagement details for casualty entry")
 	_cleanup_screen(screen)
 
 func _reset_state() -> void:

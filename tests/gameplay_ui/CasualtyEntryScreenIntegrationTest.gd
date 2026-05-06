@@ -10,6 +10,7 @@ func _init() -> void:
 func _run() -> void:
 	await process_frame
 	_test_engagements_expand_to_squad_section_casualty_items()
+	_test_owner_one_resolution_uses_owner_one_as_own_tree()
 
 	if _failures.is_empty():
 		print("CasualtyEntryScreen integration tests passed.")
@@ -38,6 +39,26 @@ func _test_engagements_expand_to_squad_section_casualty_items() -> void:
 	var p1_tree := (GameState.players[0] as Dictionary).get("division_tree", {}) as Dictionary
 	var casualty := _find_unit(p1_tree, "p1_squad_a")
 	_assert_equal("dead", String(casualty.get("status", "")), "Confirmed squad casualty should mark the squad dead in the formation tree")
+	screen.queue_free()
+
+func _test_owner_one_resolution_uses_owner_one_as_own_tree() -> void:
+	_reset_state()
+	GameState.pending_casualties["resolving_player"] = 1
+	GameState.pending_casualties["engagements"] = [{
+		"attacker_unit_id": "p2_platoon",
+		"defender_unit_id": "p1_platoon",
+		"attacker_owner": 1,
+		"defender_owner": 0
+	}]
+	var screen: Control = CASUALTY_SCREEN_SCENE.instantiate()
+	get_root().add_child(screen)
+	await process_frame
+	var own_unit: TreeItem = screen.own_tree.get_root().get_first_child()
+	var enemy_unit: TreeItem = screen.enemy_tree.get_root().get_first_child()
+	_assert_true(own_unit != null, "Owner 1 casualty tree should include its engaged unit as own")
+	_assert_true(enemy_unit != null, "Owner 1 casualty tree should include owner 0 unit as enemy")
+	_assert_equal("p2_platoon", String(own_unit.get_metadata(0)), "Resolving owner 1 should build the own tree from owner 1 units")
+	_assert_equal("p1_platoon", String(enemy_unit.get_metadata(0)), "Resolving owner 1 should build the enemy tree from owner 0 units")
 	screen.queue_free()
 
 func _reset_state() -> void:

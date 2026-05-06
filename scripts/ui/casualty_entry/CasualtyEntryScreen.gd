@@ -12,10 +12,16 @@ func _ready() -> void:
 	submit_button.pressed.connect(_on_submit_pressed)
 
 func _build_own_tree() -> void:
-	_build_casualty_tree(own_tree, 0, "No player units were listed for this battle.")
+	_build_casualty_tree(own_tree, _resolving_player(), "No player units were listed for this battle.")
 
 func _build_enemy_tree() -> void:
-	_build_casualty_tree(enemy_tree, 1, "No enemy units were listed for this battle.")
+	_build_casualty_tree(enemy_tree, _opposing_player(), "No enemy units were listed for this battle.")
+
+func _resolving_player() -> int:
+	return clampi(int(GameState.pending_casualties.get("resolving_player", 0)), 0, 1)
+
+func _opposing_player() -> int:
+	return 1 - _resolving_player()
 
 func _build_casualty_tree(tree: Tree, owner: int, empty_message: String) -> void:
 	tree.clear()

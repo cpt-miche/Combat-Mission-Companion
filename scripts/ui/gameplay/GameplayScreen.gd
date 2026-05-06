@@ -87,6 +87,7 @@ func _ready() -> void:
 	if not GameState.is_connected("debug_mode_changed", _on_debug_mode_changed):
 		GameState.debug_mode_changed.connect(_on_debug_mode_changed)
 	engagement_dialog.confirmed.connect(_on_battle_finished_pressed)
+	engagement_dialog.canceled.connect(_on_battle_dialog_dismissed)
 	engagement_dialog.get_ok_button().text = "Battle is finished"
 	_refresh_debug_status_hud()
 
@@ -670,7 +671,8 @@ func _populate_engagement_dialog(engagements: Array) -> void:
 		var defender_id := String(engagement.get("defender_unit_id", "Unknown"))
 		var attacker_text := _engagement_side_line(attacker_id, attacker_owner, engagement.get("attacker_hex", {}), defender_id)
 		var defender_text := _engagement_side_line(defender_id, defender_owner, engagement.get("defender_hex", {}), attacker_id)
-		if attacker_owner == 0:
+		var resolving_player := int(_pending_battle_payload.get("resolving_player", 0))
+		if attacker_owner == resolving_player:
 			_add_engagement_row(friendly_engagement_list, attacker_text)
 			_add_engagement_row(enemy_engagement_list, defender_text)
 		else:
@@ -696,6 +698,14 @@ func _engagement_side_line(unit_id: String, owner: int, raw_hex: Variant, opposi
 	return "%s (Owner %d) at %s engaging %s" % [unit_id, owner, hex_text, opposing_unit_id]
 
 func _on_battle_finished_pressed() -> void:
+	_finish_pending_battle()
+
+func _on_battle_dialog_dismissed() -> void:
+	_finish_pending_battle()
+
+func _finish_pending_battle() -> void:
+	if _pending_battle_payload.is_empty():
+		return
 	GameState.pending_casualties = _pending_battle_payload.duplicate(true)
 	_pending_battle_payload.clear()
 	GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
