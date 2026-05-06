@@ -33,6 +33,9 @@ enum OrderMode { MOVE, ATTACK, DIG_IN }
 @onready var debug_level_modal: DebugLevelModal = %DebugLevelModal
 @onready var debug_status_container: PanelContainer = %DebugStatusContainer
 @onready var debug_status_label: Label = %DebugStatusLabel
+@onready var engagement_dialog: AcceptDialog = %EngagementDialog
+@onready var friendly_engagement_list: VBoxContainer = %FriendlyEngagementList
+@onready var enemy_engagement_list: VBoxContainer = %EnemyEngagementList
 
 var _units: Dictionary = {}
 var _orders: Dictionary = {}
@@ -59,6 +62,7 @@ var _hovered_hex := Vector2i(-9999, -9999)
 var _selected_hex := Vector2i(-9999, -9999)
 var _active_order_mode: OrderMode = OrderMode.MOVE
 var _friendly_selection_cycle_by_hex: Dictionary = {}
+var _pending_battle_payload: Dictionary = {}
 
 func _ready() -> void:
 	var dimensions := GameState.selected_map_dimensions
@@ -82,6 +86,9 @@ func _ready() -> void:
 	debug_level_modal.canceled.connect(_on_debug_level_canceled)
 	if not GameState.is_connected("debug_mode_changed", _on_debug_mode_changed):
 		GameState.debug_mode_changed.connect(_on_debug_mode_changed)
+	engagement_dialog.confirmed.connect(_on_battle_finished_pressed)
+	engagement_dialog.canceled.connect(_on_battle_dialog_dismissed)
+	engagement_dialog.get_ok_button().text = "Battle is finished"
 	_refresh_debug_status_hud()
 
 func _process(_delta: float) -> void:
@@ -606,29 +613,102 @@ func _update_info_label(status_message: String = "") -> void:
 
 func _on_end_turn_pressed() -> void:
 	_orders = _prune_orders_for_dead_units(_orders)
+	var resolving_player := _active_player
 	var result := TurnResolver.resolve_turn(_units.duplicate(true), _orders, _combat_log, {
 		"scout_intel_by_observer": GameState.scout_intel_by_observer.duplicate(true),
-		"active_owner": _active_player
+		"active_owner": resolving_player
 	})
 	_units = result.get("units", {})
 	GameState.scout_intel_by_observer = result.get("scout_intel_by_observer", GameState.scout_intel_by_observer).duplicate(true)
 	_persist_units_to_state()
 	_execution_queue = result.get("execution_queue", [])
 	GameState.combat_log_entries = _combat_log.entries.duplicate(true)
-	GameState.pending_casualties = {
+	_pending_battle_payload = {
+		"resolving_player": resolving_player,
 		"own": result.get("own_casualties", []),
 		"enemy": result.get("enemy_casualties", []),
-		"known_enemy_units": result.get("known_enemy_units", [])
+		"known_enemy_units": result.get("known_enemy_units", []),
+		"engagements": result.get("engagements", [])
 	}
 	_orders.clear()
 	_preview_path.clear()
 	_preview_target_hex = Vector2i(-9999, -9999)
 	if _execution_queue.is_empty():
-		_refresh_log()
-		GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
+		_finish_turn_resolution()
 		return
 	animation_timer.start()
 	end_turn_button.disabled = true
+
+func _finish_turn_resolution() -> void:
+	_active_player = 1 - _active_player
+	GameState.active_player = _active_player
+	GameState.current_turn += 1
+	_begin_player_turn()
+	_refresh_log()
+	if (_pending_battle_payload.get("engagements", []) as Array).is_empty():
+		_update_info_label("Turn finished with no declared battles.")
+		return
+	_show_engagement_dialog()
+
+func _show_engagement_dialog() -> void:
+	_populate_engagement_dialog(_pending_battle_payload.get("engagements", []) as Array)
+	engagement_dialog.popup_centered_ratio(0.72)
+
+func _populate_engagement_dialog(engagements: Array) -> void:
+	_clear_children(friendly_engagement_list)
+	_clear_children(enemy_engagement_list)
+	if engagements.is_empty():
+		_add_engagement_row(friendly_engagement_list, "No friendly units engaged.")
+		_add_engagement_row(enemy_engagement_list, "No enemy units engaged.")
+		return
+	for engagement_variant in engagements:
+		if typeof(engagement_variant) != TYPE_DICTIONARY:
+			continue
+		var engagement := engagement_variant as Dictionary
+		var attacker_owner := int(engagement.get("attacker_owner", -1))
+		var defender_owner := int(engagement.get("defender_owner", -1))
+		var attacker_id := String(engagement.get("attacker_unit_id", "Unknown"))
+		var defender_id := String(engagement.get("defender_unit_id", "Unknown"))
+		var attacker_text := _engagement_side_line(attacker_id, attacker_owner, engagement.get("attacker_hex", {}), defender_id)
+		var defender_text := _engagement_side_line(defender_id, defender_owner, engagement.get("defender_hex", {}), attacker_id)
+		var resolving_player := int(_pending_battle_payload.get("resolving_player", 0))
+		if attacker_owner == resolving_player:
+			_add_engagement_row(friendly_engagement_list, attacker_text)
+			_add_engagement_row(enemy_engagement_list, defender_text)
+		else:
+			_add_engagement_row(friendly_engagement_list, defender_text)
+			_add_engagement_row(enemy_engagement_list, attacker_text)
+
+func _clear_children(container: Node) -> void:
+	for child in container.get_children():
+		child.queue_free()
+
+func _add_engagement_row(container: VBoxContainer, text: String) -> void:
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(label)
+
+func _engagement_side_line(unit_id: String, owner: int, raw_hex: Variant, opposing_unit_id: String) -> String:
+	var hex_text := "?,?"
+	if typeof(raw_hex) == TYPE_DICTIONARY:
+		var hex_dict := raw_hex as Dictionary
+		hex_text = "%d,%d" % [int(hex_dict.get("q", hex_dict.get("x", 0))), int(hex_dict.get("r", hex_dict.get("y", 0)))]
+	return "%s (Owner %d) at %s engaging %s" % [unit_id, owner, hex_text, opposing_unit_id]
+
+func _on_battle_finished_pressed() -> void:
+	_finish_pending_battle()
+
+func _on_battle_dialog_dismissed() -> void:
+	_finish_pending_battle()
+
+func _finish_pending_battle() -> void:
+	if _pending_battle_payload.is_empty():
+		return
+	GameState.pending_casualties = _pending_battle_payload.duplicate(true)
+	_pending_battle_payload.clear()
+	GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
 
 func _prune_orders_for_dead_units(orders: Dictionary) -> Dictionary:
 	var next_orders := orders.duplicate(true)
@@ -645,12 +725,7 @@ func _on_animation_step() -> void:
 	if _execution_queue.is_empty():
 		animation_timer.stop()
 		end_turn_button.disabled = false
-		_active_player = 1 - _active_player
-		GameState.active_player = _active_player
-		GameState.current_turn += 1
-		_begin_player_turn()
-		_refresh_log()
-		GameState.set_phase(GameState.Phase.CASUALTY_ENTRY)
+		_finish_turn_resolution()
 		return
 	var step: Dictionary = _execution_queue.pop_front() as Dictionary
 	if String(step.get("type", "")) != "move":

@@ -14,6 +14,8 @@ func _run() -> void:
 	_test_mode_based_order_issuing()
 	_test_left_click_move_tile_issues_move_order()
 	_test_stack_cap_feedback()
+	_test_attack_order_shows_engagement_popup_payload()
+	_test_dismissing_engagement_popup_still_opens_casualty_entry()
 
 	if _failures.is_empty():
 		print("GameplayScreen integration tests passed.")
@@ -59,7 +61,7 @@ func _test_left_click_move_tile_issues_move_order() -> void:
 	var screen := _spawn_screen()
 	screen._selected_unit_id = "u1"
 	screen._set_order_mode(screen.OrderMode.MOVE)
-	var target_hex := Vector2i(0, 1)
+	var target_hex := Vector2i(0, 2)
 	var click_position: Vector2 = screen._world_to_screen(screen._hex_center(target_hex.x, target_hex.y))
 	screen._handle_left_press(click_position)
 	screen._handle_left_release(click_position)
@@ -70,6 +72,36 @@ func _test_left_click_move_tile_issues_move_order() -> void:
 	_assert_true(path.size() >= 2, "Left-click move order should include a traversable path")
 	_cleanup_screen(screen)
 
+func _test_attack_order_shows_engagement_popup_payload() -> void:
+	_reset_state()
+	var screen := _spawn_screen()
+	screen._orders = {
+		"u1": OrderSystem.create_attack_order("u1", [Vector2i(0, 0), Vector2i(0, 1)], "enemy")
+	}
+	screen._on_end_turn_pressed()
+	var engagements := screen._pending_battle_payload.get("engagements", []) as Array
+	_assert_equal(1, engagements.size(), "Resolving attack orders should prepare one engagement for the battle popup")
+	_assert_true(screen.engagement_dialog.visible, "Battle popup should open for declared engagements")
+	_assert_equal(1, screen.friendly_engagement_list.get_child_count(), "Battle popup should list player-side engaged unit")
+	_assert_equal(1, screen.enemy_engagement_list.get_child_count(), "Battle popup should list enemy-side engaged unit")
+	screen._on_battle_finished_pressed()
+	_assert_equal(GameState.Phase.CASUALTY_ENTRY, GameState.current_phase, "Battle finished button should advance to casualty entry")
+	_assert_equal(1, (GameState.pending_casualties.get("engagements", []) as Array).size(), "Casualty entry should receive engagement details")
+	_cleanup_screen(screen)
+
+func _test_dismissing_engagement_popup_still_opens_casualty_entry() -> void:
+	_reset_state()
+	var screen := _spawn_screen()
+	screen._orders = {
+		"u1": OrderSystem.create_attack_order("u1", [Vector2i(0, 0), Vector2i(0, 1)], "enemy")
+	}
+	screen._on_end_turn_pressed()
+	_assert_true(screen.engagement_dialog.visible, "Battle popup should open before testing dismissal")
+	screen._on_battle_dialog_dismissed()
+	_assert_equal(GameState.Phase.CASUALTY_ENTRY, GameState.current_phase, "Dismissing the battle popup should still advance to casualty entry")
+	_assert_equal(1, (GameState.pending_casualties.get("engagements", []) as Array).size(), "Dismissed battle popup should preserve engagement details for casualty entry")
+	_cleanup_screen(screen)
+
 func _reset_state() -> void:
 	GameState.reset()
 	GameState.set_phase(GameState.Phase.GAMEPLAY)
@@ -78,12 +110,13 @@ func _reset_state() -> void:
 		{"name":"P1","division_tree":{},"deployments":{},"controller":"human"},
 		{"name":"P2","division_tree":{},"deployments":{},"controller":"human"}
 	]
-	GameState.units = {
-		"u1": {"id":"u1","owner":0,"hex":Vector2i(0,0),"size":"company","status":"alive"},
-		"a": {"id":"a","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
-		"b": {"id":"b","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
-		"c": {"id":"c","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"},
-		"d": {"id":"d","owner":0,"hex":Vector2i(1,0),"size":"company","status":"alive"}
+	GameState.gameplay_units = {
+		"u1": {"id":"u1","owner":0,"hex":Vector2i(0,0),"formation_size":"company","status":"alive"},
+		"enemy": {"id":"enemy","owner":1,"hex":Vector2i(0,1),"formation_size":"company","status":"alive"},
+		"a": {"id":"a","owner":0,"hex":Vector2i(1,0),"formation_size":"company","status":"alive"},
+		"b": {"id":"b","owner":0,"hex":Vector2i(1,0),"formation_size":"company","status":"alive"},
+		"c": {"id":"c","owner":0,"hex":Vector2i(1,0),"formation_size":"company","status":"alive"},
+		"d": {"id":"d","owner":0,"hex":Vector2i(1,0),"formation_size":"company","status":"alive"}
 	}
 	GameState.terrain_map = {}
 
