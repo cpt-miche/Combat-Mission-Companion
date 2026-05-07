@@ -43,6 +43,9 @@ godot --headless --path . --script ci/unit_notation_check.gd
 echo "Running gameplay AI service test..."
 godot --headless --path . --scene tests/gameplay/GameplayAIServiceTest.tscn
 
+echo "Running division builder integration test..."
+godot --headless --path . --scene tests/division_builder/DivisionBuilderScreenIntegrationTest.tscn
+
 echo "Running gameplay screen integration test..."
 godot --headless --path . --scene tests/gameplay_ui/GameplayScreenIntegrationTest.tscn
 
