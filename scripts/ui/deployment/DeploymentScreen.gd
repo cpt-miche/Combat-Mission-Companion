@@ -622,14 +622,14 @@ func _on_hex_selected(column: int, row: int) -> void:
 
 	var next_deployments := deployments.duplicate(true)
 	if existing_key != "":
-		next_deployments.erase(existing_key)
+		_remove_deployment_unit_at_key(next_deployments, existing_key, unit_id)
 
 	var placement_block_reason := DeploymentValidator.placement_block_reason(unit_snapshot, filtered_units_on_target_hex)
 	if not placement_block_reason.is_empty():
 		_refresh_phase_ui(placement_block_reason)
 		return
 
-	next_deployments[target_key] = unit_snapshot
+	_add_deployment_unit_at_key(next_deployments, target_key, unit_snapshot)
 	GameState.players[_player_index]["deployments"] = next_deployments
 	_build_deployable_unit_list()
 	if existing_key.is_empty():
@@ -640,16 +640,16 @@ func _on_hex_selected(column: int, row: int) -> void:
 func _deployed_unit_snapshots(deployments: Dictionary) -> Array[Dictionary]:
 	var units: Array[Dictionary] = []
 	for key in deployments.keys():
-		var unit_data = deployments[key]
-		if typeof(unit_data) == TYPE_DICTIONARY:
-			units.append(unit_data)
+		units.append_array(_deployment_units_from_variant(deployments[key]))
 	return units
 
 func _deployed_unit_snapshots_at_key(deployments: Dictionary, key: String) -> Array[Dictionary]:
-	var units: Array[Dictionary] = []
 	if not deployments.has(key):
-		return units
-	var deployment_variant: Variant = deployments[key]
+		return []
+	return _deployment_units_from_variant(deployments[key])
+
+func _deployment_units_from_variant(deployment_variant: Variant) -> Array[Dictionary]:
+	var units: Array[Dictionary] = []
 	if typeof(deployment_variant) == TYPE_DICTIONARY:
 		units.append(deployment_variant as Dictionary)
 	elif typeof(deployment_variant) == TYPE_ARRAY:
@@ -657,6 +657,27 @@ func _deployed_unit_snapshots_at_key(deployments: Dictionary, key: String) -> Ar
 			if typeof(unit_variant) == TYPE_DICTIONARY:
 				units.append(unit_variant as Dictionary)
 	return units
+
+func _add_deployment_unit_at_key(deployments: Dictionary, key: String, unit_snapshot: Dictionary) -> void:
+	var units := _deployed_unit_snapshots_at_key(deployments, key)
+	units.append(unit_snapshot)
+	_deployments_set_units_at_key(deployments, key, units)
+
+func _remove_deployment_unit_at_key(deployments: Dictionary, key: String, unit_id: String) -> void:
+	var remaining_units: Array[Dictionary] = []
+	for deployed_unit in _deployed_unit_snapshots_at_key(deployments, key):
+		if String(deployed_unit.get("id", "")) == unit_id:
+			continue
+		remaining_units.append(deployed_unit)
+	_deployments_set_units_at_key(deployments, key, remaining_units)
+
+func _deployments_set_units_at_key(deployments: Dictionary, key: String, units: Array[Dictionary]) -> void:
+	if units.is_empty():
+		deployments.erase(key)
+	elif units.size() == 1:
+		deployments[key] = units[0]
+	else:
+		deployments[key] = units.duplicate(true)
 
 func _collapsed_state_by_unit_id(root_item: TreeItem) -> Dictionary:
 	var collapsed_by_unit_id := {}
@@ -714,23 +735,19 @@ func _deployment_key_for_unit_id(deployments: Dictionary, unit_id: String) -> St
 	if unit_id.is_empty():
 		return ""
 	for key in deployments.keys():
-		var unit_data = deployments[key]
-		if typeof(unit_data) != TYPE_DICTIONARY:
-			continue
-		if String(unit_data.get("id", "")) == unit_id:
-			return String(key)
+		for unit_data in _deployment_units_from_variant(deployments[key]):
+			if String(unit_data.get("id", "")) == unit_id:
+				return String(key)
 	return ""
 
 func _deployment_coordinates_by_unit_id(deployments: Dictionary) -> Dictionary:
 	var coordinates_by_unit_id := {}
 	for key in deployments.keys():
-		var unit_data = deployments[key]
-		if typeof(unit_data) != TYPE_DICTIONARY:
-			continue
-		var unit_id := String((unit_data as Dictionary).get("id", ""))
-		if unit_id.is_empty():
-			continue
-		coordinates_by_unit_id[unit_id] = String(key)
+		for unit_data in _deployment_units_from_variant(deployments[key]):
+			var unit_id := String(unit_data.get("id", ""))
+			if unit_id.is_empty():
+				continue
+			coordinates_by_unit_id[unit_id] = String(key)
 	return coordinates_by_unit_id
 
 func _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id: Dictionary) -> Dictionary:
@@ -757,12 +774,11 @@ func _unit_ids_covered_by_higher_echelon_deployments() -> Dictionary:
 
 	var deployed_unit_ids := {}
 	for deployment in deployments.values():
-		if typeof(deployment) != TYPE_DICTIONARY:
-			continue
-		var deployed_unit_id := String((deployment as Dictionary).get("id", ""))
-		if deployed_unit_id.is_empty():
-			continue
-		deployed_unit_ids[deployed_unit_id] = true
+		for deployed_unit in _deployment_units_from_variant(deployment):
+			var deployed_unit_id := String(deployed_unit.get("id", ""))
+			if deployed_unit_id.is_empty():
+				continue
+			deployed_unit_ids[deployed_unit_id] = true
 
 	if deployed_unit_ids.is_empty():
 		return covered_unit_ids

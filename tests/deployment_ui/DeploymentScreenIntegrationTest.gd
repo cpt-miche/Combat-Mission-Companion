@@ -10,6 +10,7 @@ func _init() -> void:
 func _run() -> void:
 	await process_frame
 	_test_replacing_same_unit_keeps_single_deployment_entry()
+	_test_four_companies_can_stack_on_one_hex()
 	_test_occupied_hex_replacement_still_respects_validation_rules()
 	_test_tree_model_is_hierarchical_and_collapsed_by_default()
 	_test_non_deployable_units_stay_blocked()
@@ -46,6 +47,37 @@ func _test_replacing_same_unit_keeps_single_deployment_entry() -> void:
 	_assert_true(deployments.has("0,1"), "Expected moved unit to exist at latest target hex.")
 	_assert_false(deployments.has("0,0"), "Expected old deployment hex to be cleared after move.")
 	_assert_equal(1, _count_unit_id_occurrences(deployments, "u1"), "Expected one deployment record for unit u1.")
+
+	_cleanup_screen(screen)
+
+func _test_four_companies_can_stack_on_one_hex() -> void:
+	_reset_state(GameState.Phase.DEPLOYMENT_P1)
+	GameState.territory_map = {
+		"0,0": GameState.TerritoryOwnership.PLAYER_1
+	}
+	var companies := [
+		_company("co_a", "A Company"),
+		_company("co_b", "B Company"),
+		_company("co_c", "C Company"),
+		_company("co_d", "D Company"),
+		_company("co_e", "E Company")
+	]
+	GameState.players[0]["division_tree"] = _root_with_children(companies)
+
+	var screen := _spawn_screen()
+	for unit_id in ["co_a", "co_b", "co_c", "co_d"]:
+		_select_unit_by_id(screen, unit_id)
+		screen._on_hex_selected(0, 0)
+
+	var deployments: Dictionary = GameState.players[0].get("deployments", {})
+	_assert_equal(1, deployments.size(), "Expected stacked companies to share one deployment hex entry.")
+	_assert_equal(4, _deployment_units_at_hex(deployments, "0,0").size(), "Expected four companies to stack on the target hex.")
+
+	_select_unit_by_id(screen, "co_e")
+	screen._on_hex_selected(0, 0)
+	deployments = GameState.players[0].get("deployments", {})
+	_assert_equal(4, _deployment_units_at_hex(deployments, "0,0").size(), "Expected fifth company to remain blocked by stacking limit.")
+	_assert_true(String(screen.status_label.text).contains("Company limit reached"), "Expected company stacking limit status message.")
 
 	_cleanup_screen(screen)
 
@@ -275,11 +307,25 @@ func _battalion(id: String, name: String) -> Dictionary:
 func _count_unit_id_occurrences(deployments: Dictionary, unit_id: String) -> int:
 	var count := 0
 	for deployment in deployments.values():
-		if typeof(deployment) != TYPE_DICTIONARY:
-			continue
-		if String((deployment as Dictionary).get("id", "")) == unit_id:
-			count += 1
+		for deployed_unit in _deployment_units_from_variant(deployment):
+			if String(deployed_unit.get("id", "")) == unit_id:
+				count += 1
 	return count
+
+func _deployment_units_at_hex(deployments: Dictionary, key: String) -> Array[Dictionary]:
+	if not deployments.has(key):
+		return []
+	return _deployment_units_from_variant(deployments[key])
+
+func _deployment_units_from_variant(deployment_variant: Variant) -> Array[Dictionary]:
+	var units: Array[Dictionary] = []
+	if typeof(deployment_variant) == TYPE_DICTIONARY:
+		units.append(deployment_variant as Dictionary)
+	elif typeof(deployment_variant) == TYPE_ARRAY:
+		for unit_variant in (deployment_variant as Array):
+			if typeof(unit_variant) == TYPE_DICTIONARY:
+				units.append(unit_variant as Dictionary)
+	return units
 
 func _assert_equal(expected: Variant, actual: Variant, message: String) -> void:
 	if expected != actual:

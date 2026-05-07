@@ -207,15 +207,22 @@ static func _deployment_index_by_unit_id(deployments: Dictionary) -> Dictionary:
 	var index := {}
 	for key_variant in deployments.keys():
 		var hex_id := String(key_variant)
-		var deployed_unit: Variant = deployments[key_variant]
-		if typeof(deployed_unit) != TYPE_DICTIONARY:
-			continue
-		var deployed := deployed_unit as Dictionary
-		var unit_id := String(deployed.get("id", ""))
-		if unit_id.is_empty():
-			continue
-		index[unit_id] = hex_id
+		for deployed in _deployment_units_from_variant(deployments[key_variant]):
+			var unit_id := String(deployed.get("id", ""))
+			if unit_id.is_empty():
+				continue
+			index[unit_id] = hex_id
 	return index
+
+static func _deployment_units_from_variant(deployment_variant: Variant) -> Array[Dictionary]:
+	var units: Array[Dictionary] = []
+	if typeof(deployment_variant) == TYPE_DICTIONARY:
+		units.append(deployment_variant as Dictionary)
+	elif typeof(deployment_variant) == TYPE_ARRAY:
+		for unit_variant in (deployment_variant as Array):
+			if typeof(unit_variant) == TYPE_DICTIONARY:
+				units.append(unit_variant as Dictionary)
+	return units
 
 static func _parse_hex_key(key: String) -> Variant:
 	var parts := key.split(",")

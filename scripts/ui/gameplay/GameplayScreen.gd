@@ -815,27 +815,37 @@ func _load_or_initialize_units() -> void:
 				continue
 			var q := int(split[0])
 			var r := int(split[1])
-			var unit_data := deployments[key] as Dictionary
-			if not GameState.is_unit_alive(unit_data):
-				continue
-			var unit_type := _normalized_unit_type(unit_data.get("type", "infantry"))
-			if unit_type == "headquarters":
-				continue
-			var id := String(unit_data.get("id", "P%d_U_%d_%d" % [player_index + 1, q, r]))
-			generated[id] = {
-				"id": id,
-				"owner": player_index,
-				"hex": Vector2i(q, r),
-				"initiative": 50,
-				"unit_type": unit_type,
-				"formation_size": String(unit_data.get("size", "company")),
-				"status": String(unit_data.get("status", "alive")).to_lower(),
-				"is_alive": bool(unit_data.get("is_alive", String(unit_data.get("status", "alive")).to_lower() != "dead")),
-				"recon_bonus": 0 if bool(unit_data.get("is_tank", false)) else 5,
-				"concealment": 5
-			}
+			for unit_data in _deployment_units_from_variant(deployments[key]):
+				if not GameState.is_unit_alive(unit_data):
+					continue
+				var unit_type := _normalized_unit_type(unit_data.get("type", "infantry"))
+				if unit_type == "headquarters":
+					continue
+				var id := String(unit_data.get("id", "P%d_U_%d_%d" % [player_index + 1, q, r]))
+				generated[id] = {
+					"id": id,
+					"owner": player_index,
+					"hex": Vector2i(q, r),
+					"initiative": 50,
+					"unit_type": unit_type,
+					"formation_size": String(unit_data.get("size", "company")),
+					"status": String(unit_data.get("status", "alive")).to_lower(),
+					"is_alive": bool(unit_data.get("is_alive", String(unit_data.get("status", "alive")).to_lower() != "dead")),
+					"recon_bonus": 0 if bool(unit_data.get("is_tank", false)) else 5,
+					"concealment": 5
+				}
 	_units = generated
 	GameState.gameplay_units = _units.duplicate(true)
+
+func _deployment_units_from_variant(deployment_variant: Variant) -> Array[Dictionary]:
+	var units: Array[Dictionary] = []
+	if typeof(deployment_variant) == TYPE_DICTIONARY:
+		units.append(deployment_variant as Dictionary)
+	elif typeof(deployment_variant) == TYPE_ARRAY:
+		for unit_variant in (deployment_variant as Array):
+			if typeof(unit_variant) == TYPE_DICTIONARY:
+				units.append(unit_variant as Dictionary)
+	return units
 
 func _without_headquarters_units(units: Dictionary) -> Dictionary:
 	var filtered := {}

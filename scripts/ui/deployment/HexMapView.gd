@@ -105,8 +105,26 @@ func _draw_visible_placements() -> void:
 		var center := _center_for_axial(axial)
 		if center == Vector2.INF:
 			center = _hex_center(axial.x, axial.y)
+		var placed_units := _placement_units_from_variant(placements[key])
+		if placed_units.is_empty():
+			continue
 		draw_circle(center, 10.0, _placement_color(visible_player_index))
-		draw_string(get_theme_default_font(), center + Vector2(-16.0, 4.0), String(placements[key].get("label", "U")), HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12, Color.WHITE)
+		draw_string(get_theme_default_font(), center + Vector2(-16.0, 4.0), _placement_label(placed_units), HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12, Color.WHITE)
+
+func _placement_units_from_variant(placement_variant: Variant) -> Array[Dictionary]:
+	var units: Array[Dictionary] = []
+	if typeof(placement_variant) == TYPE_DICTIONARY:
+		units.append(placement_variant as Dictionary)
+	elif typeof(placement_variant) == TYPE_ARRAY:
+		for unit_variant in (placement_variant as Array):
+			if typeof(unit_variant) == TYPE_DICTIONARY:
+				units.append(unit_variant as Dictionary)
+	return units
+
+func _placement_label(placed_units: Array[Dictionary]) -> String:
+	if placed_units.size() == 1:
+		return String(placed_units[0].get("label", "U"))
+	return "%s×%d" % [String(placed_units[0].get("label", "U")), placed_units.size()]
 
 func _placement_color(player_index: int) -> Color:
 	if player_index == 0:
