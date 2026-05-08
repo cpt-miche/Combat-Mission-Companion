@@ -9,8 +9,8 @@ func _ready() -> void:
 
 func _run() -> void:
 	await get_tree().process_frame
-	_test_engagements_expand_to_squad_section_casualty_items()
-	_test_owner_one_resolution_uses_owner_one_as_own_tree()
+	await _test_engagements_expand_to_squad_section_casualty_items()
+	await _test_owner_one_resolution_uses_owner_one_as_own_tree()
 
 	if _failures.is_empty():
 		print("CasualtyEntryScreen integration tests passed.")
