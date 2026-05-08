@@ -73,6 +73,7 @@ text = ""
 unique_name_in_owner = true
 title = "Choose Side"
 size = Vector2i(460, 220)
+min_size = Vector2i(460, 220)
 initial_position = 1
 unresizable = true
 
