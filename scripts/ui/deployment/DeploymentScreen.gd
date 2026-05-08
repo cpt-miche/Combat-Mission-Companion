@@ -616,10 +616,11 @@ func _on_hex_selected(column: int, row: int) -> void:
 		return
 
 	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
-	var deployed_company_block_reason := _battalion_with_deployed_companies_block_reason(unit_snapshot, deployments, unit_id)
-	if not deployed_company_block_reason.is_empty():
-		_refresh_phase_ui(deployed_company_block_reason)
-		return
+	if existing_key.is_empty():
+		var deployed_company_block_reason := _battalion_with_deployed_companies_block_reason(unit_snapshot, deployments, unit_id)
+		if not deployed_company_block_reason.is_empty():
+			_refresh_phase_ui(deployed_company_block_reason)
+			return
 
 	var units_on_target_hex := _deployed_unit_snapshots_at_key(deployments, target_key)
 	var filtered_units_on_target_hex: Array[Dictionary] = []

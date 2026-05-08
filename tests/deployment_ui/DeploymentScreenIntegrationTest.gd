@@ -12,6 +12,7 @@ func _run() -> void:
 	_test_replacing_same_unit_keeps_single_deployment_entry()
 	_test_four_companies_can_stack_on_one_hex()
 	_test_occupied_hex_replacement_still_respects_validation_rules()
+	_test_deployed_battalion_can_move_after_company_deployment()
 	_test_tree_model_is_hierarchical_and_collapsed_by_default()
 	_test_non_deployable_units_stay_blocked()
 	_test_finish_deployment_requires_all_deployable_units()
@@ -105,6 +106,33 @@ func _test_occupied_hex_replacement_still_respects_validation_rules() -> void:
 	_assert_equal(2, deployments.size(), "Validation should reject battalion replacement when companies remain deployed.")
 	_assert_equal("co_a", _first_deployed_unit_id_at_hex(deployments, "1,0"), "Existing occupied hex entry should remain unchanged when validation fails.")
 	_assert_true(String(screen.status_label.text).contains("Cannot place a battalion after companies are deployed"), "Expected validation status message when battalion placement is blocked. actual=%s" % String(screen.status_label.text))
+
+	_cleanup_screen(screen)
+
+func _test_deployed_battalion_can_move_after_company_deployment() -> void:
+	_reset_state(GameState.Phase.DEPLOYMENT_P1)
+	GameState.territory_map = {
+		"0,0": GameState.TerritoryOwnership.PLAYER_1,
+		"0,1": GameState.TerritoryOwnership.PLAYER_1,
+		"2,0": GameState.TerritoryOwnership.PLAYER_1
+	}
+	var battalion := _battalion("bn_1", "1st Battalion")
+	var company := _company("co_a", "A Company")
+	GameState.players[0]["division_tree"] = _root_with_children([battalion, company])
+	GameState.players[0]["deployments"] = {
+		"0,0": battalion,
+		"2,0": company
+	}
+
+	var screen := _spawn_screen()
+	_select_unit_by_id(screen, "bn_1")
+	screen._on_hex_selected(0, 1)
+
+	var deployments: Dictionary = GameState.players[0].get("deployments", {})
+	_assert_false(deployments.has("0,0"), "Expected the battalion's old hex to be cleared after moving it.")
+	_assert_equal("bn_1", _first_deployed_unit_id_at_hex(deployments, "0,1"), "Expected deployed battalion to move to the selected target hex.")
+	_assert_equal("co_a", _first_deployed_unit_id_at_hex(deployments, "2,0"), "Expected existing company deployment to remain in place.")
+	_assert_true(String(screen.status_label.text).contains("Moved"), "Expected battalion move to succeed instead of being blocked by deployed companies. actual=%s" % String(screen.status_label.text))
 
 	_cleanup_screen(screen)
 
