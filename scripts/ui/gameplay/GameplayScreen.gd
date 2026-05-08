@@ -173,24 +173,9 @@ func _gui_input(event: InputEvent) -> void:
 			if _active_order_mode == OrderMode.DIG_IN:
 				_issue_dig_in_order(_selected_unit_id)
 				return
-			var target_id := ""
-			target_id = _unit_at_hex(hex, 1 - _active_player)
-			if target_id.is_empty():
-				_update_info_label("Attack orders require an enemy target hex.")
-				return
-			var start_hex := _units[_selected_unit_id].get("hex", Vector2i.ZERO) as Vector2i
-			var blocked := _blocked_cells(_selected_unit_id)
-			blocked.erase("%d,%d" % [hex.x, hex.y])
-			var path := Pathfinding.find_path(start_hex, hex, GameState.terrain_map, blocked)
-			if path.is_empty():
-				_update_info_label("No path found.")
-				return
-
-			_upsert_order_and_autosave(OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
-			_update_info_label("Attack order created for %s." % _selected_unit_id)
-			_preview_path.clear()
-			_preview_target_hex = Vector2i(-9999, -9999)
-			queue_redraw()
+			if _issue_attack_order(_selected_unit_id, hex):
+				_update_info_label("Attack order created for %s." % _selected_unit_id)
+				queue_redraw()
 
 func _handle_left_press(position: Vector2) -> void:
 	_drag_start_mouse_pos = position
@@ -562,6 +547,26 @@ func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 		_update_info_label("No path found.")
 		return false
 	_upsert_order_and_autosave(OrderSystem.create_move_order(unit_id, path))
+	_preview_path.clear()
+	_preview_target_hex = Vector2i(-9999, -9999)
+	return true
+
+func _issue_attack_order(unit_id: String, target_hex: Vector2i) -> bool:
+	if unit_id.is_empty() or not _units.has(unit_id):
+		return false
+	if not GameState.is_unit_alive(_units[unit_id] as Dictionary):
+		_update_info_label("%s is dead and cannot receive orders." % unit_id)
+		return false
+	var target_id := _unit_at_hex(target_hex, 1 - _active_player)
+	if target_id.is_empty():
+		_update_info_label("Attack orders require an enemy target hex.")
+		return false
+	var start_hex := (_units[unit_id] as Dictionary).get("hex", Vector2i.ZERO) as Vector2i
+	if not Pathfinding.are_adjacent(start_hex, target_hex):
+		_update_info_label("Attack orders require an adjacent enemy target hex.")
+		return false
+	var attack_path: Array[Vector2i] = [start_hex]
+	_upsert_order_and_autosave(OrderSystem.create_attack_order(unit_id, attack_path, target_id))
 	_preview_path.clear()
 	_preview_target_hex = Vector2i(-9999, -9999)
 	return true

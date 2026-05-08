@@ -16,6 +16,7 @@ func _run() -> void:
 	_test_left_click_move_tile_issues_move_order()
 	_test_order_changes_refresh_autosave_payload()
 	_test_stack_cap_feedback()
+	_test_attack_order_requires_adjacent_target()
 	_test_empty_execution_queue_advances_turn()
 	_test_attack_order_shows_engagement_popup_payload()
 	_test_dismissing_engagement_popup_still_opens_casualty_entry()
@@ -58,6 +59,28 @@ func _test_stack_cap_feedback() -> void:
 	var succeeded: bool = screen._issue_move_order("u1", Vector2i(1, 0))
 	_assert_true(not succeeded, "Move order should be blocked when destination stack cap exceeded")
 	_assert_true(String(screen.info_label.text).contains("Stack exceeds"), "Blocked stack move should explain stack-cap feedback")
+	_cleanup_screen(screen)
+
+
+func _test_attack_order_requires_adjacent_target() -> void:
+	_reset_state()
+	var screen := _spawn_screen()
+	screen._selected_unit_id = "u1"
+	var adjacent_succeeded: bool = screen._issue_attack_order("u1", Vector2i(0, 1))
+	_assert_true(adjacent_succeeded, "Attack order should be allowed for an adjacent enemy target")
+	_assert_true(screen._orders.has("u1"), "Adjacent attack should queue an order")
+	var adjacent_order := screen._orders["u1"] as Dictionary
+	_assert_equal(OrderSystem.OrderType.ATTACK, int(adjacent_order.get("type", -1)), "Adjacent attack should create ATTACK order")
+	var adjacent_path := adjacent_order.get("path", []) as Array
+	_assert_equal(1, adjacent_path.size(), "Adjacent attack should store only the attacker hex so it cannot look like a movement path")
+
+	screen._orders.clear()
+	GameState.debug_mode_enabled = true
+	(screen._units["enemy"] as Dictionary)["hex"] = Vector2i(0, 2)
+	var non_adjacent_succeeded: bool = screen._issue_attack_order("u1", Vector2i(0, 2))
+	_assert_true(not non_adjacent_succeeded, "Attack order should be blocked for a non-adjacent enemy target")
+	_assert_true(not screen._orders.has("u1"), "Blocked non-adjacent attack should not queue an order")
+	_assert_true(String(screen.info_label.text).contains("adjacent enemy target"), "Blocked non-adjacent attack should explain adjacency requirement")
 	_cleanup_screen(screen)
 
 
