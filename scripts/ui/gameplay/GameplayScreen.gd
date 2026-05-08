@@ -186,7 +186,7 @@ func _gui_input(event: InputEvent) -> void:
 				_update_info_label("No path found.")
 				return
 
-			_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
+			_upsert_order_and_autosave(OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
 			_update_info_label("Attack order created for %s." % _selected_unit_id)
 			_preview_path.clear()
 			_preview_target_hex = Vector2i(-9999, -9999)
@@ -561,7 +561,7 @@ func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 	if path.is_empty():
 		_update_info_label("No path found.")
 		return false
-	_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_move_order(unit_id, path))
+	_upsert_order_and_autosave(OrderSystem.create_move_order(unit_id, path))
 	_preview_path.clear()
 	_preview_target_hex = Vector2i(-9999, -9999)
 	return true
@@ -575,9 +575,14 @@ func _issue_dig_in_order(unit_id: String) -> void:
 		_update_info_label("Only friendly units can dig in.")
 		return
 	var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
-	_orders = OrderSystem.upsert_order(_orders, OrderSystem.create_dig_in_order(unit_id))
+	_upsert_order_and_autosave(OrderSystem.create_dig_in_order(unit_id))
 	_update_info_label("Dig In order created for %s." % unit_id)
 	queue_redraw()
+
+
+func _upsert_order_and_autosave(order: Dictionary) -> void:
+	_orders = OrderSystem.upsert_order(_orders, order)
+	_autosave_current_game()
 
 func _update_order_action_panel() -> void:
 	var has_friendly_selected := (not _selected_unit_id.is_empty()) and _units.has(_selected_unit_id) and int((_units[_selected_unit_id] as Dictionary).get("owner", -1)) == _active_player
@@ -1043,6 +1048,7 @@ func _delete_path_at(hex: Vector2i) -> bool:
 		var path := order.get("path", []) as Array[Vector2i]
 		if path.has(hex):
 			_orders = OrderSystem.delete_order(_orders, String(unit_id))
+			_autosave_current_game()
 			return true
 	return false
 

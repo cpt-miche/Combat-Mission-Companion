@@ -14,6 +14,7 @@ func _run() -> void:
 	_test_selection_exposes_order_actions()
 	_test_mode_based_order_issuing()
 	_test_left_click_move_tile_issues_move_order()
+	_test_order_changes_refresh_autosave_payload()
 	_test_stack_cap_feedback()
 	_test_empty_execution_queue_advances_turn()
 	_test_attack_order_shows_engagement_popup_payload()
@@ -86,6 +87,35 @@ func _test_left_click_move_tile_issues_move_order() -> void:
 	_assert_equal(OrderSystem.OrderType.MOVE, int(order.get("type", -1)), "Left-click move should create MOVE order")
 	var path := order.get("path", []) as Array
 	_assert_true(path.size() >= 2, "Left-click move order should include a traversable path")
+	_cleanup_screen(screen)
+
+
+func _test_order_changes_refresh_autosave_payload() -> void:
+	_reset_state()
+	var screen := _spawn_screen()
+	var succeeded: bool = screen._issue_move_order("u1", Vector2i(0, 2))
+	_assert_true(succeeded, "Issuing a move order should succeed before checking autosave contents")
+	_assert_true(GameState.gameplay_orders.has("u1"), "Issuing an order should immediately sync GameState gameplay orders")
+	var saved := SaveManager.load_current_game()
+	var saved_orders := saved.get("orders", {}) as Dictionary
+	_assert_true(saved_orders.has("u1"), "Issuing an order should immediately refresh the autosave order payload")
+	var saved_move_order := saved_orders["u1"] as Dictionary
+	_assert_equal(OrderSystem.OrderType.MOVE, int(saved_move_order.get("type", -1)), "Autosave should store the latest move order type")
+	var saved_path := saved_move_order.get("path", []) as Array
+	_assert_true(saved_path.size() >= 2, "Autosave should store serialized move path points")
+	var saved_target := saved_path[saved_path.size() - 1] as Dictionary
+	_assert_equal(0, int(saved_target.get("x", -1)), "Autosave should store the latest move target x")
+	_assert_equal(2, int(saved_target.get("y", -1)), "Autosave should store the latest move target y")
+	_assert_true(screen._delete_path_at(Vector2i(0, 2)), "Deleting a path point should remove the queued order")
+	saved = SaveManager.load_current_game()
+	saved_orders = saved.get("orders", {}) as Dictionary
+	_assert_true(not saved_orders.has("u1"), "Deleting an order should immediately remove it from autosave")
+	screen._issue_dig_in_order("u1")
+	saved = SaveManager.load_current_game()
+	saved_orders = saved.get("orders", {}) as Dictionary
+	_assert_true(saved_orders.has("u1"), "Issuing a dig-in order should immediately refresh the autosave order payload")
+	var saved_dig_order := saved_orders["u1"] as Dictionary
+	_assert_equal(OrderSystem.OrderType.DIG_IN, int(saved_dig_order.get("type", -1)), "Autosave should store the latest dig-in order type")
 	_cleanup_screen(screen)
 
 func _test_loaded_orders_payload_restores_gameplay_orders() -> void:
