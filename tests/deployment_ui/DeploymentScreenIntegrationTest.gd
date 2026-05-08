@@ -10,6 +10,7 @@ func _ready() -> void:
 func _run() -> void:
 	await get_tree().process_frame
 	_test_replacing_same_unit_keeps_single_deployment_entry()
+	_test_right_click_undeploys_all_units_on_hex()
 	_test_four_companies_can_stack_on_one_hex()
 	_test_occupied_hex_replacement_still_respects_validation_rules()
 	_test_deployed_battalion_can_move_after_company_deployment()
@@ -50,6 +51,40 @@ func _test_replacing_same_unit_keeps_single_deployment_entry() -> void:
 	_assert_true(deployments.has("0,1"), "Expected moved unit to exist at latest target hex.")
 	_assert_false(deployments.has("0,0"), "Expected old deployment hex to be cleared after move.")
 	_assert_equal(1, _count_unit_id_occurrences(deployments, "u1"), "Expected one deployment record for unit u1.")
+
+	_cleanup_screen(screen)
+
+func _test_right_click_undeploys_all_units_on_hex() -> void:
+	_reset_state(GameState.Phase.DEPLOYMENT_P1)
+	GameState.territory_map = {
+		"0,0": GameState.TerritoryOwnership.PLAYER_1,
+		"0,1": GameState.TerritoryOwnership.PLAYER_1
+	}
+	var companies := [
+		_company("co_a", "A Company"),
+		_company("co_b", "B Company"),
+		_company("co_c", "C Company")
+	]
+	GameState.players[0]["division_tree"] = _root_with_children(companies)
+
+	var screen := _spawn_screen()
+	_select_unit_by_id(screen, "co_a")
+	screen._on_hex_selected(0, 0)
+	_select_unit_by_id(screen, "co_b")
+	screen._on_hex_selected(0, 0)
+	_select_unit_by_id(screen, "co_c")
+	screen._on_hex_selected(0, 1)
+
+	_right_click_hex(screen, 0, 0)
+
+	var deployments: Dictionary = GameState.players[0].get("deployments", {})
+	_assert_false(deployments.has("0,0"), "Expected right-click undeploy to clear every unit assigned to the clicked hex.")
+	_assert_true(deployments.has("0,1"), "Expected right-click undeploy to preserve deployments on other hexes.")
+	_assert_equal(1, _deployment_units_at_hex(deployments, "0,1").size(), "Expected only the unclicked hex deployment to remain.")
+	_assert_true(String(screen.status_label.text).contains("Undeployed 2 units from 0,0"), "Expected undeploy status to include the number of removed units and target hex. actual=%s" % String(screen.status_label.text))
+
+	_right_click_hex(screen, 0, 0)
+	_assert_true(String(screen.status_label.text).contains("No deployed units at 0,0"), "Expected empty hex right-click to explain that nothing was undeployed.")
 
 	_cleanup_screen(screen)
 
@@ -287,6 +322,7 @@ func _test_finish_deployment_allows_subordinates_when_parent_placed() -> void:
 
 	_cleanup_screen(screen)
 
+<<<<<<< codex/fix-softlock-issue-during-deployment
 func _test_finish_deployment_allows_parent_when_all_subordinates_placed() -> void:
 	_reset_state(GameState.Phase.DEPLOYMENT_P1)
 	GameState.territory_map = {
@@ -314,6 +350,14 @@ func _test_finish_deployment_allows_parent_when_all_subordinates_placed() -> voi
 	_assert_equal(GameState.Phase.DEPLOYMENT_P2, GameState.current_phase, "Deploying every subordinate should satisfy parent deployment requirements.")
 
 	_cleanup_screen(screen)
+=======
+func _right_click_hex(screen: Control, column: int, row: int) -> void:
+	var mouse_event := InputEventMouseButton.new()
+	mouse_event.button_index = MOUSE_BUTTON_RIGHT
+	mouse_event.pressed = true
+	mouse_event.position = screen.hex_map_view._hex_center(column, row) + screen.hex_map_view.pan_offset
+	screen.hex_map_view._gui_input(mouse_event)
+>>>>>>> main
 
 func _reset_state(phase: int) -> void:
 	GameState.reset()

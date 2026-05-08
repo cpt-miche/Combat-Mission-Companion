@@ -33,6 +33,7 @@ func _ready() -> void:
 	_refresh_phase_ui("Select a unit, then click a hex in your territory.")
 
 	hex_map_view.hex_selected.connect(_on_hex_selected)
+	hex_map_view.hex_undeploy_requested.connect(_on_hex_undeploy_requested)
 	unit_list.item_selected.connect(_on_unit_item_selected)
 	unit_list.item_activated.connect(_on_unit_item_activated)
 	p2_structure_picker.item_selected.connect(_on_p2_structure_selected)
@@ -650,6 +651,27 @@ func _on_hex_selected(column: int, row: int) -> void:
 		_refresh_phase_ui("Placed %s at %d,%d." % [_unit_label(unit_data), column, row])
 	else:
 		_refresh_phase_ui("Moved %s from %s to %d,%d." % [_unit_label(unit_data), existing_key, column, row])
+
+func _on_hex_undeploy_requested(column: int, row: int) -> void:
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var target_key := "%d,%d" % [column, row]
+	var deployed_units := _deployed_unit_snapshots_at_key(deployments, target_key)
+	if deployed_units.is_empty():
+		_refresh_phase_ui("No deployed units at %s." % target_key)
+		return
+
+	var next_deployments := deployments.duplicate(true)
+	next_deployments.erase(target_key)
+	GameState.players[_player_index]["deployments"] = next_deployments
+	_build_deployable_unit_list()
+	_refresh_phase_ui("Undeployed %s from %s." % [_unit_summary(deployed_units), target_key])
+
+func _unit_summary(units: Array[Dictionary]) -> String:
+	if units.is_empty():
+		return "units"
+	if units.size() == 1:
+		return String(units[0].get("name", units[0].get("label", "unit")))
+	return "%d units" % units.size()
 
 func _deployed_unit_snapshots(deployments: Dictionary) -> Array[Dictionary]:
 	var units: Array[Dictionary] = []

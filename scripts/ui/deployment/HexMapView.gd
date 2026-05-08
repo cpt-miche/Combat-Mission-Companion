@@ -11,6 +11,7 @@ class BaseCacheLayer extends Control:
 		owner_view._draw_base_cache_into(self, cache_origin)
 
 signal hex_selected(column: int, row: int)
+signal hex_undeploy_requested(column: int, row: int)
 
 const SQRT3 := 1.7320508075688772
 var GRID_COLUMNS: int = MapGridConfig.default_columns()
@@ -85,6 +86,12 @@ func _gui_input(event: InputEvent) -> void:
 					return
 				emit_signal("hex_selected", int(coordinate["q"]), int(coordinate["r"]))
 			_is_panning = false
+			accept_event()
+			return
+		if mouse_button.button_index == MOUSE_BUTTON_RIGHT and mouse_button.pressed:
+			var coordinate := _find_hex(_to_world(mouse_button.position))
+			if not coordinate.is_empty():
+				emit_signal("hex_undeploy_requested", int(coordinate["q"]), int(coordinate["r"]))
 			accept_event()
 			return
 	if event is InputEventMouseMotion and _is_panning:
