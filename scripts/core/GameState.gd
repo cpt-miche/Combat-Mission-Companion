@@ -32,6 +32,7 @@ var current_turn: int = 1
 var territory_map: Dictionary = {}
 var terrain_map: Dictionary = {}
 var gameplay_units: Dictionary = {}
+var gameplay_orders: Dictionary = {}
 var combat_log_entries: Array[Dictionary] = []
 var pending_casualties: Dictionary = {}
 var selected_nation_id: String = "usa"
@@ -66,6 +67,7 @@ func reset() -> void:
 	territory_map.clear()
 	terrain_map.clear()
 	gameplay_units.clear()
+	gameplay_orders.clear()
 	combat_log_entries.clear()
 	pending_casualties.clear()
 	selected_nation_id = "usa"

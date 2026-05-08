@@ -72,6 +72,7 @@ func _ready() -> void:
 	GRID_ROWS = maxi(dimensions.y, 1)
 	_active_player = clampi(GameState.active_player, 0, 1)
 	_load_or_initialize_units()
+	_orders = GameState.gameplay_orders.duplicate(true)
 	_rebuild_hex_polygon_cache()
 	_begin_player_turn()
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
@@ -638,6 +639,7 @@ func _on_end_turn_pressed() -> void:
 		"engagements": result.get("engagements", [])
 	}
 	_orders.clear()
+	GameState.gameplay_orders.clear()
 	_preview_path.clear()
 	_preview_target_hex = Vector2i(-9999, -9999)
 	if _execution_queue.is_empty():
@@ -908,6 +910,7 @@ func _run_ai_turn_if_still_active() -> void:
 
 func _autosave_current_game() -> void:
 	GameState.active_player = _active_player
+	GameState.gameplay_orders = _orders.duplicate(true)
 	var autosave_payload: Dictionary = {
 		"turn_number": GameState.current_turn,
 		"active_player": _active_player,

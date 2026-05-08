@@ -1,6 +1,7 @@
 extends Node
 
 const GAMEPLAY_SCREEN_SCENE := preload("res://scenes/screens/GameplayScreen.tscn")
+const MAIN_MENU_SCREEN_SCENE := preload("res://scenes/main_menu/MainMenuScreen.tscn")
 const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 
 var _failures: Array[String] = []
@@ -17,6 +18,7 @@ func _run() -> void:
 	_test_empty_execution_queue_advances_turn()
 	_test_attack_order_shows_engagement_popup_payload()
 	_test_dismissing_engagement_popup_still_opens_casualty_entry()
+	_test_loaded_orders_payload_restores_gameplay_orders()
 
 	if _failures.is_empty():
 		print("GameplayScreen integration tests passed.")
@@ -85,6 +87,48 @@ func _test_left_click_move_tile_issues_move_order() -> void:
 	var path := order.get("path", []) as Array
 	_assert_true(path.size() >= 2, "Left-click move order should include a traversable path")
 	_cleanup_screen(screen)
+
+func _test_loaded_orders_payload_restores_gameplay_orders() -> void:
+	_reset_state()
+	var main_menu: Control = MAIN_MENU_SCREEN_SCENE.instantiate()
+	get_tree().root.add_child(main_menu)
+	var payload := {
+		"turn_number": 3,
+		"active_player": 0,
+		"map": {"grid": {"columns": 16, "rows": 16}},
+		"terrain": {},
+		"territory": {},
+		"units": {
+			"u1": {"id": "u1", "owner": 0, "hex": {"x": 0, "y": 0}, "size": "company", "status": "alive"},
+			"enemy": {"id": "enemy", "owner": 1, "hex": {"x": 0, "y": 2}, "size": "company", "status": "alive"}
+		},
+		"orders": {
+			"u1": {
+				"unit_id": "u1",
+				"type": OrderSystem.OrderType.ATTACK,
+				"path": [{"x": 0, "y": 0}, {"x": 0, "y": 1}, {"x": 0, "y": 2}],
+				"target_unit_id": "enemy"
+			}
+		},
+		"casualties": {},
+		"ai_debug": {"mode_enabled": false}
+	}
+	main_menu._apply_loaded_payload(payload)
+	_assert_true(GameState.gameplay_orders.has("u1"), "Loaded payload should store queued orders in GameState")
+	var loaded_order := GameState.gameplay_orders["u1"] as Dictionary
+	_assert_equal("u1", String(loaded_order.get("unit_id", "")), "Loaded order should preserve unit id")
+	_assert_equal(OrderSystem.OrderType.ATTACK, int(loaded_order.get("type", -1)), "Loaded order should preserve order type")
+	_assert_equal("enemy", String(loaded_order.get("target_unit_id", "")), "Loaded attack order should preserve target unit id")
+	var loaded_path := loaded_order.get("path", []) as Array
+	_assert_equal(3, loaded_path.size(), "Loaded order should preserve path length")
+	_assert_equal(Vector2i(0, 1), loaded_path[1], "Loaded order should deserialize saved path points to Vector2i")
+	var screen := _spawn_screen()
+	_assert_true(screen._orders.has("u1"), "Gameplay screen should initialize queued orders from GameState")
+	var screen_order := screen._orders["u1"] as Dictionary
+	var screen_path := screen_order.get("path", []) as Array
+	_assert_equal(Vector2i(0, 2), screen_path[2], "Gameplay screen should receive deserialized Vector2i path points")
+	_cleanup_screen(screen)
+	_cleanup_screen(main_menu)
 
 func _test_attack_order_shows_engagement_popup_payload() -> void:
 	_reset_state()

@@ -1,5 +1,7 @@
 extends Control
 
+const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
+
 @onready var play_button: Button = %PlayButton
 @onready var load_button: Button = %LoadButton
 @onready var display_button: Button = %DisplayButton
@@ -118,6 +120,7 @@ func _apply_loaded_payload(payload: Dictionary) -> void:
 	GameState.apply_map_payload(payload)
 	GameState.pending_casualties = (payload.get("casualties", {}) as Dictionary).duplicate(true)
 	GameState.gameplay_units = _deserialize_units(payload.get("units", {}) as Dictionary)
+	GameState.gameplay_orders = _deserialize_orders(payload.get("orders", {}) as Dictionary)
 	_apply_ai_debug_payload(payload.get("ai_debug", {}))
 
 func _apply_ai_debug_payload(raw_ai_debug: Variant) -> void:
@@ -224,6 +227,28 @@ func _deserialize_units(serialized_units: Dictionary) -> Dictionary:
 			unit["dug_in"] = dug_in
 			unit["entrenched"] = dug_in
 		deserialized[unit_id] = unit
+	return deserialized
+
+func _deserialize_orders(serialized_orders: Dictionary) -> Dictionary:
+	var deserialized := {}
+	for unit_id in serialized_orders.keys():
+		var raw_order := serialized_orders[unit_id] as Dictionary
+		if raw_order == null:
+			continue
+		var order := raw_order.duplicate(true)
+		var path: Array[Vector2i] = []
+		for waypoint in order.get("path", []):
+			if typeof(waypoint) == TYPE_VECTOR2I:
+				path.append(waypoint as Vector2i)
+			elif typeof(waypoint) == TYPE_DICTIONARY:
+				var hex_payload := waypoint as Dictionary
+				path.append(Vector2i(int(hex_payload.get("x", 0)), int(hex_payload.get("y", 0))))
+		order["path"] = path
+		order["unit_id"] = String(order.get("unit_id", unit_id))
+		order["type"] = int(order.get("type", OrderSystem.OrderType.MOVE))
+		if order.has("target_unit_id"):
+			order["target_unit_id"] = String(order.get("target_unit_id", ""))
+		deserialized[unit_id] = order
 	return deserialized
 
 func _configure_display_controls() -> void:
