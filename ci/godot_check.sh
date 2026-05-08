@@ -49,6 +49,25 @@ godot --headless --path . --scene tests/division_builder/DivisionBuilderScreenIn
 echo "Running gameplay screen integration test..."
 godot --headless --path . --scene tests/gameplay_ui/GameplayScreenIntegrationTest.tscn
 
+echo "Running map setup screen integration test..."
+# Scene-backed wrapper for tests/setup_ui/MapSetupScreenIntegrationTest.gd; the test and target UI rely on project autoload singletons.
+godot --headless --path . --scene tests/setup_ui/MapSetupScreenIntegrationTest.tscn
+
+echo "Running deployment screen integration test..."
+# Scene-backed wrapper for tests/deployment_ui/DeploymentScreenIntegrationTest.gd; the test and target UI rely on project autoload singletons.
+godot --headless --path . --scene tests/deployment_ui/DeploymentScreenIntegrationTest.tscn
+
+echo "Running casualty entry screen integration test..."
+# Scene-backed wrapper for tests/gameplay_ui/CasualtyEntryScreenIntegrationTest.gd; the test and target UI rely on project autoload singletons.
+godot --headless --path . --scene tests/gameplay_ui/CasualtyEntryScreenIntegrationTest.tscn
+
+echo "Running operational evaluator profile test..."
+godot --headless --path . --script tests/operational_ai/OperationalEvaluatorProfileTest.gd
+
+echo "Running order and turn resolver test..."
+# Scene-backed wrapper for tests/gameplay/OrderAndTurnResolverTest.gd; TurnResolver relies on project autoload singletons.
+godot --headless --path . --scene tests/gameplay/OrderAndTurnResolverTest.tscn
+
 if [ -f export_presets.cfg ]; then
   mkdir -p build
 

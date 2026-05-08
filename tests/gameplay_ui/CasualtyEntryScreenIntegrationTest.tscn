@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bd7d38jk80h76"]
+
+[ext_resource type="Script" path="res://tests/gameplay_ui/CasualtyEntryScreenIntegrationTest.gd" id="1_casualty_test"]
+
+[node name="CasualtyEntryScreenIntegrationTest" type="Node"]
+script = ExtResource("1_casualty_test")

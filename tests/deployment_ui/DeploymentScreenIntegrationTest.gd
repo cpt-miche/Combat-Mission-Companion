@@ -1,14 +1,14 @@
-extends SceneTree
+extends Node
 
 const DEPLOYMENT_SCREEN_SCENE := preload("res://scenes/deployment/DeploymentScreen.tscn")
 
 var _failures: Array[String] = []
 
-func _init() -> void:
+func _ready() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	await process_frame
+	await get_tree().process_frame
 	_test_replacing_same_unit_keeps_single_deployment_entry()
 	_test_four_companies_can_stack_on_one_hex()
 	_test_occupied_hex_replacement_still_respects_validation_rules()
@@ -21,12 +21,12 @@ func _run() -> void:
 
 	if _failures.is_empty():
 		print("DeploymentScreen integration tests passed.")
-		quit(0)
+		get_tree().quit(0)
 		return
 
 	for failure in _failures:
 		push_error(failure)
-	quit(1)
+	get_tree().quit(1)
 
 func _test_replacing_same_unit_keeps_single_deployment_entry() -> void:
 	_reset_state(GameState.Phase.DEPLOYMENT_P1)
@@ -103,8 +103,8 @@ func _test_occupied_hex_replacement_still_respects_validation_rules() -> void:
 
 	var deployments: Dictionary = GameState.players[0].get("deployments", {})
 	_assert_equal(2, deployments.size(), "Validation should reject battalion replacement when companies remain deployed.")
-	_assert_equal("co_a", String((deployments.get("1,0", {}) as Dictionary).get("id", "")), "Existing occupied hex entry should remain unchanged when validation fails.")
-	_assert_true(String(screen.status_label.text).contains("Cannot place a battalion after companies are deployed"), "Expected validation status message when battalion placement is blocked.")
+	_assert_equal("co_a", _first_deployed_unit_id_at_hex(deployments, "1,0"), "Existing occupied hex entry should remain unchanged when validation fails.")
+	_assert_true(String(screen.status_label.text).contains("Cannot place a battalion after companies are deployed"), "Expected validation status message when battalion placement is blocked. actual=%s" % String(screen.status_label.text))
 
 	_cleanup_screen(screen)
 
@@ -279,7 +279,7 @@ func _reset_state(phase: int) -> void:
 
 func _spawn_screen() -> Control:
 	var screen: Control = DEPLOYMENT_SCREEN_SCENE.instantiate()
-	get_root().add_child(screen)
+	get_tree().root.add_child(screen)
 	return screen
 
 func _cleanup_screen(screen: Control) -> void:
@@ -375,6 +375,12 @@ func _deployment_units_from_variant(deployment_variant: Variant) -> Array[Dictio
 			if typeof(unit_variant) == TYPE_DICTIONARY:
 				units.append(unit_variant as Dictionary)
 	return units
+
+func _first_deployed_unit_id_at_hex(deployments: Dictionary, key: String) -> String:
+	var deployed_units := _deployment_units_at_hex(deployments, key)
+	if deployed_units.is_empty():
+		return ""
+	return String(deployed_units[0].get("id", ""))
 
 func _assert_equal(expected: Variant, actual: Variant, message: String) -> void:
 	if expected != actual:

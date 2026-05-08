@@ -79,7 +79,7 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 			})
 			continue
 
-		if path.size() > 1:
+		if order_type == OrderSystem.OrderType.MOVE and path.size() > 1:
 			for i in range(1, path.size()):
 				var next_hex: Vector2i = path[i]
 				var stack_check := _validate_destination_stack(units, unit_id, unit_state, next_hex)
