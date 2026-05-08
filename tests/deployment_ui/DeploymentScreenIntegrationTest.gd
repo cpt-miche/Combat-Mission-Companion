@@ -17,6 +17,7 @@ func _run() -> void:
 	_test_non_deployable_units_stay_blocked()
 	_test_finish_deployment_requires_all_deployable_units()
 	_test_finish_deployment_allows_subordinates_when_parent_placed()
+	_test_finish_deployment_allows_parent_when_all_subordinates_placed()
 	_test_same_hex_subordinate_deployment_is_blocked_when_parent_placed()
 	_test_finish_deployment_phase_transitions()
 
@@ -283,6 +284,34 @@ func _test_finish_deployment_allows_subordinates_when_parent_placed() -> void:
 	screen._on_finish_deployment_pressed()
 
 	_assert_equal(GameState.Phase.DEPLOYMENT_P2, GameState.current_phase, "Deploying a parent formation should satisfy subordinate deployment requirements.")
+
+	_cleanup_screen(screen)
+
+func _test_finish_deployment_allows_parent_when_all_subordinates_placed() -> void:
+	_reset_state(GameState.Phase.DEPLOYMENT_P1)
+	GameState.territory_map = {
+		"0,0": GameState.TerritoryOwnership.PLAYER_1,
+		"0,1": GameState.TerritoryOwnership.PLAYER_1
+	}
+	var company_a := _company("co_a", "A Company")
+	var company_b := _company("co_b", "B Company")
+	var battalion := _battalion("bn_1", "1st Battalion")
+	battalion["children"] = [company_a, company_b]
+	GameState.players[0]["division_tree"] = _root_with_children([battalion])
+
+	var screen := _spawn_screen()
+	_select_unit_by_id(screen, "co_a")
+	screen._on_hex_selected(0, 0)
+	_select_unit_by_id(screen, "co_b")
+	screen._on_hex_selected(0, 1)
+
+	var battalion_item := _find_item_by_unit_id(screen.unit_list.get_root(), "bn_1")
+	_assert_true(battalion_item != null, "Expected battalion to remain visible in deployment tree.")
+	if battalion_item != null:
+		_assert_true(String(battalion_item.get_text(0)).contains("Covered by subordinates"), "Expected battalion row to show it is satisfied by subordinate placements.")
+
+	screen._on_finish_deployment_pressed()
+	_assert_equal(GameState.Phase.DEPLOYMENT_P2, GameState.current_phase, "Deploying every subordinate should satisfy parent deployment requirements.")
 
 	_cleanup_screen(screen)
 

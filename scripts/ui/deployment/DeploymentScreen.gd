@@ -489,13 +489,14 @@ func _build_deployable_unit_list(preserve_ui_state: bool = true) -> void:
 
 	var division_tree = GameState.players[_player_index].get("division_tree", {})
 	var covered_unit_ids := _unit_ids_covered_by_higher_echelon_deployments()
+	var subordinate_covered_unit_ids := _unit_ids_covered_by_lower_echelon_deployments()
 	var root_item := unit_list.create_item()
-	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id, collapsed_by_unit_id, covered_unit_ids)
+	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id, collapsed_by_unit_id, covered_unit_ids, subordinate_covered_unit_ids)
 	_unplaced_deployable_unit_ids = _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id)
 	if preserve_ui_state and not previously_selected_unit_id.is_empty():
 		_restore_selected_unit(previously_selected_unit_id)
 
-func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}, collapsed_by_unit_id: Dictionary = {}, covered_unit_ids: Dictionary = {}) -> void:
+func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}, collapsed_by_unit_id: Dictionary = {}, covered_unit_ids: Dictionary = {}, subordinate_covered_unit_ids: Dictionary = {}) -> void:
 	if typeof(node) != TYPE_DICTIONARY:
 		return
 
@@ -518,7 +519,11 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coo
 	item.set_text(0, display_label)
 	item.set_selectable(0, block_reason.is_empty() or is_placed)
 	var is_covered_by_higher_echelon := covered_unit_ids.has(unit_id)
-	if block_reason.is_empty() and not is_placed and not is_covered_by_higher_echelon:
+	var is_covered_by_lower_echelon := subordinate_covered_unit_ids.has(unit_id)
+	if is_covered_by_lower_echelon and not is_placed:
+		display_label += " (Covered by subordinates)"
+		item.set_text(0, display_label)
+	if block_reason.is_empty() and not is_placed and not is_covered_by_higher_echelon and not is_covered_by_lower_echelon:
 		item.set_custom_color(0, Color(1.0, 0.35, 0.35))
 	item.set_metadata(0, {
 		"unit": unit_data,
@@ -532,7 +537,7 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coo
 		return
 
 	for child in children_variant:
-		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id, collapsed_by_unit_id, covered_unit_ids)
+		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id, collapsed_by_unit_id, covered_unit_ids, subordinate_covered_unit_ids)
 
 	if item.get_child_count() > 0:
 		var was_collapsed := bool(collapsed_by_unit_id.get(unit_id, true))
@@ -854,6 +859,7 @@ func _deployment_coordinates_by_unit_id(deployments: Dictionary) -> Dictionary:
 func _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id: Dictionary) -> Dictionary:
 	var unplaced_by_id := {}
 	var covered_unit_ids := _unit_ids_covered_by_higher_echelon_deployments()
+	var subordinate_covered_unit_ids := _unit_ids_covered_by_lower_echelon_deployments()
 	for deployable_unit in _deployable_units:
 		if not _is_deployable(deployable_unit):
 			continue
@@ -861,6 +867,8 @@ func _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id: Dict
 		if unit_id.is_empty():
 			continue
 		if covered_unit_ids.has(unit_id):
+			continue
+		if subordinate_covered_unit_ids.has(unit_id):
 			continue
 		if coordinates_by_unit_id.has(unit_id):
 			continue
@@ -909,6 +917,63 @@ func _collect_covered_descendant_ids(node: Variant, ancestor_deployed: bool, dep
 
 	for child in (children_variant as Array):
 		_collect_covered_descendant_ids(child, descendant_is_covered, deployed_unit_ids, covered_unit_ids)
+
+func _unit_ids_covered_by_lower_echelon_deployments() -> Dictionary:
+	var covered_unit_ids := {}
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	if deployments.is_empty():
+		return covered_unit_ids
+
+	var deployed_unit_ids := {}
+	for deployment in deployments.values():
+		for deployed_unit in _deployment_units_from_variant(deployment):
+			var deployed_unit_id := String(deployed_unit.get("id", ""))
+			if deployed_unit_id.is_empty():
+				continue
+			deployed_unit_ids[deployed_unit_id] = true
+
+	if deployed_unit_ids.is_empty():
+		return covered_unit_ids
+
+	var division_tree: Dictionary = GameState.players[_player_index].get("division_tree", {})
+	_collect_lower_echelon_covered_ids(division_tree, deployed_unit_ids, covered_unit_ids)
+	return covered_unit_ids
+
+func _collect_lower_echelon_covered_ids(node: Variant, deployed_unit_ids: Dictionary, covered_unit_ids: Dictionary) -> Dictionary:
+	if typeof(node) != TYPE_DICTIONARY:
+		return {"has_deployable": false, "satisfied": true}
+
+	var unit_data := node as Dictionary
+	if unit_data.is_empty():
+		return {"has_deployable": false, "satisfied": true}
+
+	var unit_id := String(unit_data.get("id", ""))
+	var is_deployable := _is_deployable(unit_data)
+	var is_deployed := not unit_id.is_empty() and deployed_unit_ids.has(unit_id)
+	var has_deployable_descendant := false
+	var descendants_satisfied := true
+
+	var children_variant: Variant = unit_data.get("children", [])
+	if typeof(children_variant) == TYPE_ARRAY:
+		for child in (children_variant as Array):
+			var child_state := _collect_lower_echelon_covered_ids(child, deployed_unit_ids, covered_unit_ids)
+			if bool(child_state.get("has_deployable", false)):
+				has_deployable_descendant = true
+				if not bool(child_state.get("satisfied", false)):
+					descendants_satisfied = false
+
+	var satisfied := false
+	if is_deployable:
+		satisfied = is_deployed or (has_deployable_descendant and descendants_satisfied)
+		if not is_deployed and has_deployable_descendant and descendants_satisfied and not unit_id.is_empty():
+			covered_unit_ids[unit_id] = true
+	else:
+		satisfied = descendants_satisfied
+
+	return {
+		"has_deployable": is_deployable or has_deployable_descendant,
+		"satisfied": satisfied
+	}
 
 func _unit_snapshot(unit: Dictionary) -> Dictionary:
 	# Maintainer note: keep `_unit_snapshot`, `_string_for_type`, `_string_for_size`, `_size_rank`,
