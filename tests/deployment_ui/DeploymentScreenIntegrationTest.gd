@@ -322,7 +322,6 @@ func _test_finish_deployment_allows_subordinates_when_parent_placed() -> void:
 
 	_cleanup_screen(screen)
 
-<<<<<<< codex/fix-softlock-issue-during-deployment
 func _test_finish_deployment_allows_parent_when_all_subordinates_placed() -> void:
 	_reset_state(GameState.Phase.DEPLOYMENT_P1)
 	GameState.territory_map = {
@@ -350,14 +349,13 @@ func _test_finish_deployment_allows_parent_when_all_subordinates_placed() -> voi
 	_assert_equal(GameState.Phase.DEPLOYMENT_P2, GameState.current_phase, "Deploying every subordinate should satisfy parent deployment requirements.")
 
 	_cleanup_screen(screen)
-=======
+
 func _right_click_hex(screen: Control, column: int, row: int) -> void:
 	var mouse_event := InputEventMouseButton.new()
 	mouse_event.button_index = MOUSE_BUTTON_RIGHT
 	mouse_event.pressed = true
 	mouse_event.position = screen.hex_map_view._hex_center(column, row) + screen.hex_map_view.pan_offset
 	screen.hex_map_view._gui_input(mouse_event)
->>>>>>> main
 
 func _reset_state(phase: int) -> void:
 	GameState.reset()
