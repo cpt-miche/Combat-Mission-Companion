@@ -16,6 +16,7 @@ func _run() -> void:
 	_test_non_deployable_units_stay_blocked()
 	_test_finish_deployment_requires_all_deployable_units()
 	_test_finish_deployment_allows_subordinates_when_parent_placed()
+	_test_same_hex_subordinate_deployment_is_blocked_when_parent_placed()
 	_test_finish_deployment_phase_transitions()
 
 	if _failures.is_empty():
@@ -149,6 +150,54 @@ func _test_non_deployable_units_stay_blocked() -> void:
 	_assert_true(hq_item != null and not hq_item.is_selectable(0), "Headquarters unit should remain non-selectable.")
 	_assert_true(dead_item != null and not dead_item.is_selectable(0), "Dead unit should remain non-selectable.")
 	_assert_true(live_item != null and live_item.is_selectable(0), "Deployable platoon should remain selectable.")
+
+	_cleanup_screen(screen)
+
+func _test_same_hex_subordinate_deployment_is_blocked_when_parent_placed() -> void:
+	_reset_state(GameState.Phase.DEPLOYMENT_P1)
+	GameState.territory_map = {
+		"0,0": GameState.TerritoryOwnership.PLAYER_1,
+		"0,1": GameState.TerritoryOwnership.PLAYER_1
+	}
+	var platoon := _platoon("plt_a", "Platoon A")
+	var company := _company("co_a", "A Company")
+	company["children"] = [platoon]
+	GameState.players[0]["division_tree"] = _root_with_children([company])
+
+	var screen := _spawn_screen()
+	_select_unit_by_id(screen, "co_a")
+	screen._on_hex_selected(0, 0)
+	_select_unit_by_id(screen, "plt_a")
+	screen._on_hex_selected(0, 0)
+
+	var deployments: Dictionary = GameState.players[0].get("deployments", {})
+	_assert_equal(1, _deployment_units_at_hex(deployments, "0,0").size(), "Expected covered subordinate to remain attached instead of stacking on parent hex.")
+	_assert_equal(0, _deployment_units_at_hex(deployments, "0,1").size(), "Expected blocked same-hex placement to leave other hexes unchanged.")
+	_assert_true(String(screen.status_label.text).contains("already covered"), "Expected status to explain that same-hex subordinate placement is already covered by parent.")
+
+	_select_unit_by_id(screen, "plt_a")
+	screen._on_hex_selected(0, 1)
+	deployments = GameState.players[0].get("deployments", {})
+	_assert_equal(1, _deployment_units_at_hex(deployments, "0,0").size(), "Expected parent to remain deployed on original hex.")
+	_assert_equal(1, _deployment_units_at_hex(deployments, "0,1").size(), "Expected subordinate to still be deployable on a different hex.")
+	_cleanup_screen(screen)
+
+	_reset_state(GameState.Phase.DEPLOYMENT_P1)
+	GameState.territory_map = {
+		"0,0": GameState.TerritoryOwnership.PLAYER_1
+	}
+	platoon = _platoon("plt_a", "Platoon A")
+	company = _company("co_a", "A Company")
+	company["children"] = [platoon]
+	GameState.players[0]["division_tree"] = _root_with_children([company])
+	screen = _spawn_screen()
+	_select_unit_by_id(screen, "plt_a")
+	screen._on_hex_selected(0, 0)
+	_select_unit_by_id(screen, "co_a")
+	screen._on_hex_selected(0, 0)
+	deployments = GameState.players[0].get("deployments", {})
+	_assert_equal(1, _deployment_units_at_hex(deployments, "0,0").size(), "Expected parent placement to be blocked on a hex occupied by its deployed subordinate.")
+	_assert_true(String(screen.status_label.text).contains("already covered"), "Expected status to explain that same-hex parent placement is already covered by subordinate.")
 
 	_cleanup_screen(screen)
 

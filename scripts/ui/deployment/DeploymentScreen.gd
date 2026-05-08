@@ -390,7 +390,6 @@ func _default_rifle_company_children(side_label: String, company_suffix: String)
 		_default_rifle_company_weapons_platoon(side_label, company_suffix)
 	]
 
-
 func _default_rifle_company_weapons_platoon(side_label: String, company_suffix: String) -> Dictionary:
 	var company_tag := "%s_rifle_company_%s" % [side_label, company_suffix]
 	var weapons_platoon_tag := "%s_weapons_platoon" % company_tag
@@ -558,7 +557,6 @@ func _on_unit_item_selected() -> void:
 func _on_unit_item_activated() -> void:
 	_on_unit_item_selected()
 
-
 func _string_for_type(raw_type: Variant) -> String:
 	if typeof(raw_type) == TYPE_INT:
 		return UnitType.display_name(int(raw_type)).to_lower()
@@ -612,6 +610,11 @@ func _on_hex_selected(column: int, row: int) -> void:
 
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
 	var target_key := "%d,%d" % [column, row]
+	var same_hex_related_unit_id := _deployed_related_formation_id_at_key_for_unit_id(deployments, unit_id, target_key)
+	if not same_hex_related_unit_id.is_empty():
+		_refresh_phase_ui("%s is already covered by a related formation at %s." % [_unit_label(unit_data), target_key])
+		return
+
 	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
 	var units_on_target_hex := _deployed_unit_snapshots_at_key(deployments, target_key)
 	var filtered_units_on_target_hex: Array[Dictionary] = []
@@ -730,6 +733,88 @@ func _find_tree_item_by_unit_id(item: TreeItem, unit_id: String) -> TreeItem:
 			return found
 		child = child.get_next()
 	return null
+
+func _deployed_related_formation_id_at_key_for_unit_id(deployments: Dictionary, unit_id: String, key: String) -> String:
+	if unit_id.is_empty() or key.is_empty():
+		return ""
+	var related_unit_ids := _ancestor_unit_ids_for_unit_id(unit_id)
+	for descendant_unit_id in _descendant_unit_ids_for_unit_id(unit_id).keys():
+		related_unit_ids[descendant_unit_id] = true
+	if related_unit_ids.is_empty():
+		return ""
+	for deployed_unit in _deployed_unit_snapshots_at_key(deployments, key):
+		var deployed_unit_id := String(deployed_unit.get("id", ""))
+		if related_unit_ids.has(deployed_unit_id):
+			return deployed_unit_id
+	return ""
+
+func _descendant_unit_ids_for_unit_id(unit_id: String) -> Dictionary:
+	var descendant_unit_ids := {}
+	if unit_id.is_empty():
+		return descendant_unit_ids
+	var division_tree: Dictionary = GameState.players[_player_index].get("division_tree", {})
+	_collect_descendant_unit_ids_for_unit_id(division_tree, unit_id, false, descendant_unit_ids)
+	return descendant_unit_ids
+
+func _collect_descendant_unit_ids_for_unit_id(node: Variant, target_unit_id: String, collecting_descendants: bool, descendant_unit_ids: Dictionary) -> bool:
+	if typeof(node) != TYPE_DICTIONARY:
+		return false
+
+	var unit_data := node as Dictionary
+	if unit_data.is_empty():
+		return false
+
+	var unit_id := String(unit_data.get("id", ""))
+	var should_collect_children := collecting_descendants or unit_id == target_unit_id
+	if collecting_descendants and not unit_id.is_empty():
+		descendant_unit_ids[unit_id] = true
+
+	var found_target := unit_id == target_unit_id
+	var children_variant: Variant = unit_data.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return found_target
+
+	for child in (children_variant as Array):
+		if _collect_descendant_unit_ids_for_unit_id(child, target_unit_id, should_collect_children, descendant_unit_ids):
+			found_target = true
+	return found_target
+
+func _ancestor_unit_ids_for_unit_id(unit_id: String) -> Dictionary:
+	var ancestor_unit_ids := {}
+	if unit_id.is_empty():
+		return ancestor_unit_ids
+	var division_tree: Dictionary = GameState.players[_player_index].get("division_tree", {})
+	_collect_ancestor_unit_ids_for_unit_id(division_tree, unit_id, [], ancestor_unit_ids)
+	return ancestor_unit_ids
+
+func _collect_ancestor_unit_ids_for_unit_id(node: Variant, target_unit_id: String, ancestor_path: Array, ancestor_unit_ids: Dictionary) -> bool:
+	if typeof(node) != TYPE_DICTIONARY:
+		return false
+
+	var unit_data := node as Dictionary
+	if unit_data.is_empty():
+		return false
+
+	var unit_id := String(unit_data.get("id", ""))
+	if unit_id == target_unit_id:
+		for ancestor_id in ancestor_path:
+			var ancestor_id_string := String(ancestor_id)
+			if not ancestor_id_string.is_empty():
+				ancestor_unit_ids[ancestor_id_string] = true
+		return true
+
+	var next_ancestor_path := ancestor_path.duplicate()
+	if not unit_id.is_empty():
+		next_ancestor_path.append(unit_id)
+
+	var children_variant: Variant = unit_data.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return false
+
+	for child in (children_variant as Array):
+		if _collect_ancestor_unit_ids_for_unit_id(child, target_unit_id, next_ancestor_path, ancestor_unit_ids):
+			return true
+	return false
 
 func _deployment_key_for_unit_id(deployments: Dictionary, unit_id: String) -> String:
 	if unit_id.is_empty():
