@@ -4,7 +4,10 @@ extends Control
 @onready var load_button: Button = %LoadButton
 @onready var display_button: Button = %DisplayButton
 @onready var status_label: Label = %StatusLabel
-@onready var nation_dialog: ConfirmationDialog = %NationDialog
+@onready var nation_dialog: Window = %NationDialog
+@onready var play_as_us_button: Button = %PlayAsUsButton
+@onready var play_as_germany_button: Button = %PlayAsGermanyButton
+@onready var cancel_nation_button: Button = %CancelNationButton
 @onready var map_dialog: ConfirmationDialog = %MapDialog
 @onready var map_mode_selector: OptionButton = %MapModeSelector
 @onready var saved_map_selector: OptionButton = %SavedMapSelector
@@ -38,8 +41,10 @@ func _ready() -> void:
 	play_button.pressed.connect(_on_play_pressed)
 	load_button.pressed.connect(_on_load_pressed)
 	display_button.pressed.connect(_on_display_pressed)
-	nation_dialog.confirmed.connect(_on_play_as_usa)
-	nation_dialog.canceled.connect(_on_play_as_germany)
+	play_as_us_button.pressed.connect(_on_play_as_usa)
+	play_as_germany_button.pressed.connect(_on_play_as_germany)
+	cancel_nation_button.pressed.connect(_on_nation_dialog_closed)
+	nation_dialog.close_requested.connect(_on_nation_dialog_closed)
 	map_dialog.confirmed.connect(_on_map_selection_confirmed)
 	map_mode_selector.item_selected.connect(_on_map_mode_selected)
 	display_dialog.confirmed.connect(_on_apply_display_settings_pressed)
@@ -53,10 +58,15 @@ func _on_play_pressed() -> void:
 	nation_dialog.popup_centered()
 
 func _on_play_as_usa() -> void:
+	nation_dialog.hide()
 	_open_map_selection_for("usa")
 
 func _on_play_as_germany() -> void:
+	nation_dialog.hide()
 	_open_map_selection_for("germany")
+
+func _on_nation_dialog_closed() -> void:
+	nation_dialog.hide()
 
 func _open_map_selection_for(nation_id: String) -> void:
 	_pending_nation_id = nation_id
