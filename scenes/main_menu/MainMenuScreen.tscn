@@ -69,30 +69,59 @@ horizontal_alignment = 1
 autowrap_mode = 2
 text = ""
 
-[node name="NationDialog" type="ConfirmationDialog" parent="."]
+[node name="NationDialog" type="Window" parent="."]
 unique_name_in_owner = true
 title = "Choose Side"
 size = Vector2i(460, 220)
 initial_position = 1
-ok_button_text = "Play as US"
-cancel_button_text = "Play as Germans"
+unresizable = true
 
 [node name="NationDialogMargin" type="MarginContainer" parent="NationDialog"]
-layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 16.0
 offset_top = 16.0
 offset_right = -16.0
-offset_bottom = -52.0
+offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="NationPrompt" type="Label" parent="NationDialog/NationDialogMargin"]
+[node name="NationDialogVBox" type="VBoxContainer" parent="NationDialog/NationDialogMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="NationPrompt" type="Label" parent="NationDialog/NationDialogMargin/NationDialogVBox"]
 layout_mode = 2
 autowrap_mode = 2
 text = "Which side do you want to command?"
+
+[node name="NationButtonRow" type="HBoxContainer" parent="NationDialog/NationDialogMargin/NationDialogVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PlayAsUsButton" type="Button" parent="NationDialog/NationDialogMargin/NationDialogVBox/NationButtonRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Play as US"
+
+[node name="PlayAsGermanyButton" type="Button" parent="NationDialog/NationDialogMargin/NationDialogVBox/NationButtonRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Play as Germans"
+
+[node name="CancelNationButton" type="Button" parent="NationDialog/NationDialogMargin/NationDialogVBox/NationButtonRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Cancel"
 
 [node name="MapDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
