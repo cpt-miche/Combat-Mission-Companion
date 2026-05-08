@@ -37,6 +37,7 @@ var _selected_ui_scale_mode := DEFAULT_UI_SCALE_MODE
 var _selected_ui_scale_value := DEFAULT_UI_SCALE_VALUE
 var _connected_root_window: Window
 var _last_known_window_size := Vector2i.ZERO
+var _last_applied_content_scale_factor := -1.0
 
 func get_preset_size(preset_id: String) -> Vector2i:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
@@ -83,7 +84,7 @@ func set_display_settings(preset_id: String, window_mode: String, ui_scale_mode:
 	var applied_ui_scale_mode := _apply_ui_scale_mode(ui_scale_mode)
 	var applied_ui_scale_value := _apply_ui_scale_value(ui_scale_value)
 	_apply_effective_ui_scale()
-	_last_known_window_size = get_window_size()
+	_last_known_window_size = _get_root_window_size()
 	if persist:
 		var save_manager := _get_save_manager()
 		if save_manager != null:
@@ -111,7 +112,7 @@ func load_and_apply() -> String:
 	_apply_ui_scale_mode(stored_ui_scale_mode)
 	_apply_ui_scale_value(stored_ui_scale_value)
 	_apply_effective_ui_scale()
-	_last_known_window_size = get_window_size()
+	_last_known_window_size = _get_root_window_size()
 	runtime_display_updated.emit(get_current_settings())
 	return _selected_preset_id
 
@@ -127,7 +128,7 @@ func connect_runtime_resize_notifications(root_window: Window) -> void:
 
 func reapply_runtime_settings() -> Dictionary:
 	_apply_effective_ui_scale()
-	_last_known_window_size = get_window_size()
+	_last_known_window_size = _get_root_window_size()
 	var applied_settings := get_current_settings()
 	runtime_display_updated.emit(applied_settings)
 	return applied_settings
@@ -147,6 +148,12 @@ func _get_save_manager() -> Node:
 	if root == null:
 		return null
 	return root.get_node_or_null("SaveManager")
+
+func _get_root_window_size() -> Vector2i:
+	var tree := get_tree()
+	if tree == null or tree.root == null:
+		return get_window_size()
+	return tree.root.size
 
 func _apply_preset_id(preset_id: String) -> String:
 	var resolved_preset_id := _resolve_preset_id(preset_id)
@@ -186,10 +193,14 @@ func _apply_effective_ui_scale() -> void:
 	var root_window := tree.root
 	if root_window == null:
 		return
-	root_window.content_scale_factor = get_effective_ui_scale()
+	var effective_scale := get_effective_ui_scale()
+	if is_equal_approx(_last_applied_content_scale_factor, effective_scale) and is_equal_approx(root_window.content_scale_factor, effective_scale):
+		return
+	root_window.content_scale_factor = effective_scale
+	_last_applied_content_scale_factor = effective_scale
 
 func _on_root_window_size_changed() -> void:
-	var current_size := get_window_size()
+	var current_size := _get_root_window_size()
 	if current_size == _last_known_window_size:
 		return
 	_last_known_window_size = current_size
