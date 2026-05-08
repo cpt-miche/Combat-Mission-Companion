@@ -1,4 +1,4 @@
-extends SceneTree
+extends Node
 
 const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 const TurnResolverScript = preload("res://scripts/systems/TurnResolver.gd")
@@ -6,11 +6,11 @@ const CombatLog = preload("res://scripts/systems/CombatLog.gd")
 
 var _failures: Array[String] = []
 
-func _init() -> void:
+func _ready() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	await process_frame
+	await get_tree().process_frame
 	_test_dig_in_order_creation_shape()
 	_test_legal_stacking_move_succeeds()
 	_test_illegal_stacking_move_halts_and_logs_anomaly()
@@ -19,12 +19,12 @@ func _run() -> void:
 
 	if _failures.is_empty():
 		print("OrderSystem + TurnResolver tests passed.")
-		quit(0)
+		get_tree().quit(0)
 		return
 
 	for failure in _failures:
 		push_error(failure)
-	quit(1)
+	get_tree().quit(1)
 
 func _test_dig_in_order_creation_shape() -> void:
 	var order := OrderSystem.create_dig_in_order("u1", {"trace_id": "t1", "session_id": "s1", "created_at_unix": 123})

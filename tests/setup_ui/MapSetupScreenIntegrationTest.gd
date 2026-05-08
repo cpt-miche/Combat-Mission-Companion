@@ -1,4 +1,4 @@
-extends SceneTree
+extends Node
 
 const MAP_SETUP_SCENE := preload("res://scenes/map_setup/MapSetupScreen.tscn")
 const OperationalAIService = preload("res://scripts/systems/operational_ai/OperationalAIService.gd")
@@ -6,22 +6,22 @@ const MatchSetupTypes = preload("res://scripts/core/MatchSetupTypes.gd")
 
 var _failures: Array[String] = []
 
-func _init() -> void:
+func _ready() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	await process_frame
+	await get_tree().process_frame
 	_test_setup_screen_stores_selected_doctrine_and_difficulty()
 	_test_selected_profile_persists_into_match_state_and_operational_config()
 
 	if _failures.is_empty():
 		print("MapSetupScreen integration tests passed.")
-		quit(0)
+		get_tree().quit(0)
 		return
 
 	for failure in _failures:
 		push_error(failure)
-	quit(1)
+	get_tree().quit(1)
 
 func _test_setup_screen_stores_selected_doctrine_and_difficulty() -> void:
 	_reset_state()
@@ -64,7 +64,7 @@ func _reset_state() -> void:
 
 func _spawn_screen() -> Control:
 	var screen: Control = MAP_SETUP_SCENE.instantiate()
-	get_root().add_child(screen)
+	get_tree().root.add_child(screen)
 	return screen
 
 func _cleanup_screen(screen: Control) -> void:

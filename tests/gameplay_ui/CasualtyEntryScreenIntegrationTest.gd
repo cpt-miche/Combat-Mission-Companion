@@ -1,31 +1,31 @@
-extends SceneTree
+extends Node
 
 const CASUALTY_SCREEN_SCENE := preload("res://scenes/screens/CasualtyEntryScreen.tscn")
 
 var _failures: Array[String] = []
 
-func _init() -> void:
+func _ready() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	await process_frame
-	_test_engagements_expand_to_squad_section_casualty_items()
-	_test_owner_one_resolution_uses_owner_one_as_own_tree()
+	await get_tree().process_frame
+	await _test_engagements_expand_to_squad_section_casualty_items()
+	await _test_owner_one_resolution_uses_owner_one_as_own_tree()
 
 	if _failures.is_empty():
 		print("CasualtyEntryScreen integration tests passed.")
-		quit(0)
+		get_tree().quit(0)
 		return
 
 	for failure in _failures:
 		push_error(failure)
-	quit(1)
+	get_tree().quit(1)
 
 func _test_engagements_expand_to_squad_section_casualty_items() -> void:
 	_reset_state()
 	var screen: Control = CASUALTY_SCREEN_SCENE.instantiate()
-	get_root().add_child(screen)
-	await process_frame
+	get_tree().root.add_child(screen)
+	await get_tree().process_frame
 	var own_root: TreeItem = screen.own_tree.get_root()
 	var own_unit: TreeItem = own_root.get_first_child()
 	_assert_true(own_unit != null, "Player casualty tree should include engaged player unit")
@@ -51,8 +51,8 @@ func _test_owner_one_resolution_uses_owner_one_as_own_tree() -> void:
 		"defender_owner": 0
 	}]
 	var screen: Control = CASUALTY_SCREEN_SCENE.instantiate()
-	get_root().add_child(screen)
-	await process_frame
+	get_tree().root.add_child(screen)
+	await get_tree().process_frame
 	var own_unit: TreeItem = screen.own_tree.get_root().get_first_child()
 	var enemy_unit: TreeItem = screen.enemy_tree.get_root().get_first_child()
 	_assert_true(own_unit != null, "Owner 1 casualty tree should include its engaged unit as own")

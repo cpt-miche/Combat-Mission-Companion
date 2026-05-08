@@ -616,6 +616,12 @@ func _on_hex_selected(column: int, row: int) -> void:
 		return
 
 	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
+	if existing_key.is_empty():
+		var deployed_company_block_reason := _battalion_with_deployed_companies_block_reason(unit_snapshot, deployments, unit_id)
+		if not deployed_company_block_reason.is_empty():
+			_refresh_phase_ui(deployed_company_block_reason)
+			return
+
 	var units_on_target_hex := _deployed_unit_snapshots_at_key(deployments, target_key)
 	var filtered_units_on_target_hex: Array[Dictionary] = []
 	for deployed_unit in units_on_target_hex:
@@ -660,6 +666,16 @@ func _deployment_units_from_variant(deployment_variant: Variant) -> Array[Dictio
 			if typeof(unit_variant) == TYPE_DICTIONARY:
 				units.append(unit_variant as Dictionary)
 	return units
+
+func _battalion_with_deployed_companies_block_reason(unit_snapshot: Dictionary, deployments: Dictionary, unit_id: String) -> String:
+	if not bool(unit_snapshot.get("is_battalion", String(unit_snapshot.get("size", "")).to_lower() == "battalion")):
+		return ""
+	for deployed_unit in _deployed_unit_snapshots(deployments):
+		if String(deployed_unit.get("id", "")) == unit_id:
+			continue
+		if bool(deployed_unit.get("is_company", String(deployed_unit.get("size", "")).to_lower() == "company")):
+			return "Cannot place a battalion after companies are deployed."
+	return ""
 
 func _add_deployment_unit_at_key(deployments: Dictionary, key: String, unit_snapshot: Dictionary) -> void:
 	var units := _deployed_unit_snapshots_at_key(deployments, key)

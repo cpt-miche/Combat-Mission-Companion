@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bwg3ygeu6c28x"]
+
+[ext_resource type="Script" path="res://tests/gameplay/OrderAndTurnResolverTest.gd" id="1_order_turn_test"]
+
+[node name="OrderAndTurnResolverTest" type="Node"]
+script = ExtResource("1_order_turn_test")

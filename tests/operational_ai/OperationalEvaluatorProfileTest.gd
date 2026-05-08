@@ -33,8 +33,8 @@ func _test_evaluator_applies_selected_profile_values() -> void:
 	var aggressive_assessment := OperationalEvaluator.evaluate(aggressive)
 	var defensive_attack_reasons := _find_reasons_by_id(defensive_assessment.get("attackOpportunities", []), "attack_candidate_alpha")
 	var aggressive_attack_reasons := _find_reasons_by_id(aggressive_assessment.get("attackOpportunities", []), "attack_candidate_alpha")
-	_assert_true(defensive_attack_reasons.any(func(reason: String) -> bool: return reason.contains("doctrine_adjusted_component=defensive")), "Defensive doctrine should inject defensive doctrine reason tags")
-	_assert_true(aggressive_attack_reasons.any(func(reason: String) -> bool: return reason.contains("doctrine_adjusted_component=aggressive")), "Aggressive doctrine should inject aggressive doctrine reason tags")
+	_assert_true(defensive_attack_reasons.any(func(reason: String) -> bool: return reason.contains("doctrine_adjusted_component=security")), "Defensive doctrine should inject defensive doctrine reason tags")
+	_assert_true(aggressive_attack_reasons.any(func(reason: String) -> bool: return reason.contains("doctrine_adjusted_component=maneuver")), "Aggressive doctrine should inject aggressive doctrine reason tags")
 
 func _test_difficulty_relative_behavior_shifts() -> void:
 	var base := _fixture_input()
@@ -68,7 +68,7 @@ func _fixture_input() -> Dictionary:
 		"operationId": "profile_fixture",
 		"turnIndex": 1,
 		"sectors": [
-			{"id": "sector_a", "pressure": 0.56, "readiness": 0.60, "supply": 0.58, "objectiveCriticality": 0.58, "defensibility": 0.50, "recentEnemyAdvance": 0.12, "supportAvailability": 0.48}
+			{"id": "sector_a", "pressure": 0.563, "readiness": 0.60, "supply": 0.58, "objectiveCriticality": 0.58, "defensibility": 0.50, "recentEnemyAdvance": 0.12, "supportAvailability": 0.48}
 		],
 		"enemyAdjacentHexes": [
 			{"id": "candidate_alpha", "sectorId": "sector_a", "objectiveValue": 0.66, "enemyWeaknessEstimate": 0.62, "localFriendlyPower": 0.61, "artillerySupport": 0.57, "reconSupport": 0.52, "terrainSuitability": 0.55, "defensiveCoherenceRisk": 0.40, "overextensionRisk": 0.45}

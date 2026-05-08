@@ -96,7 +96,7 @@ const DIFFICULTY_POLICY := {
 
 static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionary:
 	var posture: String = String(input.get("posture", overrides.get("posture", "balanced")))
-	var doctrine: String = String(input.get("doctrine", input.get("metadata", {}).get("doctrine", overrides.get("doctrine", "balanced"))))
+	var doctrine: String = _normalize_doctrine(String(input.get("doctrine", input.get("metadata", {}).get("doctrine", overrides.get("doctrine", "balanced")))))
 	var difficulty: String = _normalize_difficulty(String(input.get("difficulty", input.get("metadata", {}).get("difficulty", overrides.get("difficulty", "medium")))))
 	var difficulty_policy: Dictionary = DIFFICULTY_POLICY.get(difficulty, DIFFICULTY_POLICY["medium"])
 	var cfg := _merge_dict(DEFAULT_WEIGHTS, overrides)
@@ -154,7 +154,7 @@ static func evaluate(input: Dictionary, overrides: Dictionary = {}) -> Dictionar
 	assessment["recommendedIntents"] = recommended_intents
 	assessment["warnings"] = _dedupe_sorted_strings(warnings)
 	assessment["posture"] = _normalize_posture(posture)
-	assessment["doctrine"] = _normalize_doctrine(doctrine)
+	assessment["doctrine"] = doctrine
 	assessment["difficulty"] = difficulty
 	return assessment
 

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://csbco40c4xii1"]
+
+[ext_resource type="Script" path="res://tests/deployment_ui/DeploymentScreenIntegrationTest.gd" id="1_deployment_test"]
+
+[node name="DeploymentScreenIntegrationTest" type="Node"]
+script = ExtResource("1_deployment_test")

@@ -173,24 +173,9 @@ func _gui_input(event: InputEvent) -> void:
 			if _active_order_mode == OrderMode.DIG_IN:
 				_issue_dig_in_order(_selected_unit_id)
 				return
-			var target_id := ""
-			target_id = _unit_at_hex(hex, 1 - _active_player)
-			if target_id.is_empty():
-				_update_info_label("Attack orders require an enemy target hex.")
-				return
-			var start_hex := _units[_selected_unit_id].get("hex", Vector2i.ZERO) as Vector2i
-			var blocked := _blocked_cells(_selected_unit_id)
-			blocked.erase("%d,%d" % [hex.x, hex.y])
-			var path := Pathfinding.find_path(start_hex, hex, GameState.terrain_map, blocked)
-			if path.is_empty():
-				_update_info_label("No path found.")
-				return
-
-			_upsert_order_and_autosave(OrderSystem.create_attack_order(_selected_unit_id, path, target_id))
-			_update_info_label("Attack order created for %s." % _selected_unit_id)
-			_preview_path.clear()
-			_preview_target_hex = Vector2i(-9999, -9999)
-			queue_redraw()
+			if _issue_attack_order(_selected_unit_id, hex):
+				_update_info_label("Attack order created for %s." % _selected_unit_id)
+				queue_redraw()
 
 func _handle_left_press(position: Vector2) -> void:
 	_drag_start_mouse_pos = position
@@ -435,7 +420,7 @@ func _draw() -> void:
 		draw_string(get_theme_default_font(), _drag_mouse_pos + Vector2(-12, 4), _dragging_unit_id, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
 
 func _collect_order_arrow(order: Dictionary, is_preview: bool) -> void:
-	var path := order.get("path", []) as Array
+	var path := _drawable_order_path(order)
 	if path.size() < 2:
 		return
 	var idx := _active_order_arrow_count
@@ -447,6 +432,37 @@ func _collect_order_arrow(order: Dictionary, is_preview: bool) -> void:
 		"is_preview": is_preview
 	}
 	_active_order_arrow_count += 1
+
+
+func _drawable_order_path(order: Dictionary) -> Array[Vector2i]:
+	var raw_path := order.get("path", []) as Array
+	var path: Array[Vector2i] = []
+	for point in raw_path:
+		if point is Vector2i:
+			path.append(point as Vector2i)
+		elif point is Dictionary:
+			path.append(Vector2i(int(point.get("x", 0)), int(point.get("y", 0))))
+	if path.size() >= 2:
+		return path
+	if int(order.get("type", 0)) != OrderSystem.OrderType.ATTACK:
+		return path
+	var target_id := String(order.get("target_unit_id", ""))
+	if target_id.is_empty() or not _units.has(target_id):
+		return path
+	var target_unit := _units[target_id] as Dictionary
+	if not GameState.is_unit_alive(target_unit):
+		return path
+	var target_hex := target_unit.get("hex", Vector2i.ZERO) as Vector2i
+	if path.is_empty():
+		var unit_id := String(order.get("unit_id", ""))
+		if unit_id.is_empty() or not _units.has(unit_id):
+			return path
+		var source_unit := _units[unit_id] as Dictionary
+		path.append(source_unit.get("hex", Vector2i.ZERO) as Vector2i)
+	if path[0] == target_hex:
+		return path
+	path.append(target_hex)
+	return path
 
 func _draw_order_arrow(entry: Dictionary) -> void:
 	var path := entry.get("path", []) as Array
@@ -562,6 +578,26 @@ func _issue_move_order(unit_id: String, target_hex: Vector2i) -> bool:
 		_update_info_label("No path found.")
 		return false
 	_upsert_order_and_autosave(OrderSystem.create_move_order(unit_id, path))
+	_preview_path.clear()
+	_preview_target_hex = Vector2i(-9999, -9999)
+	return true
+
+func _issue_attack_order(unit_id: String, target_hex: Vector2i) -> bool:
+	if unit_id.is_empty() or not _units.has(unit_id):
+		return false
+	if not GameState.is_unit_alive(_units[unit_id] as Dictionary):
+		_update_info_label("%s is dead and cannot receive orders." % unit_id)
+		return false
+	var target_id := _unit_at_hex(target_hex, 1 - _active_player)
+	if target_id.is_empty():
+		_update_info_label("Attack orders require an enemy target hex.")
+		return false
+	var start_hex := (_units[unit_id] as Dictionary).get("hex", Vector2i.ZERO) as Vector2i
+	if not Pathfinding.are_adjacent(start_hex, target_hex):
+		_update_info_label("Attack orders require an adjacent enemy target hex.")
+		return false
+	var attack_path: Array[Vector2i] = [start_hex]
+	_upsert_order_and_autosave(OrderSystem.create_attack_order(unit_id, attack_path, target_id))
 	_preview_path.clear()
 	_preview_target_hex = Vector2i(-9999, -9999)
 	return true

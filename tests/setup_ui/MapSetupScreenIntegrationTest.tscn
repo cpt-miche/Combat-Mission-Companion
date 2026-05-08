@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://ckj5covf8ogfr"]
+
+[ext_resource type="Script" path="res://tests/setup_ui/MapSetupScreenIntegrationTest.gd" id="1_map_setup_test"]
+
+[node name="MapSetupScreenIntegrationTest" type="Node"]
+script = ExtResource("1_map_setup_test")
