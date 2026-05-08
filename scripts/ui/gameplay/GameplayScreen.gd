@@ -420,7 +420,7 @@ func _draw() -> void:
 		draw_string(get_theme_default_font(), _drag_mouse_pos + Vector2(-12, 4), _dragging_unit_id, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
 
 func _collect_order_arrow(order: Dictionary, is_preview: bool) -> void:
-	var path := order.get("path", []) as Array
+	var path := _drawable_order_path(order)
 	if path.size() < 2:
 		return
 	var idx := _active_order_arrow_count
@@ -432,6 +432,37 @@ func _collect_order_arrow(order: Dictionary, is_preview: bool) -> void:
 		"is_preview": is_preview
 	}
 	_active_order_arrow_count += 1
+
+
+func _drawable_order_path(order: Dictionary) -> Array[Vector2i]:
+	var raw_path := order.get("path", []) as Array
+	var path: Array[Vector2i] = []
+	for point in raw_path:
+		if point is Vector2i:
+			path.append(point as Vector2i)
+		elif point is Dictionary:
+			path.append(Vector2i(int(point.get("x", 0)), int(point.get("y", 0))))
+	if path.size() >= 2:
+		return path
+	if int(order.get("type", 0)) != OrderSystem.OrderType.ATTACK:
+		return path
+	var target_id := String(order.get("target_unit_id", ""))
+	if target_id.is_empty() or not _units.has(target_id):
+		return path
+	var target_unit := _units[target_id] as Dictionary
+	if not GameState.is_unit_alive(target_unit):
+		return path
+	var target_hex := target_unit.get("hex", Vector2i.ZERO) as Vector2i
+	if path.is_empty():
+		var unit_id := String(order.get("unit_id", ""))
+		if unit_id.is_empty() or not _units.has(unit_id):
+			return path
+		var source_unit := _units[unit_id] as Dictionary
+		path.append(source_unit.get("hex", Vector2i.ZERO) as Vector2i)
+	if path[0] == target_hex:
+		return path
+	path.append(target_hex)
+	return path
 
 func _draw_order_arrow(entry: Dictionary) -> void:
 	var path := entry.get("path", []) as Array

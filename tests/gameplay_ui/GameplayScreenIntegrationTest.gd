@@ -73,6 +73,13 @@ func _test_attack_order_requires_adjacent_target() -> void:
 	_assert_equal(OrderSystem.OrderType.ATTACK, int(adjacent_order.get("type", -1)), "Adjacent attack should create ATTACK order")
 	var adjacent_path := adjacent_order.get("path", []) as Array
 	_assert_equal(1, adjacent_path.size(), "Adjacent attack should store only the attacker hex so it cannot look like a movement path")
+	screen._active_order_arrow_count = 0
+	screen._collect_order_arrow(adjacent_order, false)
+	_assert_equal(1, screen._active_order_arrow_count, "Adjacent attack should collect a drawable attack arrow")
+	var arrow := screen._order_arrow_pool[0] as Dictionary
+	var arrow_path := arrow.get("path", []) as Array
+	_assert_equal(2, arrow_path.size(), "Adjacent attack arrow should draw from attacker hex to target_unit_id hex")
+	_assert_equal(Vector2i(0, 1), arrow_path[1], "Adjacent attack arrow should use the target unit hex as the endpoint")
 
 	screen._orders.clear()
 	GameState.debug_mode_enabled = true
