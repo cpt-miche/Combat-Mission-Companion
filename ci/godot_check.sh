@@ -3,6 +3,10 @@ set -euo pipefail
 
 export PATH="$HOME/.local/bin:$PATH"
 
+# Keep headless checks isolated from the player's real user:// saves and debug data.
+CMC_CI_DATA_DIR="$(mktemp -d)"
+export XDG_DATA_HOME="$CMC_CI_DATA_DIR"
+
 if ! command -v godot >/dev/null 2>&1; then
   echo "Godot was not found on PATH." >&2
   exit 1
@@ -48,6 +52,9 @@ godot --headless --path . --scene tests/division_builder/DivisionBuilderScreenIn
 
 echo "Running gameplay screen integration test..."
 godot --headless --path . --scene tests/gameplay_ui/GameplayScreenIntegrationTest.tscn
+
+echo "Running scenario editor integration test..."
+godot --headless --path . --scene tests/scenario_editor/ScenarioEditorIntegrationTest.tscn
 
 echo "Running map setup screen integration test..."
 # Scene-backed wrapper for tests/setup_ui/MapSetupScreenIntegrationTest.gd; the test and target UI rely on project autoload singletons.

@@ -6,7 +6,7 @@ signal delete_requested(unit: UnitModel)
 signal unit_move_requested(unit: UnitModel, new_parent: UnitModel)
 
 const NODE_SIZE := Vector2(160.0, 84.0)
-const LEVEL_SPACING := 180.0
+const LEVEL_SPACING := 132.0
 const SIBLING_SPACING := 36.0
 const MIN_ZOOM := 0.5
 const MAX_ZOOM := 2.0
@@ -17,8 +17,10 @@ var selected_unit: UnitModel
 var _node_rects: Dictionary = {}
 var _collapsed_by_unit_id: Dictionary = {}
 var _toggle_hitboxes: Dictionary = {}
-var _pan_offset := Vector2(80.0, 60.0)
+var _pan_offset := Vector2(80.0, 44.0)
 var _zoom := 1.0
+var _last_root_id := ""
+var _root_needs_centering := true
 var _is_panning := false
 var _active_pan_button := -1
 var _drag_candidate: UnitModel
@@ -28,6 +30,10 @@ var _drag_mouse_position := Vector2.ZERO
 const DRAG_THRESHOLD := 8.0
 
 func set_organization(root: UnitModel, selected: UnitModel) -> void:
+	var next_root_id := root.id if root != null else ""
+	if next_root_id != _last_root_id:
+		_last_root_id = next_root_id
+		_root_needs_centering = true
 	root_unit = root
 	selected_unit = selected
 	_sync_collapsed_defaults(root_unit)
@@ -165,56 +171,69 @@ func _draw() -> void:
 	if root_unit == null:
 		return
 
-	var next_y := 0.0
-	_draw_subtree(root_unit, 0, next_y)
+	_layout_subtree(root_unit, 0, 0.0)
+	if _root_needs_centering and _node_rects.has(root_unit.id):
+		var root_rect := _node_rects[root_unit.id] as Rect2
+		_pan_offset = Vector2(size.x * 0.5 - root_rect.get_center().x * _zoom, 44.0)
+		_root_needs_centering = false
+	_draw_connections_recursive(root_unit)
+	_draw_nodes_recursive(root_unit)
 
-func _draw_subtree(unit: UnitModel, depth: int, next_y: float) -> float:
+func _layout_subtree(unit: UnitModel, depth: int, left_x: float) -> Dictionary:
 	var has_children := not unit.children.is_empty()
 	var is_collapsed := bool(_collapsed_by_unit_id.get(unit.id, false))
 	if unit == root_unit:
 		is_collapsed = false
 
 	var child_centers: Array[float] = []
-	var working_y := next_y
-
+	var cursor_x := left_x
 	if has_children and not is_collapsed:
 		for child in unit.children:
 			if child == null:
 				continue
-			working_y = _draw_subtree(child, depth + 1, working_y)
-			var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
-			child_centers.append(child_rect.get_center().y)
+			var child_layout := _layout_subtree(child, depth + 1, cursor_x)
+			child_centers.append(float(child_layout.get("center_x", cursor_x + NODE_SIZE.x * 0.5)))
+			cursor_x += float(child_layout.get("width", NODE_SIZE.x)) + SIBLING_SPACING
 
-	var center_y := 0.0
-	if child_centers.is_empty():
-		center_y = next_y + NODE_SIZE.y * 0.5
-		working_y = next_y + NODE_SIZE.y + SIBLING_SPACING
-	else:
-		center_y = (child_centers.front() + child_centers.back()) * 0.5
-
-	var rect := Rect2(
-		Vector2(float(depth) * LEVEL_SPACING, center_y - NODE_SIZE.y * 0.5),
-		NODE_SIZE
-	)
+	var subtree_width := NODE_SIZE.x
+	var center_x := left_x + NODE_SIZE.x * 0.5
+	if not child_centers.is_empty():
+		subtree_width = maxf(NODE_SIZE.x, cursor_x - left_x - SIBLING_SPACING)
+		center_x = (child_centers.front() + child_centers.back()) * 0.5
+	var rect := Rect2(Vector2(center_x - NODE_SIZE.x * 0.5, float(depth) * LEVEL_SPACING), NODE_SIZE)
 	_node_rects[unit.id] = rect
-	var screen_rect := _to_screen_rect(rect)
+	return {"width": subtree_width, "center_x": center_x}
+
+func _draw_connections_recursive(unit: UnitModel) -> void:
+	if unit == null or not _node_rects.has(unit.id):
+		return
+	var is_collapsed := bool(_collapsed_by_unit_id.get(unit.id, false)) and unit != root_unit
+	if is_collapsed:
+		return
+	var parent_rect := _node_rects[unit.id] as Rect2
+	for child in unit.children:
+		if child == null or not _node_rects.has(child.id):
+			continue
+		var child_rect := _node_rects[child.id] as Rect2
+		var from := _to_screen_point(Vector2(parent_rect.get_center().x, parent_rect.end.y))
+		var to := _to_screen_point(Vector2(child_rect.get_center().x, child_rect.position.y))
+		var elbow_y := (from.y + to.y) * 0.5
+		draw_polyline(PackedVector2Array([from, Vector2(from.x, elbow_y), Vector2(to.x, elbow_y), to]), Color(0.65, 0.72, 0.8), 2.0)
+		_draw_connections_recursive(child)
+
+func _draw_nodes_recursive(unit: UnitModel) -> void:
+	if unit == null or not _node_rects.has(unit.id):
+		return
+	var has_children := not unit.children.is_empty()
+	var is_collapsed := bool(_collapsed_by_unit_id.get(unit.id, false)) and unit != root_unit
+	var screen_rect := _to_screen_rect(_node_rects[unit.id] as Rect2)
 	_draw_unit_node(unit, screen_rect, has_children, is_collapsed)
-
-	if has_children and not is_collapsed:
-		for child in unit.children:
-			if child == null:
-				continue
-			var child_rect: Rect2 = _node_rects.get(child.id, Rect2())
-			if child_rect.size == Vector2.ZERO:
-				continue
-			var from := _to_screen_point(Vector2(rect.end.x, rect.get_center().y))
-			var to := _to_screen_point(Vector2(child_rect.position.x, child_rect.get_center().y))
-			draw_line(from, to, Color(0.65, 0.72, 0.8), 2.0)
-
 	if _is_dragging and _dragging_unit != null and unit == _dragging_unit:
 		draw_line(screen_rect.get_center(), _drag_mouse_position, Color(0.27, 0.76, 1.0, 0.8), 2.0)
-
-	return working_y
+	if is_collapsed:
+		return
+	for child in unit.children:
+		_draw_nodes_recursive(child)
 
 func _draw_unit_node(unit: UnitModel, rect: Rect2, has_children: bool, is_collapsed: bool) -> void:
 	var is_selected := unit == selected_unit
@@ -241,7 +260,7 @@ func _draw_unit_node(unit: UnitModel, rect: Rect2, has_children: bool, is_collap
 		draw_string(get_theme_default_font(), label_position, toggle_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, Color.WHITE)
 
 	var title := unit.display_name if not unit.display_name.is_empty() else _display_name_from_template_id(unit.template_id)
-	var label := "%s\n%s %s" % [title, UnitSize.display_name(unit.size), UnitType.display_name(unit.type)]
+	var label := "%s\n%s — %s" % [title, UnitSize.display_name(unit.size), UnitRole.display_name(unit.role, unit.type)]
 	draw_multiline_string(
 		get_theme_default_font(),
 		rect.position + Vector2(8.0, rect.size.y - 36.0),

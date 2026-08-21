@@ -24,15 +24,15 @@ const DEFAULT_CONFIG := {
 			"command": {"frontline": 0.1, "contested": 0.4, "rear": 1.0}
 		},
 		"terrainSuitability": {
-			"infantry": {"open": 0.7, "road": 0.6, "rough": 1.0, "urban": 1.0, "river": 0.4},
-			"armor": {"open": 1.0, "road": 0.9, "rough": 0.4, "urban": 0.5, "river": 0.2},
-			"recon": {"open": 0.9, "road": 0.9, "rough": 0.8, "urban": 0.6, "river": 0.3},
-			"airDefense": {"open": 0.7, "road": 0.7, "rough": 0.7, "urban": 0.8, "river": 0.3},
-			"antiTankSupport": {"open": 0.8, "road": 0.7, "rough": 0.7, "urban": 0.9, "river": 0.4},
-			"artillerySupport": {"open": 0.8, "road": 0.8, "rough": 0.6, "urban": 0.5, "river": 0.3},
-			"weapons": {"open": 0.7, "road": 0.7, "rough": 0.8, "urban": 0.8, "river": 0.4},
-			"mobility": {"open": 0.8, "road": 1.0, "rough": 0.7, "urban": 0.6, "river": 0.4},
-			"command": {"open": 0.5, "road": 0.8, "rough": 0.4, "urban": 0.9, "river": 0.3}
+			"infantry": {"highway": 0.6, "road": 0.6, "light": 0.7, "medium": 1.0, "heavy": 1.0, "woods": 1.0, "urban": 1.0},
+			"armor": {"highway": 1.0, "road": 0.9, "light": 1.0, "medium": 0.4, "heavy": 0.4, "woods": 0.4, "urban": 0.5},
+			"recon": {"highway": 0.9, "road": 0.9, "light": 0.9, "medium": 0.8, "heavy": 0.8, "woods": 0.8, "urban": 0.6},
+			"airDefense": {"highway": 0.7, "road": 0.7, "light": 0.7, "medium": 0.7, "heavy": 0.7, "woods": 0.7, "urban": 0.8},
+			"antiTankSupport": {"highway": 0.7, "road": 0.7, "light": 0.8, "medium": 0.7, "heavy": 0.7, "woods": 0.7, "urban": 0.9},
+			"artillerySupport": {"highway": 0.8, "road": 0.8, "light": 0.8, "medium": 0.6, "heavy": 0.6, "woods": 0.6, "urban": 0.5},
+			"weapons": {"highway": 0.7, "road": 0.7, "light": 0.7, "medium": 0.8, "heavy": 0.8, "woods": 0.8, "urban": 0.8},
+			"mobility": {"highway": 1.0, "road": 1.0, "light": 0.8, "medium": 0.7, "heavy": 0.7, "woods": 0.7, "urban": 0.6},
+			"command": {"highway": 0.8, "road": 0.8, "light": 0.5, "medium": 0.4, "heavy": 0.4, "woods": 0.4, "urban": 0.9}
 		}
 	},
 	"supportAttachment": {
@@ -61,11 +61,13 @@ const DEFAULT_CONFIG := {
 			"supportAlonePenalty": -0.9
 		},
 		"terrainSuitability": {
-			"open": 0.7,
+			"highway": 0.8,
 			"road": 0.8,
-			"rough": 0.6,
-			"urban": 0.5,
-			"river": 0.3
+			"light": 0.7,
+			"medium": 0.6,
+			"heavy": 0.6,
+			"woods": 0.6,
+			"urban": 0.5
 		}
 	},
 	"reservePlacement": {
@@ -78,11 +80,13 @@ const DEFAULT_CONFIG := {
 			"frontlineExposurePenalty": -1.2
 		},
 		"terrainSuitability": {
-			"open": 0.7,
+			"highway": 0.9,
 			"road": 0.9,
-			"rough": 0.8,
-			"urban": 0.9,
-			"river": 0.2
+			"light": 0.7,
+			"medium": 0.8,
+			"heavy": 0.8,
+			"woods": 0.8,
+			"urban": 0.9
 		}
 	}
 }
@@ -99,7 +103,7 @@ static func score_combat_assignment(context: Dictionary, overrides: Dictionary =
 	var weights: Dictionary = section.get("weights", {})
 	var unit_role := String(context.get("unitRole", "infantry"))
 	var sector_type := String(context.get("sectorType", "frontline"))
-	var terrain := String(context.get("terrain", "open"))
+	var terrain := String(context.get("terrain", "light"))
 	var support_neighbors := int(context.get("supportNeighbors", 0))
 
 	var role_affinity: float = _table_lookup(section.get("roleAffinity", {}), unit_role, sector_type, 0.5)
@@ -171,7 +175,7 @@ static func score_artillery_placement(context: Dictionary, overrides: Dictionary
 	var cfg := scoring_config(overrides)
 	var section: Dictionary = cfg.get("artilleryPlacement", {})
 	var weights: Dictionary = section.get("weights", {})
-	var terrain := String(context.get("terrain", "open"))
+	var terrain := String(context.get("terrain", "light"))
 
 	var standoff: float = clamp(float(context.get("standoffDistanceFitNormalized", 0.0)), 0.0, 1.0)
 	var coverage: float = clamp(float(context.get("targetCoverageNormalized", 0.0)), 0.0, 1.0)
@@ -206,7 +210,7 @@ static func score_reserve_placement(context: Dictionary, overrides: Dictionary =
 	var cfg := scoring_config(overrides)
 	var section: Dictionary = cfg.get("reservePlacement", {})
 	var weights: Dictionary = section.get("weights", {})
-	var terrain := String(context.get("terrain", "open"))
+	var terrain := String(context.get("terrain", "light"))
 
 	var response_distance: float = clamp(float(context.get("responseDistanceFitNormalized", 0.0)), 0.0, 1.0)
 	var interior_lines: float = clamp(float(context.get("interiorLinesNormalized", 0.0)), 0.0, 1.0)
@@ -242,12 +246,12 @@ static func sort_scored_candidates(candidates: Array[Dictionary]) -> Array[Dicti
 		var b_score := float(b.get("score", 0.0))
 		if not is_equal_approx(a_score, b_score):
 			return a_score > b_score
-		var a_unit := String(a.get("unitId", a.get("unit_id", "")))
-		var b_unit := String(b.get("unitId", b.get("unit_id", "")))
+		var a_unit := String(a.get("unitId", ""))
+		var b_unit := String(b.get("unitId", ""))
 		if a_unit != b_unit:
 			return a_unit < b_unit
-		var a_hex := String(a.get("hexId", a.get("hex_id", "")))
-		var b_hex := String(b.get("hexId", b.get("hex_id", "")))
+		var a_hex := String(a.get("hexId", ""))
+		var b_hex := String(b.get("hexId", ""))
 		return a_hex < b_hex
 	)
 	return ordered

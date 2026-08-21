@@ -1,4 +1,5 @@
 {
+  "fixtureVersion": 1,
   "id": "recon_request_uncertain_critical_sector",
   "description": "Moderate attack opportunity in uncertain critical sector should request recon and emit recon warning.",
   "operationalInput": {
@@ -6,7 +7,7 @@
     "turnIndex": 9,
     "sectors": [
       {
-        "id": "critical_uncertain",
+        "sectorId": "critical_uncertain",
         "pressure": 0.50,
         "readiness": 0.50,
         "supply": 0.50,

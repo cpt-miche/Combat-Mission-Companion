@@ -1,9 +1,10 @@
 class_name OrganizationValidator
 extends RefCounted
 
-const MAX_CHILDREN := 6
+const MAX_CHILDREN := 7
+const MAX_COMPANY_CHILDREN := 6
 # Same-type siblings should not be stricter than total siblings; some catalog templates
-# legitimately expand to six same-role children under one parent.
+# legitimately expand to seven same-role children under one parent.
 const MAX_SAME_TYPE_CHILDREN := MAX_CHILDREN
 
 static func can_add_child(parent: UnitModel, candidate: UnitModel) -> bool:
@@ -21,6 +22,17 @@ static func can_add_child_detailed(parent: UnitModel, candidate: UnitModel, enfo
 			"ok": false,
 			"error": "%s already has the maximum of %d children." % [UnitSize.display_name(parent.size), MAX_CHILDREN]
 		}
+
+	if candidate.size == UnitSize.Value.COMPANY:
+		var company_count := 0
+		for child in parent.children:
+			if child != null and child.size == UnitSize.Value.COMPANY:
+				company_count += 1
+		if company_count >= MAX_COMPANY_CHILDREN:
+			return {
+				"ok": false,
+				"error": "%s already has the maximum of %d company children." % [UnitSize.display_name(parent.size), MAX_COMPANY_CHILDREN]
+			}
 
 	var same_type_count := 0
 	for child in parent.children:

@@ -17,17 +17,31 @@ const UnitNotationFormatter = preload("res://scripts/domain/units/UnitNotationFo
 @onready var save_template_button: Button = %SaveTemplateButton
 @onready var load_template_button: Button = %LoadTemplateButton
 @onready var start_deployment_button: Button = %StartDeploymentButton
+@onready var undo_button: Button = %UndoButton
+@onready var root_margin: MarginContainer = $RootMargin
+@onready var scenario_editor_chrome: Control = %ScenarioEditorChrome
+
+const MAX_UNDO_HISTORY := 50
 
 var _root_unit: UnitModel
 var _selected_unit: UnitModel
 var _pending_unit_data: Dictionary = {}
 var _id_counter := 1
 var _builder_player_index := 0
+var _undo_history: Array[Dictionary] = []
+var _restoring_snapshot := false
+var _last_selected_nation := ""
 
 func _ready() -> void:
+	if ScenarioEditorState.active:
+		_builder_player_index = ScenarioEditorState.editor_side
 	_build_nation_selector()
 	_build_veterancy_selector()
-	_initialize_organization(_default_nation_for_builder_player(_builder_player_index))
+	if ScenarioEditorState.active:
+		_load_editor_builder_player(_builder_player_index, false)
+	else:
+		_initialize_organization(_default_nation_for_builder_player(_builder_player_index))
+	_last_selected_nation = _selected_nation()
 
 	unit_tree.cell_selected.connect(_on_unit_tree_selected)
 	add_unit_button.pressed.connect(_on_add_unit_pressed)
@@ -39,10 +53,36 @@ func _ready() -> void:
 	save_template_button.pressed.connect(_on_save_template_pressed)
 	load_template_button.pressed.connect(_on_load_template_pressed)
 	start_deployment_button.pressed.connect(_on_start_deployment_pressed)
+	undo_button.pressed.connect(_on_undo_pressed)
 
 	_refresh_template_selector()
 	_refresh_all()
 	_update_builder_phase_ui()
+	if ScenarioEditorState.active:
+		root_margin.offset_top = 56.0
+		scenario_editor_chrome.configure()
+		scenario_editor_chrome.back_requested.connect(_on_scenario_editor_back)
+		scenario_editor_chrome.before_draft_save.connect(_on_scenario_editor_before_draft_save)
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not (event is InputEventKey):
+		return
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return
+	if key_event.keycode == KEY_Z and key_event.ctrl_pressed:
+		var focus_owner := get_viewport().gui_get_focus_owner()
+		if focus_owner is LineEdit or focus_owner is TextEdit:
+			return
+		_on_undo_pressed()
+		get_viewport().set_input_as_handled()
+		return
+	if key_event.keycode != KEY_DELETE:
+		return
+	if _selected_unit == null or _selected_unit == _root_unit:
+		return
+	_delete_unit(_selected_unit)
+	get_viewport().set_input_as_handled()
 
 func _build_nation_selector() -> void:
 	nation_selector.clear()
@@ -72,18 +112,22 @@ func _initialize_organization(default_nation: String = "") -> void:
 		nation_selector.select(matching_index)
 		default_nation = String(nation_selector.get_item_metadata(matching_index))
 
-	_root_unit = _create_unit("army_root", default_nation, UnitType.Value.HEADQUARTERS, UnitSize.Value.ARMY)
+	_root_unit = _create_unit("army_root", default_nation, UnitType.Value.HEADQUARTERS, UnitSize.Value.ARMY, "headquarters")
 	_assign_unit_names()
 	_selected_unit = _root_unit
 
-func _create_unit(template_id: String, nation: String, unit_type: UnitType.Value, unit_size: UnitSize.Value) -> UnitModel:
+func _create_unit(template_id: String, nation: String, unit_type: UnitType.Value, unit_size: UnitSize.Value, unit_role: String = "") -> UnitModel:
 	var unit := UnitModel.new()
 	unit.id = "unit_%d" % _id_counter
 	_id_counter += 1
 	unit.template_id = template_id
 	unit.nation = nation
 	unit.type = unit_type
+	unit.role = UnitRole.normalize(unit_role, unit_type)
+	unit.equipment_weight = ""
 	unit.size = unit_size
+	unit.display_name = UnitSize.display_name(unit_size)
+	unit.short_name = unit.display_name
 	unit.veterancy = Veterancy.Value.REGULAR
 	unit.status = "alive"
 	unit.children = []
@@ -124,8 +168,6 @@ func _collect_templates_by_category() -> Dictionary:
 	var grouped := {}
 	var selected_nation := _selected_nation()
 	var nation_templates: Array = UnitCatalog.get_nation_templates(selected_nation)
-	if nation_templates.is_empty():
-		nation_templates = _legacy_templates_for_nation(selected_nation)
 
 	for template_variant in nation_templates:
 		if typeof(template_variant) != TYPE_DICTIONARY:
@@ -134,43 +176,37 @@ func _collect_templates_by_category() -> Dictionary:
 
 	return grouped
 
-func _legacy_templates_for_nation(nation_id: String) -> Array:
-	var legacy_templates: Array = []
-	for template_id in UnitCatalog.unit_templates.keys():
-		var template_variant: Variant = UnitCatalog.unit_templates.get(template_id, {})
-		if typeof(template_variant) != TYPE_DICTIONARY:
-			continue
-		var template_data := (template_variant as Dictionary).duplicate(true)
-		if String(template_data.get("nation", "")) != nation_id:
-			continue
-		template_data["id"] = String(template_data.get("id", template_id))
-		template_data["display_name"] = String(template_data.get("display_name", template_data.get("name", template_id)))
-		legacy_templates.append(template_data)
-	return legacy_templates
-
 func _collect_template_and_children(template_data: Dictionary, nation_id: String, grouped: Dictionary) -> void:
 	var unit_type := _type_from_template(template_data)
 	if unit_type == UnitType.Value.HEADQUARTERS:
 		return
+	var unit_size := _size_from_template(template_data)
+	if UnitSize.rank(unit_size) < UnitSize.rank(UnitSize.Value.PLATOON):
+		return
 
-	var category := UnitType.display_name(unit_type)
+	var normalized_role := UnitRole.normalize(
+		template_data.get("role", ""),
+		unit_type
+	)
+	var category := "Tank Destroyer" if normalized_role == "tank_destroyer" else UnitType.display_name(unit_type)
 	if not grouped.has(category):
 		grouped[category] = []
 
 	var template_id := String(template_data.get("id", template_data.get("display_name", "template")))
 	var base_name := _normalize_template_name(String(template_data.get("display_name", template_id)))
-	var base_template_id := _normalize_template_id(template_id)
-	if _has_grouped_template(grouped[category], nation_id, unit_type, _size_from_template(template_data), base_name):
+	if _has_grouped_template(grouped[category], nation_id, template_id):
 		return
 
 	var template := {
-		"id": base_template_id,
+		"id": template_id,
 		"name": base_name,
 		"display_name": base_name,
 		"nation": nation_id,
-		"type": unit_type,
-		"size": _size_from_template(template_data),
+		"type": _serialize_unit_type(unit_type),
+		"role": normalized_role,
+		"size": _serialize_unit_size(unit_size),
 		"count": 1,
+		"vehicle_roster": template_data.get("vehicle_roster", []).duplicate(true),
 		"children": template_data.get("children", []).duplicate(true)
 	}
 	grouped[category].append(template)
@@ -186,7 +222,7 @@ func _collect_template_and_children(template_data: Dictionary, nation_id: String
 func _can_add_template(template_data: Dictionary) -> bool:
 	if _selected_unit == null:
 		return false
-	var candidate := _create_unit("preview", String(template_data.get("nation", "usa")), template_data.get("type", UnitType.Value.INFANTRY), template_data.get("size", UnitSize.Value.COMPANY))
+	var candidate := _create_unit("preview", String(template_data.get("nation", "usa")), _type_from_template(template_data), _size_from_template(template_data), String(template_data.get("role", "")))
 	candidate.id = "preview"
 	return OrganizationValidator.can_add_child(_selected_unit, candidate)
 
@@ -204,6 +240,11 @@ func _selected_nation() -> String:
 	return String(nation_selector.get_item_metadata(nation_selector.selected))
 
 func _on_nation_changed(_index: int) -> void:
+	if not _restoring_snapshot and not _last_selected_nation.is_empty() and _last_selected_nation != _selected_nation():
+		var snapshot := _capture_builder_snapshot()
+		snapshot["selected_nation"] = _last_selected_nation
+		_record_undo_snapshot(snapshot)
+	_last_selected_nation = _selected_nation()
 	_pending_unit_data.clear()
 	_rebuild_unit_tree()
 	_update_pending_label()
@@ -223,6 +264,7 @@ func _on_add_unit_pressed() -> void:
 		return
 
 	var selected_parent := _selected_unit
+	var undo_snapshot := _capture_builder_snapshot()
 	var nation := String(_pending_unit_data.get("nation", _selected_nation()))
 	var top_level_count := maxi(int(_pending_unit_data.get("count", 1)), 1)
 	var added_roots: Array[UnitModel] = []
@@ -230,9 +272,8 @@ func _on_add_unit_pressed() -> void:
 
 	for i in range(top_level_count):
 		var requested_unit := _create_unit_from_template_tree(_pending_unit_data, nation, i + 1, top_level_count)
-		var candidate := _wrap_candidate_with_required_hq(selected_parent, requested_unit, nation)
-		_apply_auto_variant_to_candidate(selected_parent, candidate)
-		var insertion_result := _insert_subtree_with_validation(selected_parent, candidate)
+		requested_unit.is_attached = selected_parent.size != UnitSize.Value.ARMY
+		var insertion_result := _insert_subtree_with_validation(selected_parent, requested_unit)
 		if not bool(insertion_result.get("ok", false)):
 			for added_root in added_roots:
 				selected_parent.children.erase(added_root)
@@ -240,28 +281,25 @@ func _on_add_unit_pressed() -> void:
 			_selected_unit = selected_parent
 			_refresh_all()
 			return
-		added_roots.append(candidate)
+		added_roots.append(requested_unit)
 		added_requested_units.append(requested_unit)
 
 	if added_roots.is_empty():
 		return
 
+	_record_undo_snapshot(undo_snapshot)
 	_assign_unit_names()
 	_selected_unit = added_requested_units[0] if not added_requested_units.is_empty() else added_roots[0]
 	_refresh_all()
 
-func _has_grouped_template(grouped_templates: Array, nation_id: String, unit_type: UnitType.Value, unit_size: UnitSize.Value, template_name: String) -> bool:
+func _has_grouped_template(grouped_templates: Array, nation_id: String, template_id: String) -> bool:
 	for grouped_template_variant in grouped_templates:
 		if typeof(grouped_template_variant) != TYPE_DICTIONARY:
 			continue
 		var grouped_template := grouped_template_variant as Dictionary
 		if String(grouped_template.get("nation", "")) != nation_id:
 			continue
-		if int(grouped_template.get("type", UnitType.Value.INFANTRY)) != int(unit_type):
-			continue
-		if int(grouped_template.get("size", UnitSize.Value.COMPANY)) != int(unit_size):
-			continue
-		if _normalize_template_name(String(grouped_template.get("name", ""))) == template_name:
+		if String(grouped_template.get("id", "")) == template_id:
 			return true
 	return false
 
@@ -274,79 +312,20 @@ func _normalize_template_name(raw_name: String) -> String:
 		words.remove_at(words.size() - 1)
 	return " ".join(words).strip_edges()
 
-func _normalize_template_id(raw_template_id: String) -> String:
-	var parts := raw_template_id.split("_")
-	if parts.size() <= 1:
-		return raw_template_id
-	var last_part := String(parts[parts.size() - 1])
-	if last_part.is_valid_int():
-		parts.remove_at(parts.size() - 1)
-	return "_".join(parts)
-
-func _apply_auto_variant_to_candidate(parent: UnitModel, candidate: UnitModel) -> void:
-	if parent == null or candidate == null:
-		return
-
-	var base_template_id := _normalize_template_id(candidate.template_id)
-	var next_variant := _next_variant_index_for_parent(parent, base_template_id)
-	candidate.template_id = base_template_id if next_variant <= 1 else "%s_%d" % [base_template_id, next_variant]
-
-func _wrap_candidate_with_required_hq(parent: UnitModel, candidate: UnitModel, nation: String) -> UnitModel:
-	if parent == null or candidate == null:
-		return candidate
-	if candidate.size != UnitSize.Value.BATTALION:
-		return candidate
-
-	var required_echelons: Array[int] = []
-	if UnitSize.rank(parent.size) > UnitSize.rank(UnitSize.Value.DIVISION):
-		required_echelons.append(UnitSize.Value.DIVISION)
-	if UnitSize.rank(parent.size) > UnitSize.rank(UnitSize.Value.REGIMENT):
-		required_echelons.append(UnitSize.Value.REGIMENT)
-
-	var wrapped := candidate
-	for i in range(required_echelons.size() - 1, -1, -1):
-		var echelon_size := required_echelons[i]
-		var wrapper_template_id := "auto_hq_%s" % _serialize_unit_size(echelon_size).to_lower()
-		var wrapper := _create_unit(wrapper_template_id, nation, wrapped.type, echelon_size)
-		wrapper.children = [wrapped]
-		wrapped = wrapper
-
-	return wrapped
-
-func _next_variant_index_for_parent(parent: UnitModel, base_template_id: String) -> int:
-	var next_variant := 1
-	for child in parent.children:
-		if child == null:
-			continue
-		if _normalize_template_id(child.template_id) != base_template_id:
-			continue
-		var suffix := _numeric_suffix(child.template_id)
-		next_variant = maxi(next_variant, suffix + 1)
-	return next_variant
-
-func _numeric_suffix(template_id: String) -> int:
-	var parts := template_id.split("_")
-	if parts.is_empty():
-		return 1
-	var last_part := String(parts[parts.size() - 1])
-	if last_part.is_valid_int():
-		return maxi(int(last_part), 1)
-	return 1
-
 func _create_unit_from_template_tree(template_node: Dictionary, nation: String, instance_number: int = 1, instance_total: int = 1) -> UnitModel:
 	var raw_template_id := String(template_node.get("id", "template"))
-	var instance_template_id := raw_template_id
-	if instance_total > 1:
-		instance_template_id = "%s_%d" % [raw_template_id, instance_number]
 
-	var parsed_type := _parse_unit_type(template_node.get("type", UnitType.Value.INFANTRY), template_node)
-	var parsed_size := _parse_unit_size(template_node.get("size", UnitSize.Value.COMPANY), template_node)
+	var parsed_type := _parse_unit_type(template_node.get("type", ""))
+	var parsed_size := _parse_unit_size(template_node.get("size", ""))
 	var unit := _create_unit(
-		instance_template_id,
+		raw_template_id,
 		nation,
 		parsed_type,
-		parsed_size
+		parsed_size,
+		UnitRole.normalize(template_node.get("role", ""), parsed_type)
 	)
+	unit.vehicles = _expand_vehicle_roster(unit.id, template_node.get("vehicle_roster", []))
+	unit.equipment_weight = String(template_node.get("equipment_weight", "")).strip_edges().to_lower()
 
 	var children_variant: Variant = template_node.get("children", [])
 	if typeof(children_variant) != TYPE_ARRAY:
@@ -362,6 +341,43 @@ func _create_unit_from_template_tree(template_node: Dictionary, nation: String, 
 			unit.children.append(child_unit)
 
 	return unit
+
+func _expand_vehicle_roster(unit_id: String, roster_variant: Variant) -> Array[Dictionary]:
+	var vehicles: Array[Dictionary] = []
+	if not (roster_variant is Array):
+		return vehicles
+	var vehicle_index := 1
+	for entry_variant in roster_variant as Array:
+		if not (entry_variant is Dictionary):
+			continue
+		var entry := entry_variant as Dictionary
+		var model := String(entry.get("model", "Vehicle")).strip_edges()
+		var slot := String(entry.get("slot", "line_vehicle")).strip_edges().to_lower()
+		var count := maxi(int(entry.get("count", 1)), 1)
+		for slot_index in range(count):
+			var display_name := _vehicle_display_name(model, slot, slot_index + 1)
+			vehicles.append({
+				"id": "%s:vehicle:%d" % [unit_id, vehicle_index],
+				"model": model,
+				"slot": slot,
+				"display_name": display_name,
+				"status": "alive"
+			})
+			vehicle_index += 1
+	return vehicles
+
+func _vehicle_display_name(model: String, slot: String, line_number: int) -> String:
+	match slot:
+		"platoon_commander":
+			return "Commander %s" % model
+		"battalion_commander":
+			return "Battalion Commander %s" % model
+		"company_commander":
+			return "Company Commander %s" % model
+		"executive_officer":
+			return "Executive Officer %s" % model
+		_:
+			return "%s %d" % [model, line_number]
 
 func _insert_subtree_with_validation(parent: UnitModel, candidate: UnitModel) -> Dictionary:
 	if parent == null or candidate == null:
@@ -395,7 +411,7 @@ func _unit_label(unit: UnitModel) -> String:
 	if unit == null:
 		return "Unknown unit"
 	var label := unit.display_name if not unit.display_name.is_empty() else UnitSize.display_name(unit.size)
-	return "%s [%s]" % [label, unit.template_id]
+	return "%s — %s [%s]" % [label, UnitRole.display_name(unit.role, unit.type), unit.template_id]
 
 func _on_delete_button_pressed() -> void:
 	_delete_unit(_selected_unit)
@@ -409,7 +425,9 @@ func _on_org_chart_move_requested(unit: UnitModel, new_parent: UnitModel) -> voi
 func _delete_unit(unit: UnitModel) -> void:
 	if unit == null or unit == _root_unit:
 		return
+	var undo_snapshot := _capture_builder_snapshot()
 	if _remove_child_recursive(_root_unit, unit.id):
+		_record_undo_snapshot(undo_snapshot)
 		_assign_unit_names()
 		_selected_unit = _root_unit
 		_refresh_all()
@@ -437,8 +455,10 @@ func _move_unit(unit: UnitModel, new_parent: UnitModel) -> void:
 		pending_unit_label.text = "Cannot move: %s" % String(move_result.get("error", "%s cannot contain %s." % [_unit_label(new_parent), _unit_label(unit)]))
 		return
 
+	var undo_snapshot := _capture_builder_snapshot()
 	current_parent.children.erase(unit)
 	new_parent.children.append(unit)
+	_record_undo_snapshot(undo_snapshot)
 	_assign_unit_names()
 	_selected_unit = unit
 	_refresh_all()
@@ -488,7 +508,12 @@ func _on_org_chart_selected(unit: UnitModel) -> void:
 func _on_veterancy_selected(index: int) -> void:
 	if _selected_unit == null:
 		return
-	_selected_unit.veterancy = veterancy_selector.get_item_metadata(index)
+	var next_veterancy: Veterancy.Value = veterancy_selector.get_item_metadata(index)
+	if _selected_unit.veterancy == next_veterancy:
+		return
+	var undo_snapshot := _capture_builder_snapshot()
+	_selected_unit.veterancy = next_veterancy
+	_record_undo_snapshot(undo_snapshot)
 	_update_right_panel()
 	org_chart_view.queue_redraw()
 
@@ -508,7 +533,8 @@ func _update_right_panel() -> void:
 
 	var selected_display := _selected_unit.display_name if not _selected_unit.display_name.is_empty() else UnitSize.display_name(_selected_unit.size)
 	selected_name_label.text = selected_display
-	selected_meta_label.text = "Type: %s\nNation: %s\nChildren: %d" % [
+	selected_meta_label.text = "Role: %s\nClass: %s\nNation: %s\nChildren: %d" % [
+		UnitRole.display_name(_selected_unit.role, _selected_unit.type),
 		UnitType.display_name(_selected_unit.type),
 		_selected_unit.nation,
 		_selected_unit.child_count()
@@ -527,7 +553,7 @@ func _historical_text_for(unit: UnitModel) -> String:
 	return "[b]Historical Note[/b]\n%s formations in %s doctrine commonly integrated %s sub-elements as command depth increased." % [
 		UnitSize.display_name(unit.size),
 		unit.nation.to_upper(),
-		UnitType.display_name(unit.type).to_lower()
+		UnitRole.display_name(unit.role, unit.type).to_lower()
 	]
 
 func _on_save_template_pressed() -> void:
@@ -553,16 +579,18 @@ func _on_load_template_pressed() -> void:
 	var template_name := String(template_selector.get_item_text(template_selector.selected))
 	var payload: Dictionary = SaveManager.load_division_template(template_name)
 	if payload.is_empty():
-		pending_unit_label.text = "Failed to load template."
+		pending_unit_label.text = SaveManager.get_last_load_error()
 		return
 	var loaded_root := _dict_to_unit(payload.get("root_unit", {}))
 	if loaded_root == null:
 		pending_unit_label.text = "Template data invalid."
 		return
+	var undo_snapshot := _capture_builder_snapshot()
 	_root_unit = loaded_root
 	_selected_unit = _root_unit
 	_id_counter = int(payload.get("id_counter", _next_id_from_tree(_root_unit)))
 	_pending_unit_data.clear()
+	_record_undo_snapshot(undo_snapshot)
 	_refresh_all()
 	pending_unit_label.text = "Template loaded: %s" % template_name
 
@@ -573,17 +601,32 @@ func _on_start_deployment_pressed() -> void:
 		return
 
 	_ensure_players_initialized()
-	GameState.players[_builder_player_index]["division_tree"] = _unit_to_dict(_root_unit)
-	GameState.players[_builder_player_index]["deployments"] = {}
+	if ScenarioEditorState.active:
+		_commit_scenario_editor_force()
+	else:
+		GameState.players[_builder_player_index]["division_tree"] = _unit_to_dict(_root_unit)
+		GameState.players[_builder_player_index]["deployments"] = {}
+	if ScenarioEditorState.active:
+		if _builder_player_index == 0:
+			ScenarioEditorState.set_step(ScenarioEditorState.Step.PLAYER_2_FORCES, 1)
+			_clear_undo_history()
+			_load_editor_builder_player(1)
+			return
+		ScenarioEditorState.set_step(ScenarioEditorState.Step.PLAYER_1_DEPLOYMENT, 0)
+		_clear_undo_history()
+		GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
+		return
 	if _builder_player_index == 0:
 		GameState.players[1]["controller"] = "ai"
-		GameState.players[1]["is_ai"] = true
 		_builder_player_index = 1
+		_clear_undo_history()
 		_reset_builder_for_next_player()
 		return
 	if GameState.map_flow == GameState.MapFlow.PLAY_SAVED_MAP:
+		_clear_undo_history()
 		GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
 		return
+	_clear_undo_history()
 	GameState.set_phase(GameState.Phase.MAP_SETUP)
 
 func _ensure_players_initialized() -> void:
@@ -605,10 +648,17 @@ func _reset_builder_for_next_player() -> void:
 	# Keep IDs globally unique across both sides so gameplay deployment dictionaries do not collide.
 	_pending_unit_data.clear()
 	_initialize_organization(_default_nation_for_builder_player(_builder_player_index))
+	_last_selected_nation = _selected_nation()
 	_refresh_all()
 	_update_builder_phase_ui()
 
 func _update_builder_phase_ui() -> void:
+	if ScenarioEditorState.active:
+		start_deployment_button.text = "Continue to Player %d" % (2 if _builder_player_index == 0 else 1)
+		if _builder_player_index == 1:
+			start_deployment_button.text = "Continue to Player 1 Deployment"
+		pending_unit_label.text = "Author Player %d's complete force structure." % (_builder_player_index + 1)
+		return
 	if _builder_player_index == 0:
 		start_deployment_button.text = "Submit Player Units"
 		return
@@ -616,6 +666,10 @@ func _update_builder_phase_ui() -> void:
 	pending_unit_label.text = "Configure AI unit structure, then submit to continue."
 
 func _default_nation_for_builder_player(player_index: int) -> String:
+	if ScenarioEditorState.active and player_index >= 0 and player_index < GameState.players.size():
+		var authored_nation := String((GameState.players[player_index] as Dictionary).get("nation_id", "")).strip_edges().to_lower()
+		if not authored_nation.is_empty():
+			return authored_nation
 	var selected_nation := String(GameState.selected_nation_id)
 	if selected_nation.is_empty():
 		selected_nation = "usa"
@@ -630,6 +684,81 @@ func _opposing_nation_id(nation_id: String) -> String:
 	if normalized == "germany":
 		return "usa"
 	return nation_id
+
+func _load_editor_builder_player(player_index: int, refresh: bool = true) -> void:
+	_ensure_players_initialized()
+	_builder_player_index = clampi(player_index, 0, 1)
+	ScenarioEditorState.editor_side = _builder_player_index
+	var tree := (GameState.players[_builder_player_index] as Dictionary).get("division_tree", {}) as Dictionary
+	if tree.is_empty():
+		_id_counter = maxi(_id_counter, _next_editor_global_id())
+		_initialize_organization(_default_nation_for_builder_player(_builder_player_index))
+	else:
+		var loaded := _dict_to_unit(tree)
+		if loaded == null:
+			_initialize_organization(_default_nation_for_builder_player(_builder_player_index))
+		else:
+			_root_unit = loaded
+			_selected_unit = _root_unit
+			_id_counter = _next_id_from_tree(_root_unit)
+			_id_counter = maxi(_id_counter, _next_editor_global_id())
+			_select_builder_nation(String(_root_unit.nation))
+	_last_selected_nation = _selected_nation()
+	_pending_unit_data.clear()
+	if refresh:
+		_refresh_all()
+		_update_builder_phase_ui()
+		scenario_editor_chrome.configure()
+
+func _next_editor_global_id() -> int:
+	var highest := 0
+	for player_variant in GameState.players:
+		if player_variant is Dictionary:
+			highest = maxi(highest, _highest_generated_id((player_variant as Dictionary).get("division_tree", {}) as Dictionary))
+	return highest + 1
+
+func _highest_generated_id(node: Dictionary) -> int:
+	if node.is_empty():
+		return 0
+	var highest := 0
+	var unit_id := String(node.get("id", ""))
+	if unit_id.begins_with("unit_") and unit_id.trim_prefix("unit_").is_valid_int():
+		highest = int(unit_id.trim_prefix("unit_"))
+	for child_variant in node.get("children", []) as Array:
+		if child_variant is Dictionary:
+			highest = maxi(highest, _highest_generated_id(child_variant as Dictionary))
+	return highest
+
+func _select_builder_nation(nation_id: String) -> void:
+	for index in range(nation_selector.item_count):
+		if String(nation_selector.get_item_metadata(index)) == nation_id:
+			nation_selector.select(index)
+			return
+
+func _commit_scenario_editor_force() -> void:
+	_ensure_players_initialized()
+	var player := GameState.players[_builder_player_index] as Dictionary
+	var previous_nation := String(player.get("nation_id", ""))
+	var selected_nation := _selected_nation()
+	if not previous_nation.is_empty() and previous_nation != selected_nation:
+		player["deployments"] = {}
+	player["nation_id"] = selected_nation
+	GameState.players[_builder_player_index] = player
+	GameState.players[_builder_player_index]["division_tree"] = _unit_to_dict(_root_unit)
+	ScenarioEditorState.reconcile_deployments(_builder_player_index)
+	ScenarioEditorState.capture_from_game_state()
+
+func _on_scenario_editor_before_draft_save() -> void:
+	_commit_scenario_editor_force()
+
+func _on_scenario_editor_back() -> void:
+	_commit_scenario_editor_force()
+	if _builder_player_index == 1:
+		ScenarioEditorState.set_step(ScenarioEditorState.Step.PLAYER_1_FORCES, 0)
+		_load_editor_builder_player(0)
+		return
+	ScenarioEditorState.set_step(ScenarioEditorState.Step.MAP)
+	GameState.set_phase(GameState.Phase.MAP_SETUP)
 
 func _refresh_template_selector() -> void:
 	template_selector.clear()
@@ -658,58 +787,137 @@ func _unit_to_dict(unit: UnitModel) -> Dictionary:
 		"short_name": unit.short_name,
 		"designation": _normalize_designation_payload(unit.get_meta("designation_payload", {}), unit),
 		"nation": unit.nation,
-		"type": int(unit.type),
+		"type": _serialize_unit_type(unit.type),
+		"role": UnitRole.normalize(unit.role, unit.type),
+		"equipment_weight": unit.equipment_weight,
 		"size": _serialize_unit_size(unit.size),
+		"is_attached": unit.is_attached,
 		"veterancy": int(unit.veterancy),
 		"status": String(unit.status).to_lower(),
-		"is_alive": String(unit.status).to_lower() != "dead",
+		"vehicles": unit.vehicles.duplicate(true),
 		"children": serialized_children
 	}
+
+func _capture_builder_snapshot() -> Dictionary:
+	return {
+		"root_unit": _unit_to_dict(_root_unit),
+		"selected_unit_id": _selected_unit.id if _selected_unit != null else "",
+		"selected_nation": _selected_nation(),
+		"id_counter": _id_counter,
+		"pending_unit_data": _pending_unit_data.duplicate(true)
+	}
+
+func _record_undo_snapshot(snapshot: Dictionary) -> void:
+	if _restoring_snapshot or snapshot.is_empty():
+		return
+	_undo_history.append(snapshot.duplicate(true))
+	while _undo_history.size() > MAX_UNDO_HISTORY:
+		_undo_history.pop_front()
+	_update_undo_button()
+
+func _on_undo_pressed() -> void:
+	if _undo_history.is_empty():
+		return
+	var snapshot := _undo_history.pop_back() as Dictionary
+	_restore_builder_snapshot(snapshot)
+	_update_undo_button()
+
+func _restore_builder_snapshot(snapshot: Dictionary) -> void:
+	var restored_root := _dict_to_unit(snapshot.get("root_unit", {}))
+	if restored_root == null:
+		return
+	_restoring_snapshot = true
+	var nation_id := String(snapshot.get("selected_nation", _selected_nation()))
+	for index in range(nation_selector.item_count):
+		if String(nation_selector.get_item_metadata(index)) == nation_id:
+			nation_selector.select(index)
+			break
+	_root_unit = restored_root
+	_id_counter = int(snapshot.get("id_counter", _next_id_from_tree(_root_unit)))
+	_pending_unit_data = (snapshot.get("pending_unit_data", {}) as Dictionary).duplicate(true)
+	var selected_id := String(snapshot.get("selected_unit_id", ""))
+	_selected_unit = _find_unit_by_id(_root_unit, selected_id)
+	if _selected_unit == null:
+		_selected_unit = _root_unit
+	_last_selected_nation = _selected_nation()
+	_restoring_snapshot = false
+	_refresh_all()
+	pending_unit_label.text = "Undid organization edit."
+
+func _find_unit_by_id(unit: UnitModel, unit_id: String) -> UnitModel:
+	if unit == null:
+		return null
+	if unit.id == unit_id:
+		return unit
+	for child in unit.children:
+		var found := _find_unit_by_id(child, unit_id)
+		if found != null:
+			return found
+	return null
+
+func _clear_undo_history() -> void:
+	_undo_history.clear()
+	_update_undo_button()
+
+func _update_undo_button() -> void:
+	if is_instance_valid(undo_button):
+		undo_button.disabled = _undo_history.is_empty()
 
 func _serialize_unit_size(size: UnitSize.Value) -> String:
 	match size:
 		UnitSize.Value.SQUAD:
-			return "SQUAD"
+			return "squad"
 		UnitSize.Value.SECTION:
-			return "SECTION"
+			return "section"
 		UnitSize.Value.PLATOON:
-			return "PLATOON"
+			return "platoon"
 		UnitSize.Value.COMPANY:
-			return "COMPANY"
+			return "company"
 		UnitSize.Value.BATTALION:
-			return "BATTALION"
+			return "battalion"
 		UnitSize.Value.REGIMENT:
-			return "REGIMENT"
+			return "regiment"
 		UnitSize.Value.DIVISION:
-			return "DIVISION"
+			return "division"
 		UnitSize.Value.ARMY:
-			return "ARMY"
+			return "army"
 		_:
-			return "PLATOON"
+			return "platoon"
+
+func _serialize_unit_type(type: UnitType.Value) -> String:
+	return UnitType.display_name(type).to_lower().replace("-", "_").replace(" ", "_")
 
 func _dict_to_unit(data: Variant) -> UnitModel:
 	if typeof(data) != TYPE_DICTIONARY:
 		return null
 	var raw := data as Dictionary
+	for field_name in ["id", "display_name", "type", "role", "size", "status"]:
+		if not (raw.get(field_name) is String) or String(raw.get(field_name)).strip_edges().is_empty():
+			return null
+	if not (raw.get("designation") is Dictionary) or not (raw.get("children") is Array):
+		return null
+	if not (raw.get("is_attached") is bool):
+		return null
 	var unit := UnitModel.new()
 	unit.id = String(raw.get("id", ""))
 	unit.template_id = String(raw.get("template_id", ""))
 	unit.display_name = String(raw.get("display_name", ""))
 	unit.short_name = String(raw.get("short_name", ""))
-	unit.set_meta("designation_payload", _designation_from_raw(raw, unit))
 	unit.nation = String(raw.get("nation", ""))
-	unit.type = _parse_unit_type(raw.get("type", UnitType.Value.INFANTRY), raw)
-	var raw_size: Variant = raw.get("size", UnitSize.Value.PLATOON)
-	var size_context := raw.duplicate(true)
-	if typeof(raw_size) == TYPE_INT:
-		size_context["_legacy_size_index"] = true
-	unit.size = _parse_unit_size(raw_size, size_context)
+	unit.type = _parse_unit_type(raw.get("type"))
+	unit.role = UnitRole.normalize(raw.get("role", ""), unit.type)
+	unit.equipment_weight = String(raw.get("equipment_weight", "")).strip_edges().to_lower()
+	unit.size = _parse_unit_size(raw.get("size"))
+	unit.is_attached = bool(raw.get("is_attached"))
+	unit.set_meta("designation_payload", _normalize_designation_payload(raw.get("designation") as Dictionary, unit))
 	unit.veterancy = int(raw.get("veterancy", Veterancy.Value.REGULAR))
-	var raw_status := String(raw.get("status", ""))
-	if raw_status.is_empty():
-		unit.status = "alive" if bool(raw.get("is_alive", true)) else "dead"
-	else:
-		unit.status = raw_status.to_lower()
+	unit.status = String(raw.get("status")).to_lower()
+	if unit.status not in ["alive", "dead"]:
+		return null
+	unit.vehicles = []
+	for vehicle_variant in raw.get("vehicles", []) as Array:
+		if vehicle_variant is Dictionary:
+			unit.vehicles.append((vehicle_variant as Dictionary).duplicate(true))
 	unit.children = []
 	for child_data in raw.get("children", []):
 		var child := _dict_to_unit(child_data)
@@ -732,7 +940,7 @@ func _assign_unit_names_recursive(unit: UnitModel, parent: UnitModel) -> void:
 
 	var designation := _designation_for_echelon(unit, sibling_index, parent)
 	unit.set_meta("designation_payload", designation)
-	var names := _display_names_for_designation(unit, designation)
+	var names := _display_names_for_designation(unit, designation, sibling_index)
 	unit.display_name = String(names.get("display_name", "Unit"))
 	unit.short_name = String(names.get("short_name", ""))
 
@@ -745,18 +953,25 @@ func _designation_for_echelon(unit: UnitModel, sibling_index: int, parent: UnitM
 	var battalion_number := 0
 	var company_letter := ""
 	var platoon_number := 0
+	var attached_company_index := 0
 	if parent != null:
 		var parent_designation := parent.get_meta("designation_payload", {}) as Dictionary
 		regiment_number = int(parent_designation.get("regiment_number", 0))
 		battalion_number = int(parent_designation.get("battalion_number", 0))
 		company_letter = String(parent_designation.get("company_letter", ""))
+		attached_company_index = int(parent_designation.get("attached_company_index", 0))
 	match size:
 		UnitSize.Value.REGIMENT:
 			regiment_number = sibling_index
 		UnitSize.Value.BATTALION:
 			battalion_number = sibling_index
 		UnitSize.Value.COMPANY:
-			company_letter = _alphabet_designation(sibling_index)
+			if unit.is_attached:
+				attached_company_index = _attachment_index_for(parent, unit)
+				company_letter = ""
+			else:
+				attached_company_index = 0
+				company_letter = _company_letter_for(unit, parent, sibling_index, battalion_number)
 		UnitSize.Value.PLATOON:
 			platoon_number = sibling_index
 	return _normalize_designation_payload({
@@ -764,11 +979,58 @@ func _designation_for_echelon(unit: UnitModel, sibling_index: int, parent: UnitM
 		"battalion_number": battalion_number,
 		"company_letter": company_letter,
 		"platoon_number": platoon_number,
+		"attached_company_index": attached_company_index,
 		"role_echelon": UnitSize.display_name(size)
 	}, unit)
 
+func _company_letter_for(unit: UnitModel, parent: UnitModel, sibling_index: int, battalion_number: int) -> String:
+	if unit.is_attached:
+		return ""
+	if unit.nation.strip_edges().to_lower() != "usa" or battalion_number < 1 or battalion_number > 3:
+		return _alphabet_designation(sibling_index)
+	var company_slot := _usa_company_slot(parent, unit)
+	var letter_blocks := {
+		1: ["A", "B", "C", "D"],
+		2: ["E", "F", "G", "H"],
+		3: ["I", "K", "L", "M"]
+	}
+	var battalion_letters := letter_blocks[battalion_number] as Array
+	if company_slot >= 1 and company_slot <= battalion_letters.size():
+		return String(battalion_letters[company_slot - 1])
+	return _alphabet_designation(sibling_index)
 
-func _display_names_for_designation(unit: UnitModel, designation: Dictionary) -> Dictionary:
+func _usa_company_slot(parent: UnitModel, unit: UnitModel) -> int:
+	if unit.role in ["weapons", "heavy_weapons"]:
+		return 4
+	var line_company_index := 0
+	if parent == null:
+		return 1
+	for sibling in parent.children:
+		if sibling == null or sibling.size != UnitSize.Value.COMPANY or sibling.type == UnitType.Value.HEADQUARTERS:
+			continue
+		if sibling.is_attached:
+			continue
+		if sibling.role in ["weapons", "heavy_weapons"]:
+			continue
+		line_company_index += 1
+		if sibling == unit:
+			return line_company_index
+	return maxi(line_company_index, 1)
+
+func _attachment_index_for(parent: UnitModel, unit: UnitModel) -> int:
+	if parent == null:
+		return 1
+	var attached_index := 0
+	for sibling in parent.children:
+		if sibling == null or sibling.size != unit.size or not sibling.is_attached:
+			continue
+		attached_index += 1
+		if sibling == unit:
+			return attached_index
+	return maxi(attached_index, 1)
+
+
+func _display_names_for_designation(unit: UnitModel, designation: Dictionary, sibling_index: int) -> Dictionary:
 	var size := unit.size
 	var designation_nth := 1
 	match size:
@@ -779,14 +1041,21 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 		UnitSize.Value.BATTALION:
 			designation_nth = max(int(designation.get("battalion_number", 0)), 1)
 		UnitSize.Value.SECTION:
-			designation_nth = max(int(designation.get("platoon_number", 0)), 1)
+			designation_nth = maxi(sibling_index, 1)
 		UnitSize.Value.SQUAD:
-			designation_nth = max(int(designation.get("platoon_number", 0)), 1)
+			designation_nth = maxi(sibling_index, 1)
 		_:
 			designation_nth = max(int(designation.get("battalion_number", 0)), 1)
 	var nth := _ordinal(designation_nth)
 	var type_label := UnitType.display_name(unit.type)
-	var is_auto_hq := unit.template_id.begins_with("auto_hq_")
+	if unit.is_attached:
+		var attachment_index := _attachment_index_for(_find_parent(_root_unit, unit.id), unit)
+		var attached_name := "%s %s %s (Attached)" % [
+			_ordinal(attachment_index),
+			UnitRole.display_name(unit.role, unit.type),
+			UnitSize.display_name(unit.size)
+		]
+		return {"display_name": attached_name, "short_name": attached_name}
 	if unit.type == UnitType.Value.HEADQUARTERS:
 		if size == UnitSize.Value.BATTALION:
 			var battalion_hq := UnitNotationFormatter.format_unit({
@@ -795,11 +1064,6 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 				"designation": designation
 			})
 			return {"display_name": battalion_hq, "short_name": battalion_hq}
-		return {
-			"display_name": "%s HQ" % UnitSize.display_name(size),
-			"short_name": "%s HQ" % UnitSize.display_name(size)
-		}
-	if is_auto_hq and (size == UnitSize.Value.REGIMENT or size == UnitSize.Value.DIVISION):
 		return {
 			"display_name": "%s HQ" % UnitSize.display_name(size),
 			"short_name": "%s HQ" % UnitSize.display_name(size)
@@ -826,6 +1090,12 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 			})
 			return {"display_name": company_notation, "short_name": company_notation}
 		UnitSize.Value.PLATOON:
+			if int(designation.get("attached_company_index", 0)) > 0:
+				var attached_platoon_name := "%s %s Platoon" % [
+					_ordinal(maxi(int(designation.get("platoon_number", 0)), 1)),
+					UnitRole.display_name(unit.role, unit.type)
+				]
+				return {"display_name": attached_platoon_name, "short_name": attached_platoon_name}
 			var platoon_notation := UnitNotationFormatter.format_unit({
 				"type": type_label.to_lower(),
 				"size": "platoon",
@@ -839,54 +1109,15 @@ func _display_names_for_designation(unit: UnitModel, designation: Dictionary) ->
 			return {"display_name": "%s %s" % [nth, UnitSize.display_name(size)], "short_name": "%s" % nth}
 	return {"display_name": "%s %s" % [nth, UnitSize.display_name(size)], "short_name": "%s" % nth}
 
-func _designation_from_raw(raw: Dictionary, unit: UnitModel) -> Dictionary:
-	var existing: Variant = raw.get("designation", {})
-	if typeof(existing) == TYPE_DICTIONARY and not (existing as Dictionary).is_empty():
-		return _normalize_designation_payload(existing as Dictionary, unit)
-	return _migrate_designation_from_legacy_names(String(raw.get("display_name", "")), String(raw.get("short_name", "")), unit)
-
 func _normalize_designation_payload(raw_designation: Dictionary, unit: UnitModel) -> Dictionary:
 	return {
 		"regiment_number": maxi(int(raw_designation.get("regiment_number", 0)), 0),
 		"battalion_number": maxi(int(raw_designation.get("battalion_number", 0)), 0),
 		"company_letter": String(raw_designation.get("company_letter", "")).strip_edges().to_upper(),
 		"platoon_number": maxi(int(raw_designation.get("platoon_number", 0)), 0),
+		"attached_company_index": maxi(int(raw_designation.get("attached_company_index", 0)), 0),
 		"role_echelon": String(raw_designation.get("role_echelon", UnitSize.display_name(unit.size))).strip_edges()
 	}
-
-func _migrate_designation_from_legacy_names(display_name: String, short_name: String, unit: UnitModel) -> Dictionary:
-	var merged := (display_name + " " + short_name).strip_edges()
-	var company_letter := ""
-	var platoon_number := 0
-	var battalion_number := 0
-	var regiment_number := 0
-	var company_match := RegEx.new()
-	company_match.compile("([A-Z]{1,2})\\s*(?:CO|COMPANY)")
-	var cm := company_match.search(merged.to_upper())
-	if cm != null:
-		company_letter = cm.get_string(1)
-	var platoon_match := RegEx.new()
-	platoon_match.compile("(\\d+)\\s*(?:PLT|PLATOON)")
-	var pm := platoon_match.search(merged.to_upper())
-	if pm != null:
-		platoon_number = int(pm.get_string(1))
-	var bn_match := RegEx.new()
-	bn_match.compile("(\\d+)\\s*(?:BN|BATTALION)")
-	var bm := bn_match.search(merged.to_upper())
-	if bm != null:
-		battalion_number = int(bm.get_string(1))
-	var reg_match := RegEx.new()
-	reg_match.compile("(\\d+)\\s*(?:REGT|REGIMENT)")
-	var rm := reg_match.search(merged.to_upper())
-	if rm != null:
-		regiment_number = int(rm.get_string(1))
-	return _normalize_designation_payload({
-		"regiment_number": regiment_number,
-		"battalion_number": battalion_number,
-		"company_letter": company_letter,
-		"platoon_number": platoon_number,
-		"role_echelon": UnitSize.display_name(unit.size)
-	}, unit)
 
 func _sibling_index_for_naming(parent: UnitModel, unit: UnitModel) -> int:
 	var same_size_index := 0
@@ -895,13 +1126,12 @@ func _sibling_index_for_naming(parent: UnitModel, unit: UnitModel) -> int:
 			continue
 		if sibling.size != unit.size:
 			continue
+		if sibling.is_attached != unit.is_attached:
+			continue
+		if (sibling.type == UnitType.Value.HEADQUARTERS) != (unit.type == UnitType.Value.HEADQUARTERS):
+			continue
 
-		var include_in_index := true
-		if unit.size == UnitSize.Value.COMPANY and sibling.type == UnitType.Value.HEADQUARTERS:
-			include_in_index = unit.type == UnitType.Value.HEADQUARTERS
-
-		if include_in_index:
-			same_size_index += 1
+		same_size_index += 1
 		if sibling == unit:
 			return max(same_size_index, 1)
 
@@ -944,51 +1174,13 @@ func _collect_highest_id(unit: UnitModel, current_highest: int) -> int:
 	return current_highest
 
 func _type_from_template(data: Dictionary) -> UnitType.Value:
-	return _parse_unit_type(data.get("type", ""), data)
+	return _parse_unit_type(data.get("type", ""))
 
 func _size_from_template(data: Dictionary) -> UnitSize.Value:
-	if data.has("size"):
-		return _parse_unit_size(data.get("size", ""), {})
+	return _parse_unit_size(data.get("size", ""))
 
-	var inferred_size: int = _infer_size_from_children(data)
-	if inferred_size >= 0:
-		return inferred_size
-
-	return _parse_unit_size("", data)
-
-func _infer_size_from_children(data: Dictionary) -> int:
-	var children_variant: Variant = data.get("children", [])
-	if typeof(children_variant) != TYPE_ARRAY:
-		return -1
-
-	var children := children_variant as Array
-	if children.is_empty():
-		return -1
-
-	var largest_child_rank := -1
-	for child_variant in children:
-		if typeof(child_variant) != TYPE_DICTIONARY:
-			continue
-		var child_data := child_variant as Dictionary
-		var child_size := _size_from_template(child_data)
-		largest_child_rank = maxi(largest_child_rank, UnitSize.rank(child_size))
-
-	if largest_child_rank < 0:
-		return -1
-
-	var inferred_rank := largest_child_rank + 1
-	for size_value in UnitSize.Value.values():
-		if UnitSize.rank(size_value) == inferred_rank:
-			return size_value
-
-	return -1
-
-func _parse_unit_type(raw_type: Variant, fallback_data: Dictionary) -> UnitType.Value:
-	if typeof(raw_type) == TYPE_INT:
-		var type_value := int(raw_type)
-		if UnitType.Value.values().has(type_value):
-			return type_value
-	elif typeof(raw_type) == TYPE_STRING:
+func _parse_unit_type(raw_type: Variant) -> UnitType.Value:
+	if typeof(raw_type) == TYPE_STRING:
 		var normalized_type := String(raw_type).to_upper()
 		var type_map := {
 			"INFANTRY": UnitType.Value.INFANTRY,
@@ -1005,35 +1197,10 @@ func _parse_unit_type(raw_type: Variant, fallback_data: Dictionary) -> UnitType.
 		}
 		if type_map.has(normalized_type):
 			return type_map[normalized_type]
+	return UnitType.Value.INFANTRY
 
-	var tags: Array = fallback_data.get("tags", [])
-	if tags.has("infantry"):
-		return UnitType.Value.INFANTRY
-	if tags.has("line"):
-		return UnitType.Value.MOTORIZED
-	return UnitType.Value.RECON
-
-func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.Value:
-	var legacy_size_map := {
-		0: UnitSize.Value.PLATOON,
-		1: UnitSize.Value.COMPANY,
-		2: UnitSize.Value.BATTALION,
-		3: UnitSize.Value.REGIMENT,
-		4: UnitSize.Value.DIVISION,
-		5: UnitSize.Value.ARMY,
-		6: UnitSize.Value.SECTION,
-		7: UnitSize.Value.SQUAD
-	}
-
-	if typeof(raw_size) == TYPE_INT:
-		var size_value := int(raw_size)
-		if bool(fallback_data.get("_legacy_size_index", false)) and legacy_size_map.has(size_value):
-			return legacy_size_map[size_value]
-		if UnitSize.Value.values().has(size_value):
-			return size_value
-		if legacy_size_map.has(size_value):
-			return legacy_size_map[size_value]
-	elif typeof(raw_size) == TYPE_STRING:
+func _parse_unit_size(raw_size: Variant) -> UnitSize.Value:
+	if typeof(raw_size) == TYPE_STRING:
 		var normalized_size := String(raw_size).strip_edges().to_upper()
 		var size_map := {
 			"PLATOON": UnitSize.Value.PLATOON,
@@ -1047,18 +1214,4 @@ func _parse_unit_size(raw_size: Variant, fallback_data: Dictionary) -> UnitSize.
 		}
 		if size_map.has(normalized_size):
 			return size_map[normalized_size]
-
-	var points := int(fallback_data.get("points", 100))
-	if points < 80:
-		return UnitSize.Value.SQUAD
-	if points < 120:
-		return UnitSize.Value.SECTION
-	if points < 180:
-		return UnitSize.Value.PLATOON
-	if points < 260:
-		return UnitSize.Value.COMPANY
-	if points < 360:
-		return UnitSize.Value.BATTALION
-	if points < 460:
-		return UnitSize.Value.REGIMENT
-	return UnitSize.Value.DIVISION
+	return UnitSize.Value.PLATOON

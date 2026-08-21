@@ -29,7 +29,7 @@ static func format_trace_lines(trace: Dictionary) -> PackedStringArray:
 
 static func _format_event_line(trace: Dictionary, event: Dictionary, level: int) -> String:
 	var timestamp: int = int(event.get("timestamp_unix", trace.get("timestamp_unix", 0)))
-	var unit_id: int = int(event.get("unit_id", -1))
+	var unit_id := str(event.get("unit_id", ""))
 	var action: String = _action_for_event(event)
 	var reason: String = str(event.get("reason_text", event.get("reason_code", "")))
 	var details := ""
@@ -43,7 +43,7 @@ static func _format_event_line(trace: Dictionary, event: Dictionary, level: int)
 		str(trace.get("phase", "unknown")),
 		int(trace.get("turn", -1)),
 		int(trace.get("player_id", -1)),
-		"-" if unit_id < 0 else str(unit_id),
+		"-" if unit_id.is_empty() else unit_id,
 		action,
 		reason
 	]
@@ -72,7 +72,7 @@ static func _l3_details(event: Dictionary) -> String:
 	var meta: Dictionary = event.get("meta", {}) as Dictionary
 	var payload := {
 		"score": float(event.get("score", 0.0)),
-		"candidate_id": int(event.get("candidate_id", -1)),
+		"candidate_id": str(event.get("candidate_id", "")),
 		"reason_code": str(event.get("reason_code", "")),
 		"meta": meta
 	}

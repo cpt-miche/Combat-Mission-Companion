@@ -2,6 +2,7 @@ extends RefCounted
 class_name AITraceReplay
 
 const DeploymentPlanner = preload("res://scripts/systems/deployment_ai/DeploymentPlanner.gd")
+const HexGrid = preload("res://scripts/domain/map/HexGrid.gd")
 
 const SUPPORTED_PHASE := "deployment_ai"
 
@@ -32,6 +33,7 @@ static func replay_trace(trace: Dictionary) -> Dictionary:
 	var tracer_events: Array[Dictionary] = []
 	var options: Dictionary = {
 		"objectiveMode": String(reconstruction.get("objectiveMode", "mixed_split")),
+		"objectives": (reconstruction.get("objectives", []) as Array).duplicate(true),
 		"traceEventCallback": func(event_type: String, payload: Dictionary) -> void:
 			tracer_events.append(_normalize_event_for_compare(event_type, payload))
 	}
@@ -52,6 +54,7 @@ static func replay_trace(trace: Dictionary) -> Dictionary:
 		"inputs": {
 			"elements": (reconstruction.get("elements", []) as Array).size(),
 			"hexes": (reconstruction.get("hexes", []) as Array).size(),
+			"objectives": (reconstruction.get("objectives", []) as Array).size(),
 			"objectiveMode": reconstruction.get("objectiveMode", "mixed_split")
 		},
 		"expected_count": expected_events.size(),
@@ -84,7 +87,8 @@ static func _reconstruct_deployment_inputs(trace: Dictionary) -> Dictionary:
 		"elements": _typed_dict_array(elements),
 		"hexes": hexes,
 		"sectorModel": sector_model.duplicate(true),
-		"objectiveMode": String(outputs.get("objectiveMode", (plan.get("metadata", {}) as Dictionary).get("objectiveMode", "mixed_split")))
+		"objectives": (plan.get("objectives", []) as Array).duplicate(true),
+		"objectiveMode": String(outputs.get("objectiveMode", "mixed_split"))
 	}
 
 static func _typed_dict_array(values: Array) -> Array[Dictionary]:
@@ -121,7 +125,7 @@ static func _build_hexes_from_sector_model(hex_ids: Array[String], _sector_model
 	for hex_id in hex_ids:
 		var coords := _parse_axial_id(hex_id)
 		var neighbor_ids: Array[String] = []
-		for delta in _axial_neighbor_deltas():
+		for delta in HexGrid.neighbor_offsets(coords.y):
 			var neighbor_coord := coords + delta
 			var neighbor_id := "%d,%d" % [neighbor_coord.x, neighbor_coord.y]
 			if known_hexes.has(neighbor_id):
@@ -135,16 +139,6 @@ static func _build_hexes_from_sector_model(hex_ids: Array[String], _sector_model
 			"neighborIds": neighbor_ids
 		})
 	return output
-
-static func _axial_neighbor_deltas() -> Array[Vector2i]:
-	return [
-		Vector2i(1, 0),
-		Vector2i(1, -1),
-		Vector2i(0, -1),
-		Vector2i(-1, 0),
-		Vector2i(-1, 1),
-		Vector2i(0, 1)
-	]
 
 static func _parse_axial_id(hex_id: String) -> Vector2i:
 	var parts := hex_id.split(",")
@@ -275,8 +269,8 @@ static func _order_identity(order_variant: Variant) -> String:
 	var order: Dictionary = order_variant as Dictionary
 	return "%s|%s|%s|%s|%s" % [
 		String(order.get("stage", "")),
-		String(order.get("unitId", order.get("elementId", ""))),
-		String(order.get("toHexId", order.get("hexId", ""))),
+		String(order.get("unitId", "")),
+		String(order.get("toHexId", "")),
 		String(order.get("role", "")),
 		String(order.get("reason_code", ""))
 	]

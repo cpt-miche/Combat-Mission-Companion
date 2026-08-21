@@ -21,8 +21,8 @@ static func replay_fixture(fixture: Dictionary) -> Dictionary:
 	var warnings: Array[String] = []
 	var outputs := {}
 
-	if int(fixture.get("fixtureVersion", SUPPORTED_FIXTURE_VERSION)) > SUPPORTED_FIXTURE_VERSION:
-		warnings.append("fixture_version_newer_than_runner")
+	if int(fixture.get("fixtureVersion", -1)) != SUPPORTED_FIXTURE_VERSION:
+		return {"ok": false, "fixtureId": fixture_id, "warnings": [], "failures": ["unsupported_fixture_version"], "outputs": {}, "report": "fixture=%s failed=1 warnings=0 :: unsupported_fixture_version" % fixture_id}
 
 	var map_analysis: Dictionary = fixture.get("mapAnalysis", {})
 	if not map_analysis.is_empty():
@@ -196,7 +196,7 @@ static func _assert_donor_expectations(expected: Dictionary, outputs: Dictionary
 			var donor_candidates: Array = details.get("donorCandidates", [])
 			var donor_index := {}
 			for donor in donor_candidates:
-				donor_index[String((donor as Dictionary).get("sectorId", (donor as Dictionary).get("id", "")))] = donor
+				donor_index[String((donor as Dictionary).get("sectorId", ""))] = donor
 			for sector_id in (legal_map.get(request_id, {}) as Dictionary).keys():
 				if not donor_index.has(String(sector_id)):
 					return false

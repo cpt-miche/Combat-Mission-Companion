@@ -1,625 +1,557 @@
 {
   "nation": "usa",
+  "catalog_basis": "Approximate Combat Mission: Final Blitzkrieg base-game and late-1944 U.S. Army TO&E",
   "templates": [
     {
-      "id": "usa_infantry_battalion",
-      "display_name": "Infantry Battalion",
-      "type": "INFANTRY",
-      "size": "BATTALION",
-      "default_veterancy": "REGULAR",
-      "children": [
-        {
-          "id": "usa_battalion_headquarters",
-          "display_name": "Battalion Headquarters",
-          "type": "HEADQUARTERS",
-          "size": "SECTION",
-          "count": 1,
-          "children": []
-        },
-        {
-          "id": "usa_hq_company",
-          "display_name": "Headquarters Company",
-          "type": "HEADQUARTERS",
-          "size": "COMPANY",
-          "count": 1,
-          "children": [
-            {
-              "id": "usa_hq_company_hq",
-              "display_name": "Company HQ",
-              "type": "HEADQUARTERS",
-              "size": "SECTION",
-              "count": 1,
-              "children": []
-            },
-            {
-              "id": "usa_battalion_hq_section",
-              "display_name": "Battalion HQ Section",
-              "type": "HEADQUARTERS",
-              "size": "SECTION",
-              "count": 1,
-              "children": []
-            },
-            {
-              "id": "usa_antitank_platoon",
-              "display_name": "Antitank Platoon",
-              "type": "ANTI_TANK",
-              "size": "PLATOON",
-              "count": 1,
-              "children": [
-                {
-                  "id": "usa_antitank_platoon_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_antitank_squad",
-                  "display_name": "Antitank Squad",
-                  "type": "ANTI_TANK",
-                  "size": "SQUAD",
-                  "count": 3
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "usa_rifle_company",
-          "display_name": "Rifle Company",
-          "type": "INFANTRY",
-          "size": "COMPANY",
-          "count": 3,
-          "children": [
-            {
-              "id": "usa_rifle_company_hq",
-              "display_name": "Company HQ",
-              "type": "HEADQUARTERS",
-              "size": "SECTION",
-              "count": 1,
-              "children": []
-            },
-            {
-              "id": "usa_rifle_platoon_1",
-              "display_name": "Rifle Platoon 1",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "count": 1,
-              "children": [
-                {
-                  "id": "usa_rifle_platoon_1_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_rifle_platoon_1_rifle_squad",
-                  "display_name": "Rifle Squad",
-                  "type": "INFANTRY",
-                  "size": "SQUAD",
-                  "count": 3
-                }
-              ]
-            },
-            {
-              "id": "usa_rifle_platoon_2",
-              "display_name": "Rifle Platoon 2",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "count": 1,
-              "children": [
-                {
-                  "id": "usa_rifle_platoon_2_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_rifle_platoon_2_rifle_squad",
-                  "display_name": "Rifle Squad",
-                  "type": "INFANTRY",
-                  "size": "SQUAD",
-                  "count": 3
-                }
-              ]
-            },
-            {
-              "id": "usa_rifle_platoon_3",
-              "display_name": "Rifle Platoon 3",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "count": 1,
-              "children": [
-                {
-                  "id": "usa_rifle_platoon_3_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_rifle_platoon_3_rifle_squad",
-                  "display_name": "Rifle Squad",
-                  "type": "INFANTRY",
-                  "size": "SQUAD",
-                  "count": 3
-                }
-              ]
-            },
-            {
-              "id": "usa_rifle_company_weapons_platoon",
-              "display_name": "Weapons Platoon",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "count": 1,
-              "children": [
-                {
-                  "id": "usa_rifle_company_weapons_platoon_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_rifle_company_60mm_mortar_section",
-                  "display_name": "60mm Mortar Section",
-                  "type": "ARTILLERY",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_rifle_company_60mm_mortar_section_hq",
-                      "display_name": "Section HQ",
-                      "type": "HEADQUARTERS",
-                      "size": "SQUAD",
-                      "count": 1,
-                      "children": []
-                    },
-                    {
-                      "id": "usa_rifle_company_60mm_mortar_squad",
-                      "display_name": "Mortar Squad",
-                      "type": "ARTILLERY",
-                      "size": "SQUAD",
-                      "count": 3
-                    }
-                  ]
-                },
-                {
-                  "id": "usa_rifle_company_lmg_section",
-                  "display_name": "Light Machine-Gun Section",
-                  "type": "INFANTRY",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_rifle_company_lmg_section_hq",
-                      "display_name": "Section HQ",
-                      "type": "HEADQUARTERS",
-                      "size": "SQUAD",
-                      "count": 1,
-                      "children": []
-                    },
-                    {
-                      "id": "usa_rifle_company_lmg_squad",
-                      "display_name": "Light MG Squad",
-                      "type": "INFANTRY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "usa_heavy_weapons_company",
-          "display_name": "Heavy Weapons Company",
-          "type": "INFANTRY",
-          "size": "COMPANY",
-          "count": 1,
-          "children": [
-            {
-              "id": "usa_heavy_weapons_company_hq",
-              "display_name": "Company HQ",
-              "type": "HEADQUARTERS",
-              "size": "SECTION",
-              "count": 1,
-              "children": []
-            },
-            {
-              "id": "usa_heavy_machine_gun_platoon",
-              "display_name": "Heavy Machine-Gun Platoon",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "count": 2,
-              "children": [
-                {
-                  "id": "usa_heavy_machine_gun_platoon_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_heavy_machine_gun_section_1",
-                  "display_name": "Machine-Gun Section 1",
-                  "type": "INFANTRY",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_heavy_machine_gun_section_1_hq",
-                      "display_name": "Section HQ",
-                      "type": "HEADQUARTERS",
-                      "size": "SQUAD",
-                      "count": 1,
-                      "children": []
-                    },
-                    {
-                      "id": "usa_heavy_machine_gun_squad",
-                      "display_name": "Heavy MG Squad",
-                      "type": "INFANTRY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                },
-                {
-                  "id": "usa_heavy_machine_gun_section_2",
-                  "display_name": "Machine-Gun Section 2",
-                  "type": "INFANTRY",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_heavy_machine_gun_section_2_hq",
-                      "display_name": "Section HQ",
-                      "type": "HEADQUARTERS",
-                      "size": "SQUAD",
-                      "count": 1,
-                      "children": []
-                    },
-                    {
-                      "id": "usa_heavy_machine_gun_squad",
-                      "display_name": "Heavy MG Squad",
-                      "type": "INFANTRY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "usa_81mm_mortar_platoon",
-              "display_name": "81mm Mortar Platoon",
-              "type": "ARTILLERY",
-              "size": "PLATOON",
-              "count": 1,
-              "children": [
-                {
-                  "id": "usa_81mm_mortar_platoon_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_81mm_mortar_section_1",
-                  "display_name": "Mortar Section 1",
-                  "type": "ARTILLERY",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_81mm_mortar_section_1_hq",
-                      "display_name": "Section HQ",
-                      "type": "HEADQUARTERS",
-                      "size": "SQUAD",
-                      "count": 1,
-                      "children": []
-                    },
-                    {
-                      "id": "usa_81mm_mortar_squad",
-                      "display_name": "Mortar Squad",
-                      "type": "ARTILLERY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                },
-                {
-                  "id": "usa_81mm_mortar_section_2",
-                  "display_name": "Mortar Section 2",
-                  "type": "ARTILLERY",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_81mm_mortar_section_2_hq",
-                      "display_name": "Section HQ",
-                      "type": "HEADQUARTERS",
-                      "size": "SQUAD",
-                      "count": 1,
-                      "children": []
-                    },
-                    {
-                      "id": "usa_81mm_mortar_squad",
-                      "display_name": "Mortar Squad",
-                      "type": "ARTILLERY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                },
-                {
-                  "id": "usa_81mm_mortar_section_3",
-                  "display_name": "Mortar Section 3",
-                  "type": "ARTILLERY",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_81mm_mortar_section_3_hq",
-                      "display_name": "Section HQ",
-                      "type": "HEADQUARTERS",
-                      "size": "SQUAD",
-                      "count": 1,
-                      "children": []
-                    },
-                    {
-                      "id": "usa_81mm_mortar_squad",
-                      "display_name": "Mortar Squad",
-                      "type": "ARTILLERY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "usa_engineer_platoon",
-      "display_name": "Engineer Platoon",
-      "type": "ENGINEER",
-      "size": "PLATOON",
-      "default_veterancy": "GREEN",
-      "children": []
-    },
-    {
-      "id": "usa_tank_company",
-      "display_name": "Tank Company",
-      "type": "TANK",
-      "size": "COMPANY",
-      "default_veterancy": "REGULAR",
-      "children": []
-    },
-    {
-      "id": "usa_mechanized_battalion",
-      "display_name": "Mechanized Battalion",
-      "type": "MECHANIZED",
-      "size": "BATTALION",
-      "default_veterancy": "VETERAN",
-      "children": []
-    },
-    {
-      "id": "usa_1st_infantry_division",
-      "display_name": "1st Infantry Division",
+      "id": "usa_infantry_division_1944",
+      "display_name": "U.S. Infantry Division (1944)",
       "type": "INFANTRY",
       "size": "DIVISION",
+      "role": "infantry",
       "default_veterancy": "REGULAR",
       "children": [
-        {
-          "id": "usa_division_infantry_regiment",
-          "display_name": "Infantry Regiment",
-          "type": "INFANTRY",
-          "size": "REGIMENT",
-          "count": 3,
-          "children": [
-            {
-              "id": "usa_regiment_infantry_battalion",
-              "display_name": "Infantry Battalion",
-              "type": "INFANTRY",
-              "size": "BATTALION",
-              "count": 3,
-              "children": [
-                {
-                  "id": "usa_battalion_infantry_company",
-                  "display_name": "Infantry Company",
-                  "type": "INFANTRY",
-                  "size": "COMPANY",
-                  "count": 3,
-                  "children": [
-                    {
-                      "id": "usa_company_infantry_platoon",
-                      "display_name": "Infantry Platoon",
-                      "type": "INFANTRY",
-                      "size": "PLATOON",
-                      "count": 3,
-                      "children": [
-                        {
-                          "id": "usa_platoon_infantry_squad",
-                          "display_name": "Infantry Squad",
-                          "type": "INFANTRY",
-                          "size": "SQUAD",
-                          "count": 3,
-                          "children": []
-                        }
-                      ]
-                    },
-                    {
-                      "id": "usa_company_weapons_platoon",
-                      "display_name": "Weapons Platoon",
-                      "type": "INFANTRY",
-                      "size": "PLATOON",
-                      "count": 1,
-                      "children": [
-                        {
-                          "id": "usa_weapons_platoon_light_mortar_section",
-                          "display_name": "Light Mortar Section",
-                          "type": "ARTILLERY",
-                          "size": "SECTION",
-                          "count": 1,
-                          "children": []
-                        },
-                        {
-                          "id": "usa_weapons_platoon_medium_mg_section",
-                          "display_name": "Medium Machine-Gun Section",
-                          "type": "INFANTRY",
-                          "size": "SECTION",
-                          "count": 1,
-                          "children": []
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "id": "usa_battalion_antitank_platoon",
-                  "display_name": "Anti-Tank Platoon",
-                  "type": "ANTI_TANK",
-                  "size": "PLATOON",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_antitank_medium_gun",
-                      "display_name": "Medium Anti-Tank Gun",
-                      "type": "ANTI_TANK",
-                      "size": "SECTION",
-                      "count": 3,
-                      "children": []
-                    }
-                  ]
-                },
-                {
-                  "id": "usa_battalion_engineer_platoon",
-                  "display_name": "Engineer Platoon",
-                  "type": "ENGINEER",
-                  "size": "PLATOON",
-                  "count": 1,
-                  "children": []
-                },
-                {
-                  "id": "usa_battalion_weapons_company",
-                  "display_name": "Weapons Company",
-                  "type": "INFANTRY",
-                  "size": "COMPANY",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "usa_weapons_company_machine_gun_platoon",
-                      "display_name": "Machine-Gun Platoon",
-                      "type": "INFANTRY",
-                      "size": "PLATOON",
-                      "count": 2,
-                      "children": []
-                    },
-                    {
-                      "id": "usa_weapons_company_mortar_platoon",
-                      "display_name": "Mortar Platoon",
-                      "type": "ARTILLERY",
-                      "size": "PLATOON",
-                      "count": 1,
-                      "children": []
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "usa_regiment_cannon_company",
-              "display_name": "Cannon Company",
-              "type": "ARTILLERY",
-              "size": "COMPANY",
-              "count": 1,
-              "children": []
-            },
-            {
-              "id": "usa_regiment_heavy_antitank_company",
-              "display_name": "Heavy Anti-Tank Company",
-              "type": "ANTI_TANK",
-              "size": "COMPANY",
-              "count": 1,
-              "children": []
-            }
-          ]
-        },
-        {
-          "id": "usa_divisional_artillery_element",
-          "display_name": "Divisional Artillery Element",
-          "type": "ARTILLERY",
-          "size": "REGIMENT",
-          "count": 1,
-          "children": [
-            {
-              "id": "usa_divisional_artillery_105mm_battalion",
-              "display_name": "105mm Artillery Battalion",
-              "type": "ARTILLERY",
-              "size": "BATTALION",
-              "count": 2,
-              "children": [
-                {
-                  "id": "usa_artillery_battalion_howitzer_company_105",
-                  "display_name": "Howitzer Company",
-                  "type": "ARTILLERY",
-                  "size": "COMPANY",
-                  "count": 3,
-                  "children": [
-                    {
-                      "id": "usa_artillery_company_105mm_howitzer",
-                      "display_name": "105mm Howitzer",
-                      "type": "ARTILLERY",
-                      "size": "SECTION",
-                      "count": 4,
-                      "children": []
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "usa_divisional_artillery_155mm_battalion",
-              "display_name": "155mm Artillery Battalion",
-              "type": "ARTILLERY",
-              "size": "BATTALION",
-              "count": 2,
-              "children": [
-                {
-                  "id": "usa_artillery_battalion_howitzer_company_155",
-                  "display_name": "Howitzer Company",
-                  "type": "ARTILLERY",
-                  "size": "COMPANY",
-                  "count": 3,
-                  "children": [
-                    {
-                      "id": "usa_artillery_company_155mm_howitzer",
-                      "display_name": "155mm Howitzer",
-                      "type": "ARTILLERY",
-                      "size": "SECTION",
-                      "count": 4,
-                      "children": []
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
+        {"template_ref": "usa_infantry_regiment_1944", "count": 3},
+        {"template_ref": "usa_divisional_artillery_regiment", "count": 1},
+        {"template_ref": "usa_engineer_combat_battalion", "count": 1},
+        {"template_ref": "usa_cavalry_recon_troop", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_armored_division_1944",
+      "display_name": "U.S. Armored Division (1944)",
+      "type": "TANK",
+      "size": "DIVISION",
+      "role": "medium_tank",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {"template_ref": "usa_armored_combat_command", "count": 3},
+        {"template_ref": "usa_cavalry_recon_squadron", "count": 1},
+        {"template_ref": "usa_armored_engineer_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_airborne_division_1944",
+      "display_name": "U.S. Airborne Division (1944)",
+      "type": "AIRBORNE",
+      "size": "DIVISION",
+      "role": "airborne",
+      "default_veterancy": "VETERAN",
+      "children": [
+        {"template_ref": "usa_parachute_infantry_regiment", "count": 3},
+        {"template_ref": "usa_glider_infantry_regiment", "count": 1},
+        {"template_ref": "usa_airborne_artillery_regiment", "count": 1},
+        {"template_ref": "usa_airborne_engineer_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_straggler_group",
+      "display_name": "U.S. Straggler Group",
+      "type": "INFANTRY",
+      "size": "BATTALION",
+      "role": "straggler",
+      "default_veterancy": "GREEN",
+      "children": [
+        {"template_ref": "usa_straggler_company", "count": 3}
+      ]
+    },
+    {
+      "id": "usa_m4a3_75_tank_battalion",
+      "display_name": "M4A3(75) Tank Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "medium_tank",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {"template_ref": "usa_tank_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_m4a3_75_tank_company", "count": 3},
+        {"template_ref": "usa_m5a1_light_tank_company", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_m4a3_76_tank_battalion",
+      "display_name": "M4A3(76) Tank Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "medium_tank",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {"template_ref": "usa_tank_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_m4a3_76_tank_company", "count": 3},
+        {"template_ref": "usa_m5a1_light_tank_company", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_m18_tank_destroyer_battalion",
+      "display_name": "M18 Tank Destroyer Battalion",
+      "type": "ANTI_TANK",
+      "size": "BATTALION",
+      "role": "tank_destroyer",
+      "equipment_weight": "light",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {"template_ref": "usa_tank_destroyer_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_m18_tank_destroyer_company", "count": 3},
+        {"template_ref": "usa_tank_destroyer_recon_company", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_m36_tank_destroyer_battalion",
+      "display_name": "M36 Tank Destroyer Battalion",
+      "type": "ANTI_TANK",
+      "size": "BATTALION",
+      "role": "tank_destroyer",
+      "equipment_weight": "heavy",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {"template_ref": "usa_tank_destroyer_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_m36_tank_destroyer_company", "count": 3},
+        {"template_ref": "usa_tank_destroyer_recon_company", "count": 1}
       ]
     }
+  ],
+  "definitions": [
+    {
+      "id": "usa_infantry_regiment_1944",
+      "display_name": "U.S. Infantry Regiment (1944)",
+      "type": "INFANTRY",
+      "size": "REGIMENT",
+      "role": "infantry",
+      "children": [
+        {"template_ref": "usa_regimental_hq_company", "count": 1},
+        {"template_ref": "usa_infantry_battalion", "count": 3},
+        {"template_ref": "usa_cannon_company", "count": 1},
+        {"template_ref": "usa_regimental_antitank_company", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_regimental_hq_company",
+      "display_name": "Regimental HQ Company",
+      "type": "HEADQUARTERS",
+      "size": "COMPANY",
+      "role": "headquarters",
+      "children": [
+        {"template_ref": "usa_regimental_hq_section", "count": 1}
+      ]
+    },
+    {"id": "usa_regimental_hq_section", "display_name": "Regimental HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "children": []},
+    {
+      "id": "usa_infantry_battalion",
+      "display_name": "U.S. Infantry Battalion",
+      "type": "INFANTRY",
+      "size": "BATTALION",
+      "role": "infantry",
+      "children": [
+        {"template_ref": "usa_infantry_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_rifle_company", "count": 3},
+        {"template_ref": "usa_heavy_weapons_company", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_infantry_battalion_hq_company",
+      "display_name": "Infantry Battalion HQ Company",
+      "type": "HEADQUARTERS",
+      "size": "COMPANY",
+      "role": "headquarters",
+      "children": [
+        {"template_ref": "usa_battalion_hq_section", "count": 1},
+        {"template_ref": "usa_infantry_antitank_platoon", "count": 1}
+      ]
+    },
+    {"id": "usa_battalion_hq_section", "display_name": "Battalion HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "children": []},
+    {
+      "id": "usa_rifle_company",
+      "display_name": "U.S. Rifle Company",
+      "type": "INFANTRY",
+      "size": "COMPANY",
+      "role": "rifle",
+      "children": [
+        {"template_ref": "usa_rifle_company_hq_section", "count": 1},
+        {"template_ref": "usa_rifle_platoon", "count": 3},
+        {"template_ref": "usa_rifle_company_weapons_platoon", "count": 1}
+      ]
+    },
+    {"id": "usa_rifle_company_hq_section", "display_name": "Rifle Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "children": []},
+    {
+      "id": "usa_rifle_platoon",
+      "display_name": "U.S. Rifle Platoon",
+      "type": "INFANTRY",
+      "size": "PLATOON",
+      "role": "rifle",
+      "children": [
+        {"template_ref": "usa_rifle_platoon_hq_section", "count": 1},
+        {"template_ref": "usa_rifle_squad", "count": 3}
+      ]
+    },
+    {"id": "usa_rifle_platoon_hq_section", "display_name": "Rifle Platoon HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "children": []},
+    {"id": "usa_rifle_squad", "display_name": "Rifle Squad", "type": "INFANTRY", "size": "SQUAD", "role": "rifle", "children": []},
+    {
+      "id": "usa_rifle_company_weapons_platoon",
+      "display_name": "Rifle Company Weapons Platoon",
+      "type": "INFANTRY",
+      "size": "PLATOON",
+      "role": "weapons",
+      "children": [
+        {"template_ref": "usa_weapons_platoon_hq_section", "count": 1},
+        {"template_ref": "usa_60mm_mortar_section", "count": 1},
+        {"template_ref": "usa_light_machine_gun_section", "count": 1}
+      ]
+    },
+    {"id": "usa_weapons_platoon_hq_section", "display_name": "Weapons Platoon HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "children": []},
+    {"id": "usa_60mm_mortar_section", "display_name": "60mm Mortar Section", "type": "ARTILLERY", "size": "SECTION", "role": "60mm_mortar", "children": []},
+    {"id": "usa_light_machine_gun_section", "display_name": "Light Machine-Gun Section", "type": "INFANTRY", "size": "SECTION", "role": "light_machine_gun", "children": []},
+    {
+      "id": "usa_heavy_weapons_company",
+      "display_name": "U.S. Heavy Weapons Company",
+      "type": "INFANTRY",
+      "size": "COMPANY",
+      "role": "heavy_weapons",
+      "children": [
+        {"template_ref": "usa_heavy_weapons_company_hq_section", "count": 1},
+        {"template_ref": "usa_heavy_machine_gun_platoon", "count": 2},
+        {"template_ref": "usa_81mm_mortar_platoon", "count": 1}
+      ]
+    },
+    {"id": "usa_heavy_weapons_company_hq_section", "display_name": "Heavy Weapons Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "children": []},
+    {
+      "id": "usa_heavy_machine_gun_platoon",
+      "display_name": "Heavy Machine-Gun Platoon",
+      "type": "INFANTRY",
+      "size": "PLATOON",
+      "role": "heavy_machine_gun",
+      "children": [
+        {"template_ref": "usa_heavy_machine_gun_section", "count": 2}
+      ]
+    },
+    {"id": "usa_heavy_machine_gun_section", "display_name": "Heavy Machine-Gun Section", "type": "INFANTRY", "size": "SECTION", "role": "heavy_machine_gun", "children": []},
+    {
+      "id": "usa_81mm_mortar_platoon",
+      "display_name": "81mm Mortar Platoon",
+      "type": "ARTILLERY",
+      "size": "PLATOON",
+      "role": "81mm_mortar",
+      "children": [
+        {"template_ref": "usa_81mm_mortar_section", "count": 3}
+      ]
+    },
+    {"id": "usa_81mm_mortar_section", "display_name": "81mm Mortar Section", "type": "ARTILLERY", "size": "SECTION", "role": "81mm_mortar", "children": []},
+    {"id": "usa_infantry_antitank_platoon", "display_name": "57mm Anti-Tank Platoon", "type": "ANTI_TANK", "size": "PLATOON", "role": "anti_tank_gun", "equipment_weight": "medium", "children": []},
+    {"id": "usa_cannon_company", "display_name": "105mm Cannon Company", "type": "ARTILLERY", "size": "COMPANY", "role": "105mm_howitzer", "children": [{"template_ref": "usa_105mm_cannon_platoon", "count": 3}]},
+    {"id": "usa_105mm_cannon_platoon", "display_name": "105mm Cannon Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "105mm_howitzer", "children": []},
+    {"id": "usa_regimental_antitank_company", "display_name": "57mm Anti-Tank Company", "type": "ANTI_TANK", "size": "COMPANY", "role": "anti_tank_gun", "equipment_weight": "medium", "children": [{"template_ref": "usa_infantry_antitank_platoon", "count": 3}]},
+    {
+      "id": "usa_divisional_artillery_regiment",
+      "display_name": "U.S. Divisional Artillery",
+      "type": "ARTILLERY",
+      "size": "REGIMENT",
+      "role": "artillery",
+      "children": [
+        {"template_ref": "usa_105mm_towed_artillery_battalion", "count": 3},
+        {"template_ref": "usa_155mm_towed_artillery_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_105mm_towed_artillery_battalion",
+      "display_name": "105mm Field Artillery Battalion",
+      "type": "ARTILLERY",
+      "size": "BATTALION",
+      "role": "105mm_howitzer",
+      "children": [
+        {"template_ref": "usa_artillery_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_105mm_towed_artillery_battery", "count": 3}
+      ]
+    },
+    {
+      "id": "usa_155mm_towed_artillery_battalion",
+      "display_name": "155mm Field Artillery Battalion",
+      "type": "ARTILLERY",
+      "size": "BATTALION",
+      "role": "155mm_howitzer",
+      "children": [
+        {"template_ref": "usa_artillery_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_155mm_towed_artillery_battery", "count": 3}
+      ]
+    },
+    {"id": "usa_artillery_battalion_hq_company", "display_name": "Artillery Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "usa_105mm_towed_artillery_battery", "display_name": "105mm Howitzer Battery", "type": "ARTILLERY", "size": "COMPANY", "role": "105mm_howitzer", "children": [{"template_ref": "usa_105mm_towed_firing_platoon", "count": 2}]},
+    {"id": "usa_105mm_towed_firing_platoon", "display_name": "105mm Howitzer Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "105mm_howitzer", "children": []},
+    {"id": "usa_155mm_towed_artillery_battery", "display_name": "155mm Howitzer Battery", "type": "ARTILLERY", "size": "COMPANY", "role": "155mm_howitzer", "children": [{"template_ref": "usa_155mm_towed_firing_platoon", "count": 2}]},
+    {"id": "usa_155mm_towed_firing_platoon", "display_name": "155mm Howitzer Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "155mm_howitzer", "children": []},
+    {
+      "id": "usa_engineer_combat_battalion",
+      "display_name": "Engineer Combat Battalion",
+      "type": "ENGINEER",
+      "size": "BATTALION",
+      "role": "engineer",
+      "children": [
+        {"template_ref": "usa_engineer_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_engineer_combat_company", "count": 3}
+      ]
+    },
+    {"id": "usa_engineer_battalion_hq_company", "display_name": "Engineer Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "usa_engineer_combat_company", "display_name": "Engineer Combat Company", "type": "ENGINEER", "size": "COMPANY", "role": "engineer", "children": [{"template_ref": "usa_engineer_combat_platoon", "count": 3}]},
+    {"id": "usa_engineer_combat_platoon", "display_name": "Engineer Combat Platoon", "type": "ENGINEER", "size": "PLATOON", "role": "engineer", "children": []},
+    {
+      "id": "usa_cavalry_recon_troop",
+      "display_name": "Cavalry Reconnaissance Troop",
+      "type": "RECON",
+      "size": "COMPANY",
+      "role": "recon",
+      "children": [
+        {"template_ref": "usa_cavalry_troop_hq_platoon", "count": 1},
+        {"template_ref": "usa_cavalry_recon_platoon", "count": 3},
+        {"template_ref": "usa_cavalry_assault_gun_platoon", "count": 1}
+      ]
+    },
+    {"id": "usa_cavalry_troop_hq_platoon", "display_name": "Cavalry Troop HQ Platoon", "type": "HEADQUARTERS", "size": "PLATOON", "role": "headquarters", "children": []},
+    {"id": "usa_cavalry_recon_platoon", "display_name": "Mechanized Cavalry Platoon", "type": "RECON", "size": "PLATOON", "role": "recon", "vehicle_roster": [{"slot": "platoon_commander", "model": "M8 Greyhound", "count": 1}, {"slot": "line_vehicle", "model": "M8 Greyhound", "count": 2}, {"slot": "line_vehicle", "model": "M3A1 Scout Car", "count": 3}], "children": []},
+    {"id": "usa_cavalry_assault_gun_platoon", "display_name": "Cavalry Assault Gun Platoon", "type": "TANK", "size": "PLATOON", "role": "assault_gun", "equipment_weight": "light", "vehicle_roster": [{"slot": "platoon_commander", "model": "M8 HMC", "count": 1}, {"slot": "line_vehicle", "model": "M8 HMC", "count": 2}], "children": []},
+    {
+      "id": "usa_armored_combat_command",
+      "display_name": "Armored Combat Command",
+      "type": "MECHANIZED",
+      "size": "REGIMENT",
+      "role": "combined_arms",
+      "children": [
+        {"template_ref": "usa_mixed_tank_battalion", "count": 1},
+        {"template_ref": "usa_armored_infantry_battalion", "count": 1},
+        {"template_ref": "usa_105mm_sp_artillery_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_mixed_tank_battalion",
+      "display_name": "Mixed Sherman Tank Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "medium_tank",
+      "children": [
+        {"template_ref": "usa_tank_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_m4a3_75_tank_company", "count": 2},
+        {"template_ref": "usa_m4a3_76_tank_company", "count": 1},
+        {"template_ref": "usa_m5a1_light_tank_company", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_tank_battalion_hq_company",
+      "display_name": "Tank Battalion HQ Company",
+      "type": "HEADQUARTERS",
+      "size": "COMPANY",
+      "role": "headquarters",
+      "children": [
+        {"template_ref": "usa_tank_battalion_hq_section", "count": 1}
+      ]
+    },
+    {"id": "usa_tank_battalion_hq_section", "display_name": "Tank Battalion HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "battalion_commander", "model": "M4A3 Sherman", "count": 1}, {"slot": "line_vehicle", "model": "M4A3(105) Sherman", "count": 1}], "children": []},
+    {
+      "id": "usa_m4a3_75_tank_company",
+      "display_name": "M4A3(75) Tank Company",
+      "type": "TANK",
+      "size": "COMPANY",
+      "role": "medium_tank",
+      "children": [
+        {"template_ref": "usa_m4a3_75_company_hq_section", "count": 1},
+        {"template_ref": "usa_m4a3_75_tank_platoon", "count": 3}
+      ]
+    },
+    {"id": "usa_m4a3_75_company_hq_section", "display_name": "M4A3(75) Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "M4A3(75)W Sherman", "count": 1}, {"slot": "executive_officer", "model": "M4A3(75)W Sherman", "count": 1}], "children": []},
+    {"id": "usa_m4a3_75_tank_platoon", "display_name": "M4A3(75) Tank Platoon", "type": "TANK", "size": "PLATOON", "role": "medium_tank", "vehicle_roster": [{"slot": "platoon_commander", "model": "M4A3(75)W Sherman", "count": 1}, {"slot": "line_vehicle", "model": "M4A3(75)W Sherman", "count": 4}], "children": []},
+    {
+      "id": "usa_m4a3_76_tank_company",
+      "display_name": "M4A3(76) Tank Company",
+      "type": "TANK",
+      "size": "COMPANY",
+      "role": "medium_tank",
+      "children": [
+        {"template_ref": "usa_m4a3_76_company_hq_section", "count": 1},
+        {"template_ref": "usa_m4a3_76_tank_platoon", "count": 3}
+      ]
+    },
+    {"id": "usa_m4a3_76_company_hq_section", "display_name": "M4A3(76) Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "M4A3(76)W Sherman", "count": 1}, {"slot": "executive_officer", "model": "M4A3(76)W Sherman", "count": 1}], "children": []},
+    {"id": "usa_m4a3_76_tank_platoon", "display_name": "M4A3(76) Tank Platoon", "type": "TANK", "size": "PLATOON", "role": "medium_tank", "vehicle_roster": [{"slot": "platoon_commander", "model": "M4A3(76)W Sherman", "count": 1}, {"slot": "line_vehicle", "model": "M4A3(76)W Sherman", "count": 4}], "children": []},
+    {
+      "id": "usa_m5a1_light_tank_company",
+      "display_name": "M5A1 Light Tank Company",
+      "type": "TANK",
+      "size": "COMPANY",
+      "role": "light_tank",
+      "children": [
+        {"template_ref": "usa_m5a1_company_hq_section", "count": 1},
+        {"template_ref": "usa_m5a1_light_tank_platoon", "count": 3}
+      ]
+    },
+    {"id": "usa_m5a1_company_hq_section", "display_name": "M5A1 Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "M5A1 Stuart", "count": 1}, {"slot": "executive_officer", "model": "M5A1 Stuart", "count": 1}], "children": []},
+    {"id": "usa_m5a1_light_tank_platoon", "display_name": "M5A1 Light Tank Platoon", "type": "TANK", "size": "PLATOON", "role": "light_tank", "vehicle_roster": [{"slot": "platoon_commander", "model": "M5A1 Stuart", "count": 1}, {"slot": "line_vehicle", "model": "M5A1 Stuart", "count": 4}], "children": []},
+    {
+      "id": "usa_armored_infantry_battalion",
+      "display_name": "Armored Infantry Battalion",
+      "type": "MECHANIZED",
+      "size": "BATTALION",
+      "role": "mechanized",
+      "children": [
+        {"template_ref": "usa_armored_infantry_hq_company", "count": 1},
+        {"template_ref": "usa_armored_rifle_company", "count": 3}
+      ]
+    },
+    {"id": "usa_armored_infantry_hq_company", "display_name": "Armored Infantry Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {
+      "id": "usa_armored_rifle_company",
+      "display_name": "Armored Rifle Company",
+      "type": "MECHANIZED",
+      "size": "COMPANY",
+      "role": "mechanized",
+      "children": [
+        {"template_ref": "usa_armored_rifle_company_hq_platoon", "count": 1},
+        {"template_ref": "usa_armored_rifle_platoon", "count": 3},
+        {"template_ref": "usa_armored_machine_gun_platoon", "count": 1},
+        {"template_ref": "usa_armored_mortar_platoon", "count": 1},
+        {"template_ref": "usa_armored_antitank_platoon", "count": 1}
+      ]
+    },
+    {"id": "usa_armored_rifle_company_hq_platoon", "display_name": "Armored Rifle Company HQ Platoon", "type": "HEADQUARTERS", "size": "PLATOON", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "M3A1 Half-track", "count": 1}], "children": []},
+    {"id": "usa_armored_rifle_platoon", "display_name": "Armored Rifle Platoon", "type": "MECHANIZED", "size": "PLATOON", "role": "mechanized", "vehicle_roster": [{"slot": "platoon_commander", "model": "M3A1 Half-track", "count": 1}, {"slot": "line_vehicle", "model": "M3A1 Half-track", "count": 4}], "children": [{"template_ref": "usa_armored_rifle_squad", "count": 3}]},
+    {"id": "usa_armored_rifle_squad", "display_name": "Armored Rifle Squad", "type": "MECHANIZED", "size": "SQUAD", "role": "mechanized", "children": []},
+    {"id": "usa_armored_machine_gun_platoon", "display_name": "Armored Machine-Gun Platoon", "type": "MECHANIZED", "size": "PLATOON", "role": "heavy_machine_gun", "vehicle_roster": [{"slot": "platoon_commander", "model": "M3A1 Half-track", "count": 1}, {"slot": "line_vehicle", "model": "M3A1 Half-track", "count": 1}], "children": []},
+    {"id": "usa_armored_mortar_platoon", "display_name": "Armored 81mm Mortar Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "81mm_mortar", "vehicle_roster": [{"slot": "platoon_commander", "model": "M4 Mortar Carrier", "count": 1}, {"slot": "line_vehicle", "model": "M4 Mortar Carrier", "count": 2}], "children": []},
+    {"id": "usa_armored_antitank_platoon", "display_name": "Armored Anti-Tank Platoon", "type": "ANTI_TANK", "size": "PLATOON", "role": "anti_tank_gun", "equipment_weight": "medium", "vehicle_roster": [{"slot": "line_vehicle", "model": "M3A1 Half-track", "count": 3}], "children": []},
+    {
+      "id": "usa_105mm_sp_artillery_battalion",
+      "display_name": "105mm SP Artillery Battalion",
+      "type": "ARTILLERY",
+      "size": "BATTALION",
+      "role": "105mm_howitzer",
+      "children": [
+        {"template_ref": "usa_artillery_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_m7_sp_artillery_battery", "count": 3}
+      ]
+    },
+    {"id": "usa_m7_sp_artillery_battery", "display_name": "M7 Priest Artillery Battery", "type": "ARTILLERY", "size": "COMPANY", "role": "105mm_howitzer", "children": [{"template_ref": "usa_m7_sp_artillery_platoon", "count": 2}]},
+    {"id": "usa_m7_sp_artillery_platoon", "display_name": "M7 Priest Artillery Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "105mm_howitzer", "vehicle_roster": [{"slot": "platoon_commander", "model": "M7 Priest", "count": 1}, {"slot": "line_vehicle", "model": "M7 Priest", "count": 2}], "children": []},
+    {
+      "id": "usa_cavalry_recon_squadron",
+      "display_name": "Cavalry Reconnaissance Squadron",
+      "type": "RECON",
+      "size": "BATTALION",
+      "role": "recon",
+      "children": [
+        {"template_ref": "usa_cavalry_squadron_hq_company", "count": 1},
+        {"template_ref": "usa_cavalry_recon_troop", "count": 3},
+        {"template_ref": "usa_cavalry_assault_gun_troop", "count": 1}
+      ]
+    },
+    {"id": "usa_cavalry_squadron_hq_company", "display_name": "Cavalry Squadron HQ Troop", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "usa_cavalry_assault_gun_troop", "display_name": "Cavalry Assault Gun Troop", "type": "TANK", "size": "COMPANY", "role": "assault_gun", "equipment_weight": "light", "children": [{"template_ref": "usa_cavalry_assault_gun_platoon", "count": 3}]},
+    {
+      "id": "usa_armored_engineer_battalion",
+      "display_name": "Armored Engineer Battalion",
+      "type": "ENGINEER",
+      "size": "BATTALION",
+      "role": "engineer",
+      "children": [
+        {"template_ref": "usa_engineer_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_armored_engineer_company", "count": 3}
+      ]
+    },
+    {"id": "usa_armored_engineer_company", "display_name": "Armored Engineer Company", "type": "ENGINEER", "size": "COMPANY", "role": "engineer", "children": [{"template_ref": "usa_armored_engineer_platoon", "count": 3}]},
+    {"id": "usa_armored_engineer_platoon", "display_name": "Armored Engineer Platoon", "type": "ENGINEER", "size": "PLATOON", "role": "engineer", "vehicle_roster": [{"slot": "platoon_commander", "model": "M3A1 Half-track", "count": 1}, {"slot": "line_vehicle", "model": "M3A1 Half-track", "count": 2}], "children": []},
+    {
+      "id": "usa_parachute_infantry_regiment",
+      "display_name": "Parachute Infantry Regiment",
+      "type": "AIRBORNE",
+      "size": "REGIMENT",
+      "role": "airborne",
+      "children": [
+        {"template_ref": "usa_airborne_regimental_hq_company", "count": 1},
+        {"template_ref": "usa_parachute_infantry_battalion", "count": 3}
+      ]
+    },
+    {
+      "id": "usa_glider_infantry_regiment",
+      "display_name": "Glider Infantry Regiment",
+      "type": "AIRBORNE",
+      "size": "REGIMENT",
+      "role": "glider_infantry",
+      "children": [
+        {"template_ref": "usa_airborne_regimental_hq_company", "count": 1},
+        {"template_ref": "usa_glider_infantry_battalion", "count": 3}
+      ]
+    },
+    {"id": "usa_airborne_regimental_hq_company", "display_name": "Airborne Regimental HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {
+      "id": "usa_parachute_infantry_battalion",
+      "display_name": "Parachute Infantry Battalion",
+      "type": "AIRBORNE",
+      "size": "BATTALION",
+      "role": "airborne",
+      "children": [
+        {"template_ref": "usa_airborne_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_parachute_rifle_company", "count": 3},
+        {"template_ref": "usa_airborne_weapons_company", "count": 1}
+      ]
+    },
+    {
+      "id": "usa_glider_infantry_battalion",
+      "display_name": "Glider Infantry Battalion",
+      "type": "AIRBORNE",
+      "size": "BATTALION",
+      "role": "glider_infantry",
+      "children": [
+        {"template_ref": "usa_airborne_battalion_hq_company", "count": 1},
+        {"template_ref": "usa_glider_rifle_company", "count": 3},
+        {"template_ref": "usa_airborne_weapons_company", "count": 1}
+      ]
+    },
+    {"id": "usa_airborne_battalion_hq_company", "display_name": "Airborne Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "usa_parachute_rifle_company", "display_name": "Parachute Rifle Company", "type": "AIRBORNE", "size": "COMPANY", "role": "airborne", "children": [{"template_ref": "usa_parachute_rifle_platoon", "count": 3}, {"template_ref": "usa_airborne_weapons_platoon", "count": 1}]},
+    {"id": "usa_glider_rifle_company", "display_name": "Glider Rifle Company", "type": "AIRBORNE", "size": "COMPANY", "role": "glider_infantry", "children": [{"template_ref": "usa_glider_rifle_platoon", "count": 3}, {"template_ref": "usa_airborne_weapons_platoon", "count": 1}]},
+    {"id": "usa_parachute_rifle_platoon", "display_name": "Parachute Rifle Platoon", "type": "AIRBORNE", "size": "PLATOON", "role": "airborne", "children": [{"template_ref": "usa_parachute_rifle_squad", "count": 3}]},
+    {"id": "usa_glider_rifle_platoon", "display_name": "Glider Rifle Platoon", "type": "AIRBORNE", "size": "PLATOON", "role": "glider_infantry", "children": [{"template_ref": "usa_glider_rifle_squad", "count": 3}]},
+    {"id": "usa_parachute_rifle_squad", "display_name": "Parachute Rifle Squad", "type": "AIRBORNE", "size": "SQUAD", "role": "airborne", "children": []},
+    {"id": "usa_glider_rifle_squad", "display_name": "Glider Rifle Squad", "type": "AIRBORNE", "size": "SQUAD", "role": "glider_infantry", "children": []},
+    {"id": "usa_airborne_weapons_platoon", "display_name": "Airborne Weapons Platoon", "type": "AIRBORNE", "size": "PLATOON", "role": "weapons", "children": []},
+    {"id": "usa_airborne_weapons_company", "display_name": "Airborne Weapons Company", "type": "AIRBORNE", "size": "COMPANY", "role": "heavy_weapons", "children": [{"template_ref": "usa_airborne_machine_gun_platoon", "count": 2}, {"template_ref": "usa_airborne_mortar_platoon", "count": 1}]},
+    {"id": "usa_airborne_machine_gun_platoon", "display_name": "Airborne Machine-Gun Platoon", "type": "AIRBORNE", "size": "PLATOON", "role": "heavy_machine_gun", "children": []},
+    {"id": "usa_airborne_mortar_platoon", "display_name": "Airborne 81mm Mortar Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "81mm_mortar", "children": []},
+    {
+      "id": "usa_airborne_artillery_regiment",
+      "display_name": "Airborne Divisional Artillery",
+      "type": "ARTILLERY",
+      "size": "REGIMENT",
+      "role": "artillery",
+      "children": [
+        {"template_ref": "usa_75mm_pack_artillery_battalion", "count": 3},
+        {"template_ref": "usa_105mm_glider_artillery_battalion", "count": 1}
+      ]
+    },
+    {"id": "usa_75mm_pack_artillery_battalion", "display_name": "75mm Pack Artillery Battalion", "type": "ARTILLERY", "size": "BATTALION", "role": "75mm_pack_howitzer", "children": [{"template_ref": "usa_artillery_battalion_hq_company", "count": 1}, {"template_ref": "usa_75mm_pack_artillery_battery", "count": 3}]},
+    {"id": "usa_75mm_pack_artillery_battery", "display_name": "75mm Pack Howitzer Battery", "type": "ARTILLERY", "size": "COMPANY", "role": "75mm_pack_howitzer", "children": [{"template_ref": "usa_75mm_pack_artillery_platoon", "count": 2}]},
+    {"id": "usa_75mm_pack_artillery_platoon", "display_name": "75mm Pack Howitzer Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "75mm_pack_howitzer", "children": []},
+    {"id": "usa_105mm_glider_artillery_battalion", "display_name": "105mm Glider Artillery Battalion", "type": "ARTILLERY", "size": "BATTALION", "role": "105mm_howitzer", "children": [{"template_ref": "usa_artillery_battalion_hq_company", "count": 1}, {"template_ref": "usa_105mm_towed_artillery_battery", "count": 3}]},
+    {"id": "usa_airborne_engineer_battalion", "display_name": "Airborne Engineer Battalion", "type": "ENGINEER", "size": "BATTALION", "role": "engineer", "children": [{"template_ref": "usa_engineer_battalion_hq_company", "count": 1}, {"template_ref": "usa_airborne_engineer_company", "count": 3}]},
+    {"id": "usa_airborne_engineer_company", "display_name": "Airborne Engineer Company", "type": "ENGINEER", "size": "COMPANY", "role": "engineer", "children": [{"template_ref": "usa_airborne_engineer_platoon", "count": 3}]},
+    {"id": "usa_airborne_engineer_platoon", "display_name": "Airborne Engineer Platoon", "type": "ENGINEER", "size": "PLATOON", "role": "engineer", "children": []},
+    {"id": "usa_straggler_company", "display_name": "Straggler Company", "type": "INFANTRY", "size": "COMPANY", "role": "straggler", "children": [{"template_ref": "usa_straggler_platoon", "count": 3}]},
+    {"id": "usa_straggler_platoon", "display_name": "Straggler Platoon", "type": "INFANTRY", "size": "PLATOON", "role": "straggler", "children": []},
+    {"id": "usa_tank_destroyer_battalion_hq_company", "display_name": "Tank Destroyer Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {
+      "id": "usa_m18_tank_destroyer_company",
+      "display_name": "M18 Tank Destroyer Company",
+      "type": "ANTI_TANK",
+      "size": "COMPANY",
+      "role": "tank_destroyer",
+      "equipment_weight": "light",
+      "children": [{"template_ref": "usa_m18_tank_destroyer_platoon", "count": 3}]
+    },
+    {"id": "usa_m18_tank_destroyer_platoon", "display_name": "M18 Tank Destroyer Platoon", "type": "ANTI_TANK", "size": "PLATOON", "role": "tank_destroyer", "equipment_weight": "light", "vehicle_roster": [{"slot": "platoon_commander", "model": "M18 Hellcat", "count": 1}, {"slot": "line_vehicle", "model": "M18 Hellcat", "count": 3}], "children": []},
+    {
+      "id": "usa_m36_tank_destroyer_company",
+      "display_name": "M36 Tank Destroyer Company",
+      "type": "ANTI_TANK",
+      "size": "COMPANY",
+      "role": "tank_destroyer",
+      "equipment_weight": "heavy",
+      "children": [{"template_ref": "usa_m36_tank_destroyer_platoon", "count": 3}]
+    },
+    {"id": "usa_m36_tank_destroyer_platoon", "display_name": "M36 Tank Destroyer Platoon", "type": "ANTI_TANK", "size": "PLATOON", "role": "tank_destroyer", "equipment_weight": "heavy", "vehicle_roster": [{"slot": "platoon_commander", "model": "M36 GMC", "count": 1}, {"slot": "line_vehicle", "model": "M36 GMC", "count": 3}], "children": []},
+    {"id": "usa_tank_destroyer_recon_company", "display_name": "Tank Destroyer Recon Company", "type": "RECON", "size": "COMPANY", "role": "recon", "children": [{"template_ref": "usa_tank_destroyer_recon_platoon", "count": 3}]},
+    {"id": "usa_tank_destroyer_recon_platoon", "display_name": "Tank Destroyer Recon Platoon", "type": "RECON", "size": "PLATOON", "role": "recon", "vehicle_roster": [{"slot": "platoon_commander", "model": "M8 Greyhound", "count": 1}, {"slot": "line_vehicle", "model": "M8 Greyhound", "count": 1}], "children": []}
   ]
 }

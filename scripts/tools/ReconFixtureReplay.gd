@@ -51,8 +51,8 @@ static func replay_fixture(fixture: Dictionary) -> Dictionary:
 	var warnings: Array[String] = []
 	var outputs: Dictionary = {}
 
-	if int(fixture.get("fixtureVersion", SUPPORTED_FIXTURE_VERSION)) > SUPPORTED_FIXTURE_VERSION:
-		warnings.append("fixture_version_newer_than_runner")
+	if int(fixture.get("fixtureVersion", -1)) != SUPPORTED_FIXTURE_VERSION:
+		return {"ok": false, "fixtureId": fixture_id, "warnings": [], "failures": ["unsupported_fixture_version"], "outputs": {}, "report": "fixture=%s failed=1 warnings=0 :: unsupported_fixture_version" % fixture_id}
 
 	var prior_intel: Dictionary = (fixture.get("initialPriorIntel", {}) as Dictionary).duplicate(true)
 	var turn_outputs: Array[Dictionary] = []
@@ -247,17 +247,12 @@ static func _normalize_unit(raw: Dictionary) -> Dictionary:
 	var unit: Dictionary = raw.duplicate(true)
 	unit["id"] = String(raw.get("id", ""))
 	unit["owner"] = int(raw.get("owner", 0))
-	unit["unit_type"] = String(raw.get("unit_type", raw.get("type", "infantry")))
+	unit["type"] = String(raw.get("type", "infantry"))
 	unit["size"] = String(raw.get("size", "company"))
-	unit["hex"] = _hex_from_value(raw.get("hex", Vector2i.ZERO))
+	unit["hex"] = _hex_from_value(raw.get("hex", [0, 0]))
 	return unit
 
 static func _hex_from_value(value: Variant) -> Vector2i:
-	if value is Vector2i:
-		return value as Vector2i
-	if value is Dictionary:
-		var dict: Dictionary = value as Dictionary
-		return Vector2i(int(dict.get("x", 0)), int(dict.get("y", 0)))
 	if value is Array:
 		var parts: Array = value as Array
 		if parts.size() >= 2:

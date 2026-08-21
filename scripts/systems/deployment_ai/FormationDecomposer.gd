@@ -36,6 +36,12 @@ const SUPPORT_TYPES := {
 const ROLE_CANONICAL_MAP := {
 	"infantry": "infantry",
 	"tank": "armor",
+	"panzer": "armor",
+	"light_tank": "armor",
+	"medium_tank": "armor",
+	"heavy_tank": "armor",
+	"assault_gun": "armor",
+	"tank_destroyer": "antiTankSupport",
 	"armor": "armor",
 	"recon": "recon",
 	"airdefense": "airDefense",
@@ -71,6 +77,8 @@ static func decompose_formation_tree(root: Dictionary, options: Dictionary = {})
 	var player_index := int(options.get("playerIndex", -1))
 	var hex_id := String(options.get("hexId", "")).strip_edges()
 	var context := options.get("context", {}) as Dictionary
+	var target_combat_elements := int(options.get("targetCombatElements", -1))
+	var preferred_base_size := String(options.get("preferredBaseSize", "company")).strip_edges().to_lower()
 
 	var state := {
 		"elements": [],
@@ -81,14 +89,19 @@ static func decompose_formation_tree(root: Dictionary, options: Dictionary = {})
 		"minDeploySize": min_deploy_size,
 		"supportCapacityPerHex": support_capacity_per_hex,
 		"playerIndex": player_index,
-		"hexId": hex_id
+		"hexId": hex_id,
+		"targetCombatElements": target_combat_elements,
+		"preferredBaseSize": preferred_base_size
 	}
 
-	_decompose_node(root, "", 0, state)
+	if target_combat_elements >= 0:
+		_decompose_for_frontage(root, state)
+	else:
+		_decompose_node(root, "", 0, state)
 
 	var sanity := {
 		"supportCapacityViolations": _support_capacity_violations(state["supportCountByHex"] as Dictionary, support_capacity_per_hex),
-		"illegalSizeSplits": _illegal_size_splits(state["audit"] as Array[Dictionary]),
+		"illegalSizeSplits": _illegal_size_splits(state["audit"] as Array),
 		"model": "formationDecomposerV1"
 	}
 
@@ -99,9 +112,178 @@ static func decompose_formation_tree(root: Dictionary, options: Dictionary = {})
 			"supportCountByHex": state["supportCountByHex"],
 			"weights": weights,
 			"context": context,
+			"targetCombatElements": target_combat_elements,
+			"selectedCombatElements": _combat_element_count(state["elements"] as Array),
+			"frontageShortfall": maxi(0, target_combat_elements - _combat_element_count(state["elements"] as Array)) if target_combat_elements >= 0 else 0,
 			"sanity": sanity
 		}
 	}
+
+static func _decompose_for_frontage(root: Dictionary, state: Dictionary) -> void:
+	var candidates: Array[Dictionary] = []
+	_collect_company_first_candidates(root, "", 0, state, candidates)
+	var target := maxi(0, int(state.get("targetCombatElements", 0)))
+
+	while _candidate_combat_count(candidates) < target:
+		var best_index := -1
+		var best_gain := 0
+		var best_id := ""
+		var best_replacements: Array[Dictionary] = []
+		for i in range(candidates.size()):
+			var candidate := candidates[i]
+			var formation := candidate.get("formation", {}) as Dictionary
+			if _normalized_size(formation.get("size", "")) != "company":
+				continue
+			if not _is_combat_role(_formation_role(formation)):
+				continue
+			var replacements: Array[Dictionary] = []
+			_collect_split_replacements(
+				formation,
+				String(formation.get("id", "")),
+				int(candidate.get("depth", 0)) + 1,
+				state,
+				replacements
+			)
+			var gain := _candidate_combat_count(replacements) - 1
+			var unit_id := String(formation.get("id", ""))
+			if gain > best_gain or (gain == best_gain and gain > 0 and (best_id.is_empty() or unit_id < best_id)):
+				best_index = i
+				best_gain = gain
+				best_id = unit_id
+				best_replacements = replacements
+		if best_index < 0:
+			break
+		var split_candidate := candidates[best_index]
+		var split_formation := split_candidate.get("formation", {}) as Dictionary
+		candidates.remove_at(best_index)
+		for replacement in best_replacements:
+			candidates.append(replacement)
+		(state["audit"] as Array).append({
+			"formationId": String(split_formation.get("id", "")),
+			"formationName": String(split_formation.get("display_name", split_formation.get("id", ""))),
+			"depth": int(split_candidate.get("depth", 0)),
+			"action": "adaptive_split",
+			"reason": "split company into real sub-units to meet frontage target",
+			"decision": {
+				"targetCombatElements": target,
+				"combatElementsBefore": _candidate_combat_count(candidates) - best_gain,
+				"combatElementsAfter": _candidate_combat_count(candidates),
+				"combatElementGain": best_gain
+			}
+		})
+
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_formation := a.get("formation", {}) as Dictionary
+		var b_formation := b.get("formation", {}) as Dictionary
+		return String(a_formation.get("id", "")) < String(b_formation.get("id", ""))
+	)
+	for candidate in candidates:
+		_append_element(
+			candidate.get("formation", {}) as Dictionary,
+			String(candidate.get("parentId", "")),
+			state
+		)
+
+static func _collect_company_first_candidates(
+	node: Variant,
+	parent_id: String,
+	depth: int,
+	state: Dictionary,
+	output: Array[Dictionary]
+) -> void:
+	if typeof(node) != TYPE_DICTIONARY:
+		return
+	var formation := node as Dictionary
+	if formation.is_empty() or not _is_formation_alive(formation):
+		return
+	var unit_id := String(formation.get("id", "")).strip_edges()
+	if unit_id.is_empty():
+		return
+	var role := _formation_role(formation)
+	var size := _normalized_size(formation.get("size", ""))
+	var children := _dictionary_children(formation)
+
+	if role == DeploymentTypes.ROLE_COMMAND or _size_rank(size) > _size_rank(String(state.get("preferredBaseSize", "company"))):
+		var before := output.size()
+		for child in children:
+			_collect_company_first_candidates(child, unit_id, depth + 1, state, output)
+		if output.size() > before:
+			(state["audit"] as Array).append({
+				"formationId": unit_id,
+				"formationName": String(formation.get("display_name", unit_id)),
+				"depth": depth,
+				"action": "company_first_split",
+				"reason": "split higher echelon to company-or-lower deployment elements"
+			})
+			return
+
+	if _is_eligible_deployment_element(formation, state):
+		output.append({"formation": formation, "parentId": parent_id, "depth": depth})
+		return
+
+	for child in children:
+		_collect_company_first_candidates(child, unit_id, depth + 1, state, output)
+
+static func _collect_split_replacements(
+	formation: Dictionary,
+	parent_id: String,
+	depth: int,
+	state: Dictionary,
+	output: Array[Dictionary]
+) -> void:
+	for child in _dictionary_children(formation):
+		if not _is_formation_alive(child):
+			continue
+		var child_id := String(child.get("id", ""))
+		var role := _canonical_role(child.get("role", "infantry"))
+		if role == DeploymentTypes.ROLE_COMMAND:
+			_collect_split_replacements(child, child_id, depth + 1, state, output)
+		elif _is_eligible_deployment_element(child, state):
+			output.append({"formation": child, "parentId": parent_id, "depth": depth})
+		else:
+			_collect_split_replacements(child, child_id, depth + 1, state, output)
+
+static func _is_eligible_deployment_element(formation: Dictionary, state: Dictionary) -> bool:
+	var role := _formation_role(formation)
+	if role == DeploymentTypes.ROLE_COMMAND:
+		return false
+	var size := _normalized_size(formation.get("size", ""))
+	var rank := _size_rank(size)
+	if rank > _size_rank("battalion"):
+		return false
+	if rank >= _size_rank(String(state.get("minDeploySize", "platoon"))):
+		return true
+	return role == DeploymentTypes.ROLE_ANTI_TANK_SUPPORT and rank in [_size_rank("squad"), _size_rank("section")]
+
+static func _is_formation_alive(formation: Dictionary) -> bool:
+	return String(formation.get("status", "")).strip_edges().to_lower() != "dead"
+
+static func _dictionary_children(formation: Dictionary) -> Array[Dictionary]:
+	var children: Array[Dictionary] = []
+	var children_variant: Variant = formation.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return children
+	for child_variant in children_variant as Array:
+		if typeof(child_variant) == TYPE_DICTIONARY:
+			children.append(child_variant as Dictionary)
+	return children
+
+static func _candidate_combat_count(candidates: Array[Dictionary]) -> int:
+	var count := 0
+	for candidate in candidates:
+		var formation := candidate.get("formation", {}) as Dictionary
+		if _is_combat_role(_formation_role(formation)):
+			count += 1
+	return count
+
+static func _combat_element_count(elements: Array) -> int:
+	var count := 0
+	for element_variant in elements:
+		if typeof(element_variant) != TYPE_DICTIONARY:
+			continue
+		if not bool((element_variant as Dictionary).get("isSupport", false)):
+			count += 1
+	return count
 
 static func formation_split_score(formation: Dictionary, options: Dictionary = {}) -> Dictionary:
 	var weights := DEFAULT_WEIGHTS.merged(options.get("weights", {}), true)
@@ -187,7 +369,7 @@ static func _decompose_node(node: Variant, parent_id: String, depth: int, state:
 
 	var audit_entry := {
 		"formationId": unit_id,
-		"formationName": String(formation.get("name", unit_id)),
+		"formationName": String(formation.get("display_name", unit_id)),
 		"depth": depth,
 		"action": action,
 		"decision": decision,
@@ -216,7 +398,7 @@ static func _decompose_node(node: Variant, parent_id: String, depth: int, state:
 
 static func _append_element(formation: Dictionary, parent_id: String, state: Dictionary) -> void:
 	var unit_id := String(formation.get("id", "")).strip_edges()
-	var role := _canonical_role(formation.get("type", formation.get("role", "infantry")))
+	var role := _formation_role(formation)
 	var size := _normalized_size(formation.get("size", "company"))
 	var hex_id := String(formation.get("hexId", state.get("hexId", ""))).strip_edges()
 	var support_count_by_hex := state["supportCountByHex"] as Dictionary
@@ -238,14 +420,15 @@ static func _append_element(formation: Dictionary, parent_id: String, state: Dic
 	(state["elements"] as Array).append({
 		"id": unit_id,
 		"playerIndex": int(state.get("playerIndex", -1)),
-		"name": String(formation.get("name", unit_id)),
+		"name": String(formation.get("display_name", unit_id)),
 		"role": role,
 		"size": size,
 		"formationId": parent_id,
 		"hexId": hex_id,
 		"prpCost": _prp_cost(role, size),
 		"isSupport": is_support,
-		"supportCapacityCost": 1 if is_support else 0
+		"supportCapacityCost": 1 if is_support else 0,
+		"status": String(formation.get("status", "alive")).to_lower()
 	})
 
 static func _prp_cost(role: String, size: String) -> int:
@@ -266,43 +449,30 @@ static func _normalized_size(size: Variant) -> String:
 	return String(size).strip_edges().to_lower()
 
 static func _normalized_role(role: Variant) -> String:
-	if typeof(role) == TYPE_INT:
-		return _unit_type_name_from_enum_value(int(role))
 	return String(role).strip_edges().to_lower().replace("_", "")
-
-static func _unit_type_name_from_enum_value(unit_type_value: int) -> String:
-	match unit_type_value:
-		UnitType.Value.INFANTRY:
-			return "infantry"
-		UnitType.Value.TANK:
-			return "tank"
-		UnitType.Value.ENGINEER:
-			return "engineer"
-		UnitType.Value.ARTILLERY:
-			return "artillery"
-		UnitType.Value.RECON:
-			return "recon"
-		UnitType.Value.AIRBORNE:
-			return "airborne"
-		UnitType.Value.MECHANIZED:
-			return "mechanized"
-		UnitType.Value.MOTORIZED:
-			return "motorized"
-		UnitType.Value.ANTI_TANK:
-			return "antitank"
-		UnitType.Value.AIR_DEFENSE:
-			return "airdefense"
-		UnitType.Value.HEADQUARTERS:
-			return "headquarters"
-		_:
-			return str(unit_type_value).strip_edges().to_lower().replace("_", "")
 
 static func _canonical_role(role: Variant) -> String:
 	var normalized := _normalized_role(role)
+	if normalized.contains("antitank"):
+		return "antiTankSupport"
+	if normalized.contains("airdefense"):
+		return "airDefense"
+	if normalized.contains("howitzer") or normalized.contains("artillery"):
+		return "artillerySupport"
+	if normalized.contains("weapon") or normalized.contains("machinegun") or normalized.contains("mortar") or normalized == "cannon":
+		return "weapons"
+	if normalized == "pionier":
+		return "weapons"
 	return String(ROLE_CANONICAL_MAP.get(normalized, "infantry"))
 
+static func _formation_role(formation: Dictionary) -> String:
+	return _canonical_role(formation.get("role", "infantry"))
+
 static func _is_support_role(role: String) -> bool:
-	return SUPPORT_TYPES.has(_normalized_role(role))
+	return not _is_combat_role(role)
+
+static func _is_combat_role(role: String) -> bool:
+	return role in ["infantry", "armor", "mobility"]
 
 static func _valid_child_count(formation: Dictionary) -> int:
 	var count := 0
@@ -347,9 +517,12 @@ static func _support_capacity_violations(support_count_by_hex: Dictionary, suppo
 			})
 	return violations
 
-static func _illegal_size_splits(audit: Array[Dictionary]) -> Array[Dictionary]:
+static func _illegal_size_splits(audit: Array) -> Array[Dictionary]:
 	var illegal: Array[Dictionary] = []
-	for entry in audit:
+	for entry_variant in audit:
+		if typeof(entry_variant) != TYPE_DICTIONARY:
+			continue
+		var entry := entry_variant as Dictionary
 		if String(entry.get("action", "")) != "blocked_child":
 			continue
 		illegal.append(entry)

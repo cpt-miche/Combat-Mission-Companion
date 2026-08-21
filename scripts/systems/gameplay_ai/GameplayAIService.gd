@@ -12,7 +12,7 @@ static func generate_orders(units: Dictionary, active_player: int, terrain_map: 
 	var operational_state_for_orders := _operational_state_for_player(operational_ai_state, active_player)
 	var friendly_ids := _sorted_unit_ids(units, active_player)
 	var enemy_ids := _sorted_enemy_ids(units, active_player, trace_context)
-	var reserved_destinations: Dictionary = {}
+	var projected_units := units.duplicate(true)
 
 	for unit_id in friendly_ids:
 		var unit := units[unit_id] as Dictionary
@@ -24,36 +24,44 @@ static func generate_orders(units: Dictionary, active_player: int, terrain_map: 
 			orders = OrderSystem.upsert_order(orders, OrderSystem.create_attack_order(unit_id, [unit_hex], adjacent_enemy_id, _trace_context_for_order(trace_context, unit_id, "attack")))
 			continue
 
-		if _is_threatened(unit_hex, enemy_ids, units):
+		var advancing_to_assignment := _has_active_formation_assignment(unit_id, unit_hex, trace_context) and not bool(trace_context.get("formation_defending", false))
+		if _is_threatened(unit_hex, enemy_ids, units) and not advancing_to_assignment:
 			orders = OrderSystem.upsert_order(orders, OrderSystem.create_dig_in_order(unit_id, _trace_context_for_order(trace_context, unit_id, "dig_in")))
 			continue
 
-		var move_order := _build_move_order(unit_id, unit, units, active_player, enemy_ids, terrain_map, operational_state_for_orders, reserved_destinations, trace_context)
+		var move_order := _build_move_order(unit_id, unit, units, projected_units, active_player, enemy_ids, terrain_map, operational_state_for_orders, trace_context)
 		if not move_order.is_empty():
 			orders = OrderSystem.upsert_order(orders, move_order)
 			var path := move_order.get("path", []) as Array
 			if path.size() > 0:
-				reserved_destinations[_hex_key(path[path.size() - 1] as Vector2i)] = true
+				var projected_unit := (projected_units[unit_id] as Dictionary).duplicate(true)
+				projected_unit["hex"] = path[path.size() - 1] as Vector2i
+				projected_units[unit_id] = projected_unit
 
 	return orders
+
+static func _has_active_formation_assignment(unit_id: String, unit_hex: Vector2i, trace_context: Dictionary) -> bool:
+	var assignments_variant: Variant = trace_context.get("formation_assignments", {})
+	if not (assignments_variant is Dictionary) or not (assignments_variant as Dictionary).has(unit_id):
+		return false
+	var target_variant: Variant = (assignments_variant as Dictionary)[unit_id]
+	return target_variant is Vector2i and (target_variant as Vector2i) != unit_hex
 
 static func _operational_state_for_player(operational_ai_state: Dictionary, active_player: int) -> Dictionary:
 	if int(operational_ai_state.get("playerIndex", -1)) != active_player:
 		return {}
 	return operational_ai_state
 
-static func _build_move_order(unit_id: String, unit: Dictionary, units: Dictionary, active_player: int, enemy_ids: Array[String], terrain_map: Dictionary, operational_ai_state: Dictionary, reserved_destinations: Dictionary, trace_context: Dictionary) -> Dictionary:
+static func _build_move_order(unit_id: String, unit: Dictionary, units: Dictionary, projected_units: Dictionary, active_player: int, enemy_ids: Array[String], terrain_map: Dictionary, operational_ai_state: Dictionary, trace_context: Dictionary) -> Dictionary:
 	var start_hex := unit.get("hex", Vector2i.ZERO) as Vector2i
 	var blocked := _blocked_cells(units, active_player, unit_id)
-	var target_candidates := _movement_targets(start_hex, units, active_player, enemy_ids, operational_ai_state, trace_context)
+	var target_candidates := _movement_targets(unit_id, start_hex, units, active_player, enemy_ids, operational_ai_state, trace_context)
 	for target_hex in target_candidates:
 		if target_hex == start_hex:
 			continue
 		if blocked.get(_hex_key(target_hex), false):
 			continue
-		if reserved_destinations.get(_hex_key(target_hex), false):
-			continue
-		if not _can_enter_destination(units, unit_id, unit, target_hex):
+		if not _can_enter_destination(projected_units, unit_id, unit, target_hex):
 			continue
 		var path := Pathfinding.find_path(start_hex, target_hex, terrain_map, blocked)
 		if path.size() < 2:
@@ -61,9 +69,18 @@ static func _build_move_order(unit_id: String, unit: Dictionary, units: Dictiona
 		return OrderSystem.create_move_order(unit_id, path, _trace_context_for_order(trace_context, unit_id, "move"))
 	return {}
 
-static func _movement_targets(start_hex: Vector2i, units: Dictionary, active_player: int, enemy_ids: Array[String], operational_ai_state: Dictionary, trace_context: Dictionary) -> Array[Vector2i]:
+static func _movement_targets(unit_id: String, start_hex: Vector2i, units: Dictionary, active_player: int, enemy_ids: Array[String], operational_ai_state: Dictionary, trace_context: Dictionary) -> Array[Vector2i]:
 	var targets: Array[Vector2i] = []
 	var dimensions := _map_dimensions(trace_context)
+	var preferred_target := Vector2i(-9999, -9999)
+	var assignments_variant: Variant = trace_context.get("formation_assignments", {})
+	if assignments_variant is Dictionary and (assignments_variant as Dictionary).has(unit_id):
+		var target_variant: Variant = (assignments_variant as Dictionary)[unit_id]
+		if target_variant is Vector2i:
+			preferred_target = target_variant as Vector2i
+			_append_unique_hex(targets, preferred_target)
+	if preferred_target == start_hex:
+		return [start_hex]
 	for enemy_id in enemy_ids:
 		var enemy := units[enemy_id] as Dictionary
 		var enemy_hex := enemy.get("hex", Vector2i.ZERO) as Vector2i
@@ -82,8 +99,12 @@ static func _movement_targets(start_hex: Vector2i, units: Dictionary, active_pla
 		_append_unique_hex(targets, fallback)
 
 	targets.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		var distance_a := _hex_distance(start_hex, a)
-		var distance_b := _hex_distance(start_hex, b)
+		if a == preferred_target:
+			return true
+		if b == preferred_target:
+			return false
+		var distance_a := Pathfinding.hex_distance(start_hex, a)
+		var distance_b := Pathfinding.hex_distance(start_hex, b)
 		if distance_a == distance_b:
 			return _hex_key(a) < _hex_key(b)
 		return distance_a < distance_b
@@ -175,7 +196,7 @@ static func _scout_intel_mentions_unit_or_hex(scout_intel: Dictionary, unit_id: 
 		if not (known_variant is Dictionary):
 			continue
 		var known_unit := known_variant as Dictionary
-		var known_id := String(known_unit.get("unitId", known_unit.get("id", "")))
+		var known_id := String(known_unit.get("unitId", ""))
 		if known_id == unit_id or known_id.is_empty():
 			return true
 	return false
@@ -190,7 +211,7 @@ static func _first_adjacent_enemy_id(unit_hex: Vector2i, enemy_ids: Array[String
 static func _is_threatened(unit_hex: Vector2i, enemy_ids: Array[String], units: Dictionary) -> bool:
 	for enemy_id in enemy_ids:
 		var enemy := units[enemy_id] as Dictionary
-		if _hex_distance(unit_hex, enemy.get("hex", Vector2i.ZERO) as Vector2i) <= THREAT_DISTANCE:
+		if Pathfinding.hex_distance(unit_hex, enemy.get("hex", Vector2i.ZERO) as Vector2i) <= THREAT_DISTANCE:
 			return true
 	return false
 
@@ -265,17 +286,11 @@ static func _parse_hex_id(hex_id: String) -> Vector2i:
 		return Vector2i(-9999, -9999)
 	return Vector2i(int(parts[0]), int(parts[1]))
 
-static func _hex_distance(a: Vector2i, b: Vector2i) -> int:
-	return maxi(abs(a.x - b.x), abs(a.y - b.y))
-
 static func _hex_key(hex: Vector2i) -> String:
 	return "%d,%d" % [hex.x, hex.y]
 
 static func _is_unit_alive(unit: Dictionary) -> bool:
-	var status := String(unit.get("status", "")).strip_edges().to_lower()
-	if not status.is_empty():
-		return status != "dead"
-	return bool(unit.get("is_alive", true))
+	return String(unit.get("status", "")).strip_edges().to_lower() != "dead"
 
 static func _map_dimensions(trace_context: Dictionary) -> Vector2i:
 	var dimensions_variant: Variant = trace_context.get("map_dimensions", Vector2i(1, 1))

@@ -6,6 +6,8 @@ const OperationalMapAnalyzer = preload("res://scripts/systems/operational_ai/Ope
 const AIDebugTracer = preload("res://scripts/systems/ai_debug/AIDebugTracer.gd")
 const AIDebugFormatter = preload("res://scripts/systems/ai_debug/AIDebugFormatter.gd")
 const MatchSetupTypes = preload("res://scripts/core/MatchSetupTypes.gd")
+const Pathfinding = preload("res://scripts/systems/Pathfinding.gd")
+const ReconSystem = preload("res://scripts/systems/ReconSystem.gd")
 
 static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 	var ai_player_index: int = int(GameState.active_player)
@@ -34,7 +36,8 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 		})
 	})
 
-	if not bool(GameState.operational_ai_enabled):
+	var ai_controlled := String(ai_player.get("controller", "human")).strip_edges().to_lower() == "ai"
+	if not bool(GameState.operational_ai_enabled) and not ai_controlled:
 		tracer.add_event(trace, "feature_flag_disabled", {
 			"stage": "operational_assessment",
 			"reason_code": "operational_ai_disabled",
@@ -47,7 +50,7 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 			"assessment": {},
 			"snapshot": {}
 		}, {"evaluation_ms": 0})
-		GameState.operational_ai_debug["player_%d" % ai_player_index] = _legacy_debug_from_trace(disabled_trace)
+		GameState.operational_ai_debug["player_%d" % ai_player_index] = disabled_trace.duplicate(true)
 		_persist_trace(disabled_trace)
 		return {"ok": true, "reason": "feature_flag_disabled", "enabled": false, "assessment": {}}
 
@@ -91,7 +94,7 @@ static func run_for_active_player(trace_context: Dictionary = {}) -> Dictionary:
 		"assessment": assessment,
 		"traceId": String(finished_trace.get("trace_id", ""))
 	}
-	GameState.operational_ai_debug["player_%d" % ai_player_index] = _legacy_debug_from_trace(finished_trace)
+	GameState.operational_ai_debug["player_%d" % ai_player_index] = finished_trace.duplicate(true)
 	_persist_trace(finished_trace)
 	return {"ok": true, "reason": "assessed", "enabled": true, "assessment": assessment}
 
@@ -100,8 +103,9 @@ static func _build_operational_snapshot(ai_player_index: int, ai_config: Diction
 	var enemy_player_index: int = 1 - ai_player_index
 	var enemy_owner: int = _territory_owner_for_player(enemy_player_index)
 	var sector_map: Array[Dictionary] = OperationalMapAnalyzer.analyze(GameState.territory_map, ai_owner, enemy_owner)
-	var units_by_hex: Dictionary = _units_by_hex()
 	var observer_intel: Dictionary = _observer_intel_for_player(ai_player_index, ai_owner)
+	var units_by_hex: Dictionary = _units_by_hex_for_observer(ai_player_index, enemy_player_index, observer_intel)
+	var objectives_by_sector := _objectives_by_sector(sector_map)
 	var ai_player: Dictionary = {}
 	if ai_player_index >= 0 and ai_player_index < GameState.players.size():
 		ai_player = GameState.players[ai_player_index] as Dictionary
@@ -117,6 +121,17 @@ static func _build_operational_snapshot(ai_player_index: int, ai_config: Diction
 		var frontline: Array[String] = sector.get("frontlineHexIds", [])
 		var rear: Array[String] = sector.get("rearHexIds", [])
 		var contested: Array[String] = sector.get("contestedHexIds", [])
+		var objective_hex_ids: Array[String] = []
+		for objective_hex_variant in objectives_by_sector.get(sector_id, []) as Array:
+			objective_hex_ids.append(String(objective_hex_variant))
+		var primary_objectives: Array[String] = []
+		var secondary_objectives: Array[String] = []
+		for objective_hex_id in objective_hex_ids:
+			var objective_entry := GameState.key_objectives.get(objective_hex_id, {}) as Dictionary
+			if String(objective_entry.get("priority", "secondary")) == "primary":
+				primary_objectives.append(objective_hex_id)
+			else:
+				secondary_objectives.append(objective_hex_id)
 
 		var enemy_adjacent_count: int = 0
 		var enemy_strength: float = 0.0
@@ -128,7 +143,7 @@ static func _build_operational_snapshot(ai_player_index: int, ai_config: Diction
 			friendly_strength += float(friendly_units.size())
 			var adjacent_enemies: Array = _adjacent_enemy_units(hex_id, enemy_player_index, units_by_hex)
 			enemy_adjacent_count += adjacent_enemies.size()
-			enemy_strength += float(adjacent_enemies.size())
+			enemy_strength += _estimated_strength(adjacent_enemies)
 			for enemy_hex_id in _adjacent_enemy_hex_ids(hex_id, enemy_player_index, units_by_hex):
 				sector_adjacent_enemy_hexes[String(enemy_hex_id)] = true
 
@@ -143,12 +158,23 @@ static func _build_operational_snapshot(ai_player_index: int, ai_config: Diction
 		var readiness: float = clamp(float(friendly_strength) / float(max(1.0, enemy_strength + friendly_strength)), 0.0, 1.0)
 		var supply: float = clamp(float(rear.size()) / float(max(1, (sector.get("hexIds", []) as Array).size())), 0.0, 1.0)
 
+		var objective_criticality: float = clamp(float(frontline.size()) / 6.0, 0.0, 1.0)
+		if not secondary_objectives.is_empty():
+			objective_criticality = maxf(objective_criticality, 0.65)
+		if not primary_objectives.is_empty():
+			objective_criticality = 1.0
 		sectors.append({
-			"id": sector_id,
+			"sectorId": sector_id,
+			"frontlineHexIds": frontline.duplicate(),
+			"contestedHexIds": contested.duplicate(),
+			"rearHexIds": rear.duplicate(),
+			"objectiveHexIds": objective_hex_ids.duplicate(),
+			"primaryObjectiveHexIds": primary_objectives,
+			"secondaryObjectiveHexIds": secondary_objectives,
 			"pressure": pressure,
 			"readiness": readiness,
 			"supply": supply,
-			"objectiveCriticality": clamp(float(frontline.size()) / 6.0, 0.0, 1.0),
+			"objectiveCriticality": objective_criticality,
 			"defensibility": clamp(1.0 - pressure, 0.0, 1.0),
 			"recentEnemyAdvance": 0.0,
 			"support": clamp((readiness + supply) * 0.5, 0.0, 1.0),
@@ -217,6 +243,7 @@ static func _build_operational_snapshot(ai_player_index: int, ai_config: Diction
 		"reinforcementRequests": [],
 		"responseIntents": [],
 		"enemyAdjacentHexes": enemy_adjacent,
+		"objectiveHexIds": GameState.key_objectives.keys(),
 		"metadata": {
 			"activePlayer": ai_player_index,
 			"featureFlag": bool(GameState.operational_ai_enabled),
@@ -247,9 +274,6 @@ static func _resolve_ai_config(ai_player: Dictionary, trace_context: Dictionary)
 static func _resolve_operational_doctrine(ai_player: Dictionary) -> String:
 	var selected_ai_doctrine: String = MatchSetupTypes.sanitize_ai_doctrine(GameState.selected_ai_doctrine)
 	var player_doctrine: String = MatchSetupTypes.sanitize_ai_doctrine(ai_player.get("doctrine", selected_ai_doctrine))
-	var raw_operational := String(ai_player.get("operationalDoctrine", "")).strip_edges().to_lower()
-	if not raw_operational.is_empty():
-		return _map_ai_doctrine_to_operational(raw_operational)
 	return _map_ai_doctrine_to_operational(player_doctrine)
 
 static func _map_ai_doctrine_to_operational(doctrine: String) -> String:
@@ -321,24 +345,117 @@ static func _scout_level_for_enemy_hex(observer_intel: Dictionary, enemy_hex_id:
 		return int(clamp(int((intel as Dictionary).get("scoutLevel", 0)), 0, 4))
 	return 0
 
-static func _units_by_hex() -> Dictionary:
+static func _units_by_hex_for_observer(ai_player_index: int, enemy_player_index: int, observer_intel: Dictionary) -> Dictionary:
 	var by_hex: Dictionary = {}
+	var visible_enemy_ids := {}
 	for unit_variant in GameState.gameplay_units.values():
 		if typeof(unit_variant) != TYPE_DICTIONARY:
 			continue
 		var unit: Dictionary = unit_variant as Dictionary
+		var owner: int = int(unit.get("owner", ai_player_index))
+		if owner == enemy_player_index and not _enemy_directly_visible(unit, ai_player_index):
+			continue
+		if owner == enemy_player_index:
+			visible_enemy_ids[String(unit.get("id", ""))] = true
 		var hex: Variant = unit.get("hex", null)
 		if not hex is Vector2i:
 			continue
 		var hex_id: String = "%d,%d" % [hex.x, hex.y]
 		if not by_hex.has(hex_id):
 			by_hex[hex_id] = {"friendly": [], "enemy": []}
-		var owner: int = int(unit.get("owner", GameState.active_player))
-		if owner == GameState.active_player:
+		if owner == ai_player_index:
 			((by_hex[hex_id] as Dictionary)["friendly"] as Array).append(unit)
 		else:
 			((by_hex[hex_id] as Dictionary)["enemy"] as Array).append(unit)
+	var memory_variant: Variant = observer_intel.get(ReconSystem.UNIT_INTEL_KEY, {})
+	if memory_variant is Dictionary:
+		for unit_id_variant in (memory_variant as Dictionary).keys():
+			var unit_id := String(unit_id_variant)
+			if visible_enemy_ids.has(unit_id):
+				continue
+			var known_variant: Variant = (memory_variant as Dictionary).get(unit_id, {})
+			if not (known_variant is Dictionary):
+				continue
+			var known: Dictionary = known_variant as Dictionary
+			var confidence: float = float(known.get("memoryConfidence", 0.0))
+			var last_hex_id: String = String(known.get("lastKnownHex", ""))
+			var parsed: Variant = _parse_hex_id(last_hex_id)
+			if confidence <= 0.0 or parsed == null:
+				continue
+			if not by_hex.has(last_hex_id):
+				by_hex[last_hex_id] = {"friendly": [], "enemy": []}
+			var estimated: Dictionary = {
+				"id": unit_id,
+				"owner": enemy_player_index,
+				"hex": parsed,
+				"size": String(known.get("reportedSize", "")),
+				"type": String(known.get("reportedType", "")),
+				"intel_confidence": confidence,
+				"is_estimated_contact": true,
+				"status": "alive"
+			}
+			((by_hex[last_hex_id] as Dictionary)["enemy"] as Array).append(estimated)
 	return by_hex
+
+static func _enemy_directly_visible(enemy: Dictionary, ai_player_index: int) -> bool:
+	var enemy_hex := enemy.get("hex", Vector2i.ZERO) as Vector2i
+	for unit_variant in GameState.gameplay_units.values():
+		if not (unit_variant is Dictionary):
+			continue
+		var friendly := unit_variant as Dictionary
+		if int(friendly.get("owner", -1)) != ai_player_index or not GameState.is_unit_alive(friendly):
+			continue
+		var friendly_hex := friendly.get("hex", Vector2i.ZERO) as Vector2i
+		if friendly_hex == enemy_hex or Pathfinding.are_adjacent(friendly_hex, enemy_hex):
+			return true
+	return false
+
+static func _estimated_strength(units: Array) -> float:
+	var total := 0.0
+	for unit_variant in units:
+		if not (unit_variant is Dictionary):
+			continue
+		var unit := unit_variant as Dictionary
+		var size := String(unit.get("size", "")).to_lower()
+		var base := 0.5
+		match size:
+			"platoon": base = 0.33
+			"company": base = 1.0
+			"battalion": base = 4.0
+		total += base * float(unit.get("intel_confidence", 1.0))
+	return total
+
+static func _objectives_by_sector(sectors: Array[Dictionary]) -> Dictionary:
+	var assignments := {}
+	for sector in sectors:
+		assignments[String(sector.get("sectorId", ""))] = []
+	for objective_hex_variant in GameState.key_objectives.keys():
+		var objective_hex_id := String(objective_hex_variant)
+		var objective_parsed: Variant = _parse_hex_id(objective_hex_id)
+		if objective_parsed == null:
+			continue
+		var objective_hex := objective_parsed as Vector2i
+		var best_sector_id := ""
+		var best_distance := 999999
+		for sector in sectors:
+			var candidates := sector.get("frontlineHexIds", []) as Array
+			if candidates.is_empty():
+				candidates = sector.get("hexIds", []) as Array
+			for candidate_variant in candidates:
+				var candidate_parsed: Variant = _parse_hex_id(String(candidate_variant))
+				if candidate_parsed == null:
+					continue
+				var candidate := candidate_parsed as Vector2i
+				var distance := maxi(abs(objective_hex.x - candidate.x), abs(objective_hex.y - candidate.y))
+				var sector_id := String(sector.get("sectorId", ""))
+				if distance < best_distance or (distance == best_distance and (best_sector_id.is_empty() or sector_id < best_sector_id)):
+					best_distance = distance
+					best_sector_id = sector_id
+		if not best_sector_id.is_empty():
+			(assignments[best_sector_id] as Array).append(objective_hex_id)
+	for sector_id in assignments.keys():
+		(assignments[sector_id] as Array).sort()
+	return assignments
 
 static func _adjacent_enemy_units(hex_id: String, enemy_player_index: int, units_by_hex: Dictionary) -> Array:
 	var results: Array = []
@@ -372,17 +489,9 @@ static func _parse_hex_id(hex_id: String) -> Variant:
 		return null
 	return Vector2i(int(parts[0]), int(parts[1]))
 
-static func _legacy_debug_from_trace(final_trace: Dictionary) -> Dictionary:
-	var outputs: Dictionary = final_trace.get("outputs", {}) as Dictionary
-	var legacy: Dictionary = outputs.duplicate(true)
-	legacy["traceId"] = String(final_trace.get("trace_id", ""))
-	legacy["trace"] = final_trace.duplicate(true)
-	legacy["events"] = (final_trace.get("events", []) as Array).duplicate(true)
-	legacy["eventCount"] = int(final_trace.get("event_count", (final_trace.get("events", []) as Array).size()))
-	return legacy
-
 static func _persist_trace(final_trace: Dictionary) -> void:
 	var trace_payload := final_trace.duplicate(true)
 	trace_payload["line_entries"] = AIDebugFormatter.format_trace_lines(final_trace)
 	trace_payload["line_log_path"] = SaveManager.AI_TRACE_LINE_LOG_PATH
-	SaveManager.save_ai_trace(trace_payload)
+	if not SaveManager.save_ai_trace(trace_payload):
+		push_warning("Operational AI trace was not fully persisted for player %d." % int(final_trace.get("player_id", -1)))

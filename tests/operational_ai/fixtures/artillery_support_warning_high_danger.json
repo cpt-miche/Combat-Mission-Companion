@@ -1,4 +1,5 @@
 {
+  "fixtureVersion": 1,
   "id": "artillery_support_warning_high_danger",
   "description": "High-danger sector without artillery support should raise explicit artillery coverage warning.",
   "operationalInput": {
@@ -6,7 +7,7 @@
     "turnIndex": 11,
     "sectors": [
       {
-        "id": "sector_red",
+        "sectorId": "sector_red",
         "type": "frontline",
         "pressure": 0.8,
         "enemyPressure": 0.85,

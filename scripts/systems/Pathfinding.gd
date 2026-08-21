@@ -1,6 +1,8 @@
 extends RefCounted
 class_name Pathfinding
 
+const HexGrid = preload("res://scripts/domain/map/HexGrid.gd")
+
 const TERRAIN_COSTS := {
 	"highway": 1,
 	"road": 1,
@@ -55,34 +57,19 @@ static func _move_cost(hex: Vector2i, terrain_map: Dictionary) -> int:
 	return int(TERRAIN_COSTS.get(terrain, 2))
 
 static func _heuristic(a: Vector2i, b: Vector2i) -> int:
-	var dq: int = abs(a.x - b.x)
-	var dr: int = abs(a.y - b.y)
-	return int(max(dq, dr))
+	return hex_distance(a, b)
+
+static func hex_distance(a: Vector2i, b: Vector2i) -> int:
+	return HexGrid.distance(a, b)
 
 static func _neighbors(hex: Vector2i) -> Array[Vector2i]:
-	var offsets_even: Array[Vector2i] = [
-		Vector2i(1, 0), Vector2i(-1, 0),
-		Vector2i(0, -1), Vector2i(-1, -1),
-		Vector2i(0, 1), Vector2i(-1, 1)
-	]
-	var offsets_odd: Array[Vector2i] = [
-		Vector2i(1, 0), Vector2i(-1, 0),
-		Vector2i(1, -1), Vector2i(0, -1),
-		Vector2i(1, 1), Vector2i(0, 1)
-	]
-	var offsets: Array[Vector2i] = offsets_odd if hex.y % 2 == 1 else offsets_even
-	var results: Array[Vector2i] = []
 	var dimensions := GameState.selected_map_dimensions
 	var max_columns := maxi(dimensions.x, 1)
 	var max_rows := maxi(dimensions.y, 1)
-	for offset in offsets:
-		var candidate := hex + offset
-		if candidate.x >= 0 and candidate.x < max_columns and candidate.y >= 0 and candidate.y < max_rows:
-			results.append(candidate)
-	return results
+	return HexGrid.neighbors(hex, Vector2i(max_columns, max_rows))
 
 static func are_adjacent(a: Vector2i, b: Vector2i) -> bool:
-	return _neighbors(a).has(b)
+	return HexGrid.are_adjacent(a, b)
 
 static func _key_for(hex: Vector2i) -> String:
 	return "%d,%d" % [hex.x, hex.y]

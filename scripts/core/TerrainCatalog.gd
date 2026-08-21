@@ -13,24 +13,6 @@ const TERRAIN_IDS := [
 	"urban"
 ]
 
-const _LEGACY_NAME_TO_ID := {
-	"highway": "highway",
-	"road": "road",
-	"light": "light",
-	"light terrain": "light",
-	"open": "light",
-	"clear": "light",
-	"medium": "medium",
-	"medium terrain": "medium",
-	"rough": "medium",
-	"heavy": "heavy",
-	"heavy terrain": "heavy",
-	"dense": "heavy",
-	"woods": "woods",
-	"forest": "woods",
-	"urban": "urban"
-}
-
 const _CATALOG := {
 	"highway": {
 		"display_name": "Highway",
@@ -91,9 +73,7 @@ static func default_terrain_id() -> String:
 
 static func normalize_terrain_id(terrain: String) -> String:
 	var normalized := terrain.strip_edges().to_lower()
-	if normalized.is_empty():
-		return DEFAULT_TERRAIN_ID
-	return String(_LEGACY_NAME_TO_ID.get(normalized, DEFAULT_TERRAIN_ID))
+	return normalized if TERRAIN_IDS.has(normalized) else DEFAULT_TERRAIN_ID
 
 static func display_name(terrain_id: String) -> String:
 	var id := normalize_terrain_id(terrain_id)

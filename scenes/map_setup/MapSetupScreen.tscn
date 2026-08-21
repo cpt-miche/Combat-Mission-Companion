@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://dgk2v6h00m3h3"]
+[gd_scene load_steps=4 format=3 uid="uid://dgk2v6h00m3h3"]
 
 [ext_resource type="Script" path="res://scripts/ui/map_setup/MapSetupScreen.gd" id="1_5hfrc"]
 [ext_resource type="Script" path="res://scripts/ui/map_setup/HexMapView.gd" id="2_fjgke"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ScenarioEditorChrome.tscn" id="3_chrome"]
 
 [node name="MapSetupScreen" type="Control"]
 layout_mode = 3
@@ -11,6 +12,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_5hfrc")
+
+[node name="ScenarioEditorChrome" parent="." instance=ExtResource("3_chrome")]
+unique_name_in_owner = true
 
 [node name="RootMargin" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -204,6 +208,24 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Territory P2"
+
+[node name="PrimaryObjectiveButton" type="Button" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox/ModeButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Primary Objective"
+
+[node name="SecondaryObjectiveButton" type="Button" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox/ModeButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Secondary Objective"
+
+[node name="ClearObjectivesButton" type="Button" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Clear Objectives"
+tooltip_text = "Remove every primary and secondary key objective from the map."
 
 [node name="ConfirmTerritoriesButton" type="Button" parent="RootMargin/RootVBox/ModePanel/ModeMargin/ModeVBox"]
 unique_name_in_owner = true

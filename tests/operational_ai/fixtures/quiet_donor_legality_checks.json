@@ -1,4 +1,5 @@
 {
+  "fixtureVersion": 1,
   "id": "quiet_donor_legality_checks",
   "description": "Only quiet and legally safe donor sectors should be selected for reinforcement transfer.",
   "operationalInput": {
@@ -6,7 +7,7 @@
     "turnIndex": 12,
     "sectors": [
       {
-        "id": "quiet_donor",
+        "sectorId": "quiet_donor",
         "pressure": 0.20,
         "readiness": 0.40,
         "supply": 0.40,
@@ -16,7 +17,7 @@
         "artillerySupport": 0.70
       },
       {
-        "id": "loud_donor",
+        "sectorId": "loud_donor",
         "pressure": 0.70,
         "readiness": 0.60,
         "supply": 0.50,

@@ -68,7 +68,7 @@ func _fixture_input() -> Dictionary:
 		"operationId": "profile_fixture",
 		"turnIndex": 1,
 		"sectors": [
-			{"id": "sector_a", "pressure": 0.563, "readiness": 0.60, "supply": 0.58, "objectiveCriticality": 0.58, "defensibility": 0.50, "recentEnemyAdvance": 0.12, "supportAvailability": 0.48}
+			{"sectorId": "sector_a", "pressure": 0.563, "readiness": 0.60, "supply": 0.58, "objectiveCriticality": 0.58, "defensibility": 0.50, "recentEnemyAdvance": 0.12, "supportAvailability": 0.48}
 		],
 		"enemyAdjacentHexes": [
 			{"id": "candidate_alpha", "sectorId": "sector_a", "objectiveValue": 0.66, "enemyWeaknessEstimate": 0.62, "localFriendlyPower": 0.61, "artillerySupport": 0.57, "reconSupport": 0.52, "terrainSuitability": 0.55, "defensiveCoherenceRisk": 0.40, "overextensionRisk": 0.45}

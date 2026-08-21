@@ -4,6 +4,7 @@ const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 
 @onready var play_button: Button = %PlayButton
 @onready var load_button: Button = %LoadButton
+@onready var scenario_editor_button: Button = %ScenarioEditorButton
 @onready var display_button: Button = %DisplayButton
 @onready var status_label: Label = %StatusLabel
 @onready var nation_dialog: Window = %NationDialog
@@ -12,10 +13,13 @@ const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 @onready var cancel_nation_button: Button = %CancelNationButton
 @onready var map_dialog: ConfirmationDialog = %MapDialog
 @onready var map_mode_selector: OptionButton = %MapModeSelector
+@onready var saved_map_label: Label = %SavedMapLabel
 @onready var saved_map_selector: OptionButton = %SavedMapSelector
+@onready var delete_scenario_button: Button = %DeleteScenarioButton
 @onready var map_size_label: Label = %MapSizeLabel
 @onready var map_size_selector: OptionButton = %MapSizeSelector
 @onready var map_selection_status_label: Label = %MapSelectionStatusLabel
+@onready var delete_scenario_dialog: ConfirmationDialog = %DeleteScenarioDialog
 @onready var display_dialog: ConfirmationDialog = %DisplayDialog
 @onready var resolution_selector: OptionButton = %ResolutionSelector
 @onready var window_mode_toggle: CheckBox = %WindowModeToggle
@@ -25,6 +29,7 @@ const OrderSystem = preload("res://scripts/systems/OrderSystem.gd")
 @onready var display_status_label: Label = %DisplayStatusLabel
 
 var _pending_nation_id := "usa"
+var _pending_delete_scenario_name := ""
 var _last_applied_display_settings := {
 	"preset_id": DisplaySettings.DEFAULT_PRESET_ID,
 	"window_mode": DisplaySettings.DEFAULT_WINDOW_MODE,
@@ -42,6 +47,7 @@ var _has_pending_display_revert := false
 func _ready() -> void:
 	play_button.pressed.connect(_on_play_pressed)
 	load_button.pressed.connect(_on_load_pressed)
+	scenario_editor_button.pressed.connect(_on_scenario_editor_pressed)
 	display_button.pressed.connect(_on_display_pressed)
 	play_as_us_button.pressed.connect(_on_play_as_usa)
 	play_as_germany_button.pressed.connect(_on_play_as_germany)
@@ -49,6 +55,8 @@ func _ready() -> void:
 	nation_dialog.close_requested.connect(_on_nation_dialog_closed)
 	map_dialog.confirmed.connect(_on_map_selection_confirmed)
 	map_mode_selector.item_selected.connect(_on_map_mode_selected)
+	delete_scenario_button.pressed.connect(_on_delete_scenario_pressed)
+	delete_scenario_dialog.confirmed.connect(_on_delete_scenario_confirmed)
 	display_dialog.confirmed.connect(_on_apply_display_settings_pressed)
 	display_dialog.canceled.connect(_on_display_dialog_closed)
 	ui_scale_mode_selector.item_selected.connect(_on_ui_scale_mode_selected)
@@ -58,6 +66,10 @@ func _ready() -> void:
 
 func _on_play_pressed() -> void:
 	nation_dialog.popup_centered()
+
+func _on_scenario_editor_pressed() -> void:
+	ScenarioEditorState.clear()
+	GameState.set_phase(GameState.Phase.SCENARIO_EDITOR)
 
 func _on_play_as_usa() -> void:
 	nation_dialog.hide()
@@ -74,7 +86,7 @@ func _open_map_selection_for(nation_id: String) -> void:
 	_pending_nation_id = nation_id
 	_configure_map_mode_selector()
 	_configure_map_size_selector()
-	_refresh_saved_map_selector()
+	_refresh_saved_selector_for_mode()
 	_refresh_map_dialog_ui()
 	map_dialog.popup_centered()
 
@@ -96,31 +108,56 @@ func _start_new_division_builder_for(nation_id: String, selected_mode: int, sele
 		return
 	var payload := SaveManager.load_map(map_name)
 	if payload.is_empty():
-		status_label.text = "Could not load map '%s'." % map_name
+		status_label.text = SaveManager.get_last_load_error()
 		return
 	GameState.selected_map_name = map_name
-	GameState.apply_map_payload(payload)
+	if not GameState.apply_map_payload(payload):
+		status_label.text = "Saved map '%s' has invalid map data." % map_name
+		GameState.reset()
+		return
 	GameState.set_phase(GameState.Phase.DIVISION_BUILDER)
 
 func _on_load_pressed() -> void:
 	var payload := SaveManager.load_current_game()
 	if payload.is_empty():
-		status_label.text = "No save file found."
+		status_label.text = SaveManager.get_last_load_error()
 		return
 
 	_apply_loaded_payload(payload)
-	status_label.text = "Loaded save. Entering gameplay..."
-	GameState.set_phase(GameState.Phase.GAMEPLAY)
+	var loaded_phase := _loaded_game_phase()
+	status_label.text = "Loaded save. Resuming battle resolution..." if loaded_phase == GameState.Phase.CASUALTY_ENTRY else "Loaded save. Entering gameplay..."
+	GameState.set_phase(loaded_phase)
+
+func _loaded_game_phase() -> GameState.Phase:
+	if not GameState.pending_casualties.is_empty():
+		return GameState.Phase.CASUALTY_ENTRY
+	return GameState.Phase.GAMEPLAY
 
 func _apply_loaded_payload(payload: Dictionary) -> void:
 	GameState.current_turn = int(payload.get("turn_number", 1))
 	# Preserve whose turn was in progress when the autosave was created.
 	var loaded_active_player := int(payload.get("active_player", GameState.active_player))
 	GameState.active_player = clampi(loaded_active_player, 0, 1)
-	GameState.apply_map_payload(payload)
+	var raw_players := payload.get("players", []) as Array
+	if not raw_players.is_empty():
+		var loaded_players: Array[Dictionary] = []
+		for player_variant in raw_players:
+			if player_variant is Dictionary:
+				loaded_players.append((player_variant as Dictionary).duplicate(true))
+		GameState.players = loaded_players
+	if not GameState.apply_map_payload(payload):
+		push_error("Validated current-game save failed map application.")
+		GameState.reset()
+		return
 	GameState.pending_casualties = (payload.get("casualties", {}) as Dictionary).duplicate(true)
 	GameState.gameplay_units = _deserialize_units(payload.get("units", {}) as Dictionary)
 	GameState.gameplay_orders = _deserialize_orders(payload.get("orders", {}) as Dictionary)
+	GameState.ai_formation_state = (payload.get("ai_formation_state", {}) as Dictionary).duplicate(true)
+	GameState.scout_intel_by_observer = (payload.get("scout_intel_by_observer", {}) as Dictionary).duplicate(true)
+	GameState.combat_log_entries.clear()
+	for entry_variant in payload.get("combat_log_entries", []) as Array:
+		if entry_variant is Dictionary:
+			GameState.combat_log_entries.append((entry_variant as Dictionary).duplicate(true))
 	_apply_ai_debug_payload(payload.get("ai_debug", {}))
 
 func _apply_ai_debug_payload(raw_ai_debug: Variant) -> void:
@@ -129,10 +166,10 @@ func _apply_ai_debug_payload(raw_ai_debug: Variant) -> void:
 		GameState.disable_debug_mode()
 		return
 
-	var mode_enabled := bool(ai_debug_payload.get("mode_enabled", ai_debug_payload.get("enabled", false)))
-	var mode_level := clampi(int(ai_debug_payload.get("mode_level", ai_debug_payload.get("level", 1))), 1, 3)
-	if mode_enabled:
-		GameState.enable_debug_mode(mode_level)
+	var enabled := bool(ai_debug_payload.get("enabled", false))
+	var level := clampi(int(ai_debug_payload.get("level", 1)), 1, 3)
+	if enabled:
+		GameState.enable_debug_mode(level)
 		return
 	GameState.disable_debug_mode()
 
@@ -141,12 +178,39 @@ func _configure_map_mode_selector() -> void:
 	map_mode_selector.add_item("New Map", GameState.MapFlow.NEW_MAP)
 	map_mode_selector.add_item("Edit Existing Map", GameState.MapFlow.EDIT_EXISTING_MAP)
 	map_mode_selector.add_item("Play Saved Map", GameState.MapFlow.PLAY_SAVED_MAP)
+	map_mode_selector.add_item("Play Starting Scenario", GameState.MapFlow.STARTING_SCENARIO)
 	map_mode_selector.select(0)
 
 func _refresh_saved_map_selector() -> void:
 	saved_map_selector.clear()
 	for map_name in SaveManager.list_maps():
 		saved_map_selector.add_item(map_name)
+
+func _refresh_saved_scenario_selector() -> void:
+	saved_map_selector.clear()
+	for scenario_file_name in SaveManager.list_scenarios():
+		var payload := SaveManager.load_scenario(scenario_file_name)
+		if payload.is_empty():
+			continue
+		var display_name := String(payload.get("name", scenario_file_name)).strip_edges()
+		if display_name.is_empty():
+			display_name = scenario_file_name
+		var players := payload.get("players", []) as Array
+		for player_index in range(mini(players.size(), 2)):
+			if not (players[player_index] is Dictionary):
+				continue
+			var player := players[player_index] as Dictionary
+			if String(player.get("nation_id", "")).strip_edges().to_lower() != _pending_nation_id.strip_edges().to_lower():
+				continue
+			var force_name := String(player.get("name", "Player %d" % (player_index + 1)))
+			saved_map_selector.add_item("%s — as %s" % [display_name, force_name])
+			saved_map_selector.set_item_metadata(saved_map_selector.item_count - 1, {"scenario_id": scenario_file_name, "human_side": player_index})
+
+func _refresh_saved_selector_for_mode() -> void:
+	if _selected_map_mode() == GameState.MapFlow.STARTING_SCENARIO:
+		_refresh_saved_scenario_selector()
+		return
+	_refresh_saved_map_selector()
 
 func _configure_map_size_selector() -> void:
 	map_size_selector.clear()
@@ -163,19 +227,25 @@ func _configure_map_size_selector() -> void:
 	map_size_selector.select(selected_index)
 
 func _on_map_mode_selected(_index: int) -> void:
+	_refresh_saved_selector_for_mode()
 	_refresh_map_dialog_ui()
 
 func _refresh_map_dialog_ui() -> void:
 	var mode := _selected_map_mode()
 	var needs_saved_map := mode == GameState.MapFlow.EDIT_EXISTING_MAP or mode == GameState.MapFlow.PLAY_SAVED_MAP
+	var needs_scenario := mode == GameState.MapFlow.STARTING_SCENARIO
+	var needs_saved_selection := needs_saved_map or needs_scenario
 	var needs_new_map_size := mode == GameState.MapFlow.NEW_MAP
-	saved_map_selector.disabled = not needs_saved_map
+	saved_map_label.text = "Starting scenario" if needs_scenario else "Saved map"
+	saved_map_selector.disabled = not needs_saved_selection
+	delete_scenario_button.visible = needs_scenario
+	delete_scenario_button.disabled = not needs_scenario or saved_map_selector.item_count == 0
 	map_size_selector.disabled = not needs_new_map_size
 	map_size_label.visible = needs_new_map_size
 	map_size_selector.visible = needs_new_map_size
-	if needs_saved_map and saved_map_selector.item_count == 0:
+	if needs_saved_selection and saved_map_selector.item_count == 0:
 		map_dialog.get_ok_button().disabled = true
-		map_selection_status_label.text = "No saved maps found. Save one in Map Setup first."
+		map_selection_status_label.text = "No starting scenarios found for this side." if needs_scenario else "No saved maps found. Save one in Map Setup first."
 		return
 	map_dialog.get_ok_button().disabled = false
 	map_selection_status_label.text = ""
@@ -189,7 +259,20 @@ func _selected_map_mode() -> int:
 func _selected_saved_map_name() -> String:
 	if saved_map_selector.item_count == 0:
 		return ""
-	return saved_map_selector.get_item_text(maxi(saved_map_selector.selected, 0))
+	var selected_index := maxi(saved_map_selector.selected, 0)
+	var metadata: Variant = saved_map_selector.get_item_metadata(selected_index)
+	if metadata is Dictionary:
+		return String((metadata as Dictionary).get("scenario_id", ""))
+	if metadata != null and not String(metadata).is_empty():
+		return String(metadata)
+	return saved_map_selector.get_item_text(selected_index)
+
+func _selected_starting_scenario_ref() -> Dictionary:
+	if saved_map_selector.item_count == 0:
+		return {}
+	var selected_index := clampi(saved_map_selector.selected, 0, saved_map_selector.item_count - 1)
+	var metadata: Variant = saved_map_selector.get_item_metadata(selected_index)
+	return (metadata as Dictionary).duplicate(true) if metadata is Dictionary else {}
 
 func _selected_map_dimensions() -> Vector2i:
 	if map_size_selector.item_count == 0:
@@ -202,6 +285,10 @@ func _selected_map_dimensions() -> Vector2i:
 
 func _on_map_selection_confirmed() -> void:
 	var selected_mode := _selected_map_mode()
+	if selected_mode == GameState.MapFlow.STARTING_SCENARIO:
+		var scenario_ref := _selected_starting_scenario_ref()
+		_load_starting_scenario(String(scenario_ref.get("scenario_id", "")), int(scenario_ref.get("human_side", -1)))
+		return
 	var selected_dimensions := _selected_map_dimensions()
 	if selected_mode == GameState.MapFlow.NEW_MAP and not MapGridConfig.is_allowed_size(selected_dimensions.x):
 		var fallback_size := MapGridConfig.default_columns()
@@ -209,25 +296,89 @@ func _on_map_selection_confirmed() -> void:
 		map_selection_status_label.text = "Invalid map size selected. Using %dx%d." % [fallback_size, fallback_size]
 	_start_new_division_builder_for(_pending_nation_id, selected_mode, selected_dimensions)
 
+func _load_starting_scenario(scenario_name: String, human_side: int) -> bool:
+	if scenario_name.is_empty():
+		status_label.text = "No starting scenario selected."
+		return false
+	var payload := SaveManager.load_scenario(scenario_name)
+	if payload.is_empty():
+		status_label.text = SaveManager.get_last_load_error()
+		return false
+	if not SaveManager.validate_scenario_payload(payload):
+		status_label.text = "Starting scenario '%s' is incomplete or invalid." % scenario_name
+		return false
+	var raw_players := payload.get("players", []) as Array
+	if raw_players.size() != 2 or human_side < 0 or human_side >= raw_players.size():
+		status_label.text = "Starting scenario '%s' has invalid side data." % scenario_name
+		return false
+	var runtime_players: Array[Dictionary] = []
+	for player_index in range(2):
+		if not (raw_players[player_index] is Dictionary):
+			status_label.text = "Starting scenario '%s' has invalid force data." % scenario_name
+			return false
+		var player := (raw_players[player_index] as Dictionary).duplicate(true)
+		player["controller"] = "human" if player_index == human_side else "ai"
+		runtime_players.append(player)
+
+	GameState.reset(false)
+	if not GameState.apply_map_payload(payload):
+		status_label.text = "Starting scenario '%s' has invalid map data." % scenario_name
+		GameState.reset(false)
+		return false
+	GameState.players = runtime_players
+	GameState.selected_nation_id = String(runtime_players[human_side].get("nation_id", _pending_nation_id))
+	GameState.map_flow = GameState.MapFlow.STARTING_SCENARIO
+	GameState.selected_scenario_name = String(payload.get("name", scenario_name)).strip_edges()
+	GameState.active_player = 0
+	GameState.current_turn = 1
+	ScenarioEditorState.clear()
+	map_dialog.hide()
+	GameState.set_phase(GameState.Phase.GAMEPLAY)
+	return true
+
+func _on_delete_scenario_pressed() -> void:
+	if _selected_map_mode() != GameState.MapFlow.STARTING_SCENARIO:
+		return
+	_pending_delete_scenario_name = String(_selected_starting_scenario_ref().get("scenario_id", ""))
+	if _pending_delete_scenario_name.is_empty():
+		map_selection_status_label.text = "No starting scenario selected."
+		return
+	delete_scenario_dialog.dialog_text = "Delete starting scenario '%s'?" % saved_map_selector.get_item_text(maxi(saved_map_selector.selected, 0))
+	delete_scenario_dialog.popup_centered()
+
+func _on_delete_scenario_confirmed() -> void:
+	if _pending_delete_scenario_name.is_empty():
+		return
+	var deleted_name := _pending_delete_scenario_name
+	_pending_delete_scenario_name = ""
+	if not SaveManager.delete_scenario(deleted_name):
+		map_selection_status_label.text = "Failed to delete starting scenario '%s'." % deleted_name
+		return
+	_refresh_saved_scenario_selector()
+	_refresh_map_dialog_ui()
+	if saved_map_selector.item_count > 0:
+		map_selection_status_label.text = "Deleted starting scenario '%s'." % deleted_name
+
 func _deserialize_units(serialized_units: Dictionary) -> Dictionary:
 	var deserialized := {}
 	for unit_id in serialized_units.keys():
-		var unit := (serialized_units[unit_id] as Dictionary).duplicate(true)
-		var hex_payload := unit.get("hex", {}) as Dictionary
-		unit["hex"] = Vector2i(int(hex_payload.get("x", 0)), int(hex_payload.get("y", 0)))
-		var normalized_status := String(unit.get("status", "")).to_lower()
-		if normalized_status.is_empty():
-			normalized_status = "alive" if bool(unit.get("is_alive", true)) else "dead"
-		unit["status"] = normalized_status
-		unit["is_alive"] = bool(unit.get("is_alive", normalized_status != "dead"))
-		var has_dug_in := unit.has("dug_in")
-		var has_entrenched := unit.has("entrenched")
-		if has_dug_in or has_entrenched:
-			var dug_in := bool(unit.get("dug_in", unit.get("entrenched", false)))
-			unit["dug_in"] = dug_in
-			unit["entrenched"] = dug_in
+		var unit := _deserialize_unit_snapshot(serialized_units[unit_id] as Dictionary)
 		deserialized[unit_id] = unit
 	return deserialized
+
+func _deserialize_unit_snapshot(serialized_unit: Dictionary) -> Dictionary:
+	var unit := serialized_unit.duplicate(true)
+	var hex_variant: Variant = unit.get("hex", {})
+	if hex_variant is Dictionary:
+		var hex_payload := hex_variant as Dictionary
+		unit["hex"] = Vector2i(int(hex_payload.get("x", 0)), int(hex_payload.get("y", 0)))
+	var components: Array[Dictionary] = []
+	for component_variant in unit.get("combined_components", []) as Array:
+		if component_variant is Dictionary:
+			components.append(_deserialize_unit_snapshot(component_variant as Dictionary))
+	if unit.has("combined_components"):
+		unit["combined_components"] = components
+	return unit
 
 func _deserialize_orders(serialized_orders: Dictionary) -> Dictionary:
 	var deserialized := {}
@@ -238,9 +389,7 @@ func _deserialize_orders(serialized_orders: Dictionary) -> Dictionary:
 		var order := raw_order.duplicate(true)
 		var path: Array[Vector2i] = []
 		for waypoint in order.get("path", []):
-			if typeof(waypoint) == TYPE_VECTOR2I:
-				path.append(waypoint as Vector2i)
-			elif typeof(waypoint) == TYPE_DICTIONARY:
+			if typeof(waypoint) == TYPE_DICTIONARY:
 				var hex_payload := waypoint as Dictionary
 				path.append(Vector2i(int(hex_payload.get("x", 0)), int(hex_payload.get("y", 0))))
 		order["path"] = path

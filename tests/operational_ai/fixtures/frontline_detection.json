@@ -1,4 +1,5 @@
 {
+  "fixtureVersion": 1,
   "id": "frontline_detection",
   "description": "Operational map analysis should correctly detect frontline hexes and deterministic sector ordering.",
   "mapAnalysis": {

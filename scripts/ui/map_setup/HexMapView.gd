@@ -12,6 +12,7 @@ class BaseCacheLayer extends Control:
 
 signal painted(axial: Vector2i, terrain: String)
 signal territory_painted(axial: Vector2i, owner: int)
+signal objective_painted(axial: Vector2i, priority: String)
 
 const SQRT3 := 1.7320508075688772
 const MIN_ZOOM := 0.2
@@ -37,12 +38,17 @@ var _is_erasing := false
 var _is_panning := false
 var _is_painting_territory := false
 var _is_erasing_territory := false
+var _is_painting_objective := false
+var _is_erasing_objective := false
 var _last_mouse_position := Vector2.ZERO
 var _has_last_brush_axial := false
 var _last_brush_axial := Vector2i.ZERO
 var _territory_mode_enabled := false
 var _territory_brush_owner: int = GameState.TerritoryOwnership.NEUTRAL
 var _territory_map: Dictionary = {}
+var _objective_mode_enabled := false
+var _objective_brush_priority := "secondary"
+var _objective_map: Dictionary = {}
 var _geometry_dirty := true
 var _base_cache_dirty := true
 var _base_cache_origin := Vector2.ZERO
@@ -92,6 +98,16 @@ func set_territory_paint_mode(enabled: bool, owner: int, territory_map: Dictiona
 		_is_erasing_territory = false
 		_has_last_brush_axial = false
 	_rebuild_territory_overlay_cache()
+	queue_redraw()
+
+func set_objective_paint_mode(enabled: bool, priority: String, objective_map: Dictionary) -> void:
+	_objective_mode_enabled = enabled
+	_objective_brush_priority = "primary" if priority == "primary" else "secondary"
+	_objective_map = objective_map.duplicate(true)
+	if not enabled:
+		_is_painting_objective = false
+		_is_erasing_objective = false
+		_has_last_brush_axial = false
 	queue_redraw()
 
 func export_terrain_map() -> Dictionary:
@@ -144,12 +160,27 @@ func _gui_input(event: InputEvent) -> void:
 				_is_erasing = false
 				_is_painting_territory = false
 				_is_erasing_territory = false
+				_is_painting_objective = false
+				_is_erasing_objective = false
 				_has_last_brush_axial = false
 			accept_event()
 			return
 
 		if mouse_button.button_index == MOUSE_BUTTON_LEFT:
 			if mouse_button.pressed:
+				if _objective_mode_enabled:
+					_is_painting_objective = false
+					_is_erasing_objective = false
+					_is_painting = false
+					_is_panning = false
+					_has_last_brush_axial = false
+					if _is_screen_position_on_map_hex(mouse_button.position):
+						_is_painting_objective = true
+						_paint_objective_at(mouse_button.position, _objective_brush_priority)
+					else:
+						_is_panning = true
+					accept_event()
+					return
 				if _territory_mode_enabled:
 					_is_painting_territory = false
 					_is_erasing_territory = false
@@ -174,6 +205,8 @@ func _gui_input(event: InputEvent) -> void:
 					_is_painting = false
 					_is_panning = true
 			else:
+				_is_painting_objective = false
+				_is_erasing_objective = false
 				_is_painting_territory = false
 				_is_erasing_territory = false
 				_is_painting = false
@@ -183,6 +216,21 @@ func _gui_input(event: InputEvent) -> void:
 			return
 
 		if mouse_button.button_index == MOUSE_BUTTON_RIGHT:
+			if _objective_mode_enabled:
+				_is_erasing = false
+				if mouse_button.pressed:
+					_is_painting_objective = false
+					_is_erasing_objective = false
+					_is_panning = false
+					_has_last_brush_axial = false
+					if _is_screen_position_on_map_hex(mouse_button.position):
+						_is_erasing_objective = true
+						_paint_objective_at(mouse_button.position, "")
+				else:
+					_is_erasing_objective = false
+					_has_last_brush_axial = false
+				accept_event()
+				return
 			if _territory_mode_enabled:
 				_is_erasing = false
 				if mouse_button.pressed:
@@ -230,6 +278,16 @@ func _gui_input(event: InputEvent) -> void:
 			accept_event()
 			return
 
+		if _is_painting_objective:
+			_paint_objective_at(mouse_motion.position, _objective_brush_priority)
+			accept_event()
+			return
+
+		if _is_erasing_objective:
+			_paint_objective_at(mouse_motion.position, "")
+			accept_event()
+			return
+
 		if _is_erasing_territory:
 			_paint_territory_at(mouse_motion.position, GameState.TerritoryOwnership.NEUTRAL)
 			accept_event()
@@ -264,6 +322,7 @@ func _draw() -> void:
 		draw_texture(_base_viewport.get_texture(), _base_cache_origin)
 	_draw_painted_hexes()
 	_draw_territory_overlay()
+	_draw_objective_overlay()
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -344,6 +403,30 @@ func _paint_territory_at(screen_position: Vector2, owner_override: int = -1) -> 
 	territory_painted.emit(axial, target_owner)
 	queue_redraw()
 
+func _paint_objective_at(screen_position: Vector2, priority: String) -> void:
+	if not _objective_mode_enabled:
+		return
+	var axial := _world_to_axial(_screen_to_world(screen_position))
+	if not _is_axial_on_map(axial):
+		return
+	if _has_last_brush_axial and _last_brush_axial == axial:
+		return
+	var key := _coordinate_key(axial)
+	var normalized := priority if priority in ["primary", "secondary"] else ""
+	var current := String((_objective_map.get(key, {}) as Dictionary).get("priority", "")) if _objective_map.get(key, {}) is Dictionary else ""
+	if current == normalized:
+		_has_last_brush_axial = true
+		_last_brush_axial = axial
+		return
+	if normalized.is_empty():
+		_objective_map.erase(key)
+	else:
+		_objective_map[key] = {"priority": normalized}
+	_has_last_brush_axial = true
+	_last_brush_axial = axial
+	objective_painted.emit(axial, normalized)
+	queue_redraw()
+
 func _draw_territory_overlay() -> void:
 	if not _territory_mode_enabled:
 		return
@@ -353,6 +436,24 @@ func _draw_territory_overlay() -> void:
 			continue
 		var color: Color = entry.get("color", Color.TRANSPARENT)
 		draw_colored_polygon(corners, color)
+
+func _draw_objective_overlay() -> void:
+	for key_variant in _objective_map.keys():
+		var parts := String(key_variant).split(",")
+		if parts.size() != 2:
+			continue
+		var axial := Vector2i(int(parts[0]), int(parts[1]))
+		if not _is_axial_on_map(axial):
+			continue
+		var entry := _objective_map[key_variant] as Dictionary
+		var primary := String(entry.get("priority", "secondary")) == "primary"
+		var center := _center_for_axial(axial)
+		var color := Color(1.0, 0.72, 0.12, 0.95) if primary else Color(0.78, 0.86, 1.0, 0.9)
+		var radius := hex_size * (0.34 if primary else 0.24)
+		draw_circle(center, radius, Color(color, 0.25))
+		draw_arc(center, radius, 0.0, TAU, 24, color, 3.0 if primary else 2.0, true)
+		draw_line(center - Vector2(radius * 0.55, 0.0), center + Vector2(radius * 0.55, 0.0), color, 2.0)
+		draw_line(center - Vector2(0.0, radius * 0.55), center + Vector2(0.0, radius * 0.55), color, 2.0)
 
 func _color_for_owner(owner: int) -> Color:
 	if owner == GameState.TerritoryOwnership.PLAYER_1:

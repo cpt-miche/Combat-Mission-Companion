@@ -91,7 +91,7 @@ static func make_sector_assessment(
 	details: Dictionary = {}
 ) -> Dictionary:
 	return {
-		"id": sector_id,
+		"sectorId": sector_id,
 		"urgency": urgency,
 		"score": score,
 		"reasons": reasons.duplicate(),

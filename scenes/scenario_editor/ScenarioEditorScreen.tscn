@@ -1,0 +1,341 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/scenario_editor/ScenarioEditorScreen.gd" id="1_editor"]
+
+[node name="ScenarioEditorScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_editor")
+
+[node name="RootMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RootVBox" type="VBoxContainer" parent="RootMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="RootMargin/RootVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Scenario Library"
+
+[node name="StatusLabel" type="Label" parent="RootMargin/RootVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="LibraryPanel" type="VBoxContainer" parent="RootMargin/RootVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="LibraryButtons" type="HBoxContainer" parent="RootMargin/RootVBox/LibraryPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="NewButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/LibraryButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New"
+
+[node name="EditButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/LibraryButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Edit"
+
+[node name="DuplicateButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/LibraryButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Duplicate"
+
+[node name="DeleteButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/LibraryButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Delete"
+
+[node name="PlayButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/LibraryButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Play"
+
+[node name="ImportButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/LibraryButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Import JSON"
+
+[node name="ExportButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/LibraryButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Export JSON"
+
+[node name="MainMenuButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/LibraryButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Main Menu"
+
+[node name="ScenarioList" type="ItemList" parent="RootMargin/RootVBox/LibraryPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 280)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ScenarioDescriptionLabel" type="Label" parent="RootMargin/RootVBox/LibraryPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+text = "Select a scenario."
+
+[node name="DraftRow" type="HBoxContainer" parent="RootMargin/RootVBox/LibraryPanel"]
+layout_mode = 2
+
+[node name="DraftLabel" type="Label" parent="RootMargin/RootVBox/LibraryPanel/DraftRow"]
+visible = false
+layout_mode = 2
+text = "Draft actions"
+
+[node name="DraftSelector" type="OptionButton" parent="RootMargin/RootVBox/LibraryPanel/DraftRow"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ResumeDraftButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/DraftRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Resume Selected Draft"
+
+[node name="DeleteDraftButton" type="Button" parent="RootMargin/RootVBox/LibraryPanel/DraftRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Discard Selected Draft"
+
+[node name="EditorPanel" type="VBoxContainer" parent="RootMargin/RootVBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="EditorStepLabel" type="Label" parent="RootMargin/RootVBox/EditorPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Scenario Details"
+
+[node name="NameLabel" type="Label" parent="RootMargin/RootVBox/EditorPanel"]
+layout_mode = 2
+text = "Scenario name"
+
+[node name="ScenarioNameInput" type="LineEdit" parent="RootMargin/RootVBox/EditorPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BriefingLabel" type="Label" parent="RootMargin/RootVBox/EditorPanel"]
+layout_mode = 2
+text = "Briefing"
+
+[node name="BriefingInput" type="TextEdit" parent="RootMargin/RootVBox/EditorPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+
+[node name="SideNames" type="HBoxContainer" parent="RootMargin/RootVBox/EditorPanel"]
+layout_mode = 2
+
+[node name="Player1NameInput" type="LineEdit" parent="RootMargin/RootVBox/EditorPanel/SideNames"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Player 1 side name"
+
+[node name="Player2NameInput" type="LineEdit" parent="RootMargin/RootVBox/EditorPanel/SideNames"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Player 2 side name"
+
+[node name="ReviewSummaryLabel" type="Label" parent="RootMargin/RootVBox/EditorPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+
+[node name="StepButtons" type="GridContainer" parent="RootMargin/RootVBox/EditorPanel"]
+layout_mode = 2
+columns = 3
+
+[node name="MapStepButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/StepButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Map"
+
+[node name="P1ForcesButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/StepButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Player 1 Forces"
+
+[node name="P2ForcesButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/StepButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Player 2 Forces"
+
+[node name="P1DeploymentButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/StepButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Player 1 Deployment"
+
+[node name="P2DeploymentButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/StepButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Player 2 Deployment"
+
+[node name="ContinueButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/StepButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Apply Details & Continue"
+
+[node name="EditorActions" type="HBoxContainer" parent="RootMargin/RootVBox/EditorPanel"]
+layout_mode = 2
+
+[node name="SaveDraftButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/EditorActions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save Draft"
+
+[node name="SaveScenarioButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/EditorActions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save Completed Scenario"
+
+[node name="ExitLibraryButton" type="Button" parent="RootMargin/RootVBox/EditorPanel/EditorActions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Return to Library"
+
+[node name="NewScenarioDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "New Scenario"
+size = Vector2i(520, 460)
+ok_button_text = "Create"
+
+[node name="NewVBox" type="VBoxContainer" parent="NewScenarioDialog"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 504.0
+offset_bottom = 405.0
+
+[node name="NewNameInput" type="LineEdit" parent="NewScenarioDialog/NewVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Scenario name"
+
+[node name="NewBriefingInput" type="TextEdit" parent="NewScenarioDialog/NewVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+placeholder_text = "Briefing"
+
+[node name="NewSizeSelector" type="OptionButton" parent="NewScenarioDialog/NewVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="NewP1NameInput" type="LineEdit" parent="NewScenarioDialog/NewVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Allied Force"
+
+[node name="NewP1NationSelector" type="OptionButton" parent="NewScenarioDialog/NewVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="NewP2NameInput" type="LineEdit" parent="NewScenarioDialog/NewVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Axis Force"
+
+[node name="NewP2NationSelector" type="OptionButton" parent="NewScenarioDialog/NewVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="PlayDialog" type="Window" parent="."]
+unique_name_in_owner = true
+title = "Choose Side"
+size = Vector2i(440, 190)
+initial_position = 1
+
+[node name="PlayVBox" type="VBoxContainer" parent="PlayDialog"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 424.0
+offset_bottom = 174.0
+
+[node name="PlayPrompt" type="Label" parent="PlayDialog/PlayVBox"]
+layout_mode = 2
+text = "Choose the side you will command. Player 1 always moves first."
+autowrap_mode = 3
+
+[node name="PlayStatusLabel" type="Label" parent="PlayDialog/PlayVBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.35, 0.35, 1)
+autowrap_mode = 3
+
+[node name="PlaySide1Button" type="Button" parent="PlayDialog/PlayVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Play as Player 1"
+
+[node name="PlaySide2Button" type="Button" parent="PlayDialog/PlayVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Play as Player 2"
+
+[node name="DeleteDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Delete Scenario"
+dialog_text = "Delete the selected scenario from data/scenarios?"
+ok_button_text = "Delete"
+
+[node name="EditorExitDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Leave Scenario Editor"
+dialog_text = "Save the current scenario as a draft before returning to the library?"
+ok_button_text = "Save Draft & Exit"
+cancel_button_text = "Cancel"
+
+[node name="ImportConflictDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Scenario Already Exists"
+dialog_text = "A scenario with this name already exists. Replace it or save the import as a copy?"
+ok_button_text = "Replace"
+cancel_button_text = "Cancel"
+
+[node name="ImportDialog" type="FileDialog" parent="."]
+unique_name_in_owner = true
+title = "Import Scenario JSON"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.json ; Scenario JSON")
+
+[node name="ExportDialog" type="FileDialog" parent="."]
+unique_name_in_owner = true
+title = "Export Scenario JSON"
+file_mode = 4
+access = 2
+filters = PackedStringArray("*.json ; Scenario JSON")

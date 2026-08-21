@@ -55,6 +55,13 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "Load"
 
+[node name="ScenarioEditorButton" type="Button" parent="RootMargin/CenterVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Scenario Editor"
+
 [node name="DisplayButton" type="Button" parent="RootMargin/CenterVBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 44)
@@ -71,6 +78,7 @@ text = ""
 
 [node name="NationDialog" type="Window" parent="."]
 unique_name_in_owner = true
+visible = false
 title = "Choose Side"
 size = Vector2i(460, 220)
 min_size = Vector2i(460, 220)
@@ -159,12 +167,19 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="SavedMapLabel" type="Label" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Saved map"
 
 [node name="SavedMapSelector" type="OptionButton" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="DeleteScenarioButton" type="Button" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Delete Selected Scenario"
 
 [node name="MapSizeLabel" type="Label" parent="MapDialog/MapDialogMargin/MapDialogVBox"]
 unique_name_in_owner = true
@@ -180,6 +195,14 @@ unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 2
 text = ""
+
+[node name="DeleteScenarioDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Delete Starting Scenario"
+initial_position = 1
+ok_button_text = "Delete"
+cancel_button_text = "Cancel"
+dialog_text = "Delete the selected starting scenario?"
 
 [node name="DisplayDialog" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
