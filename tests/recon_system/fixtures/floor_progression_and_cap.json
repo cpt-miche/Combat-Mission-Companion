@@ -10,8 +10,8 @@
         "2,1": {"hexId": "2,1", "scoutLevel": 0, "knownEnemyUnits": []}
       },
       "units": [
-        {"id": "obs_inf", "owner": 1, "unit_type": "infantry", "size": "company", "hex": [1, 1]},
-        {"id": "enemy_1", "owner": 2, "unit_type": "infantry", "size": "company", "hex": [2, 1]}
+        {"id": "obs_inf", "owner": 1, "type": "infantry", "size": "company", "hex": [1, 1]},
+        {"id": "enemy_1", "owner": 2, "type": "infantry", "size": "company", "hex": [2, 1]}
       ],
       "expected": {
         "hexLevelMin": {"2,1": 1},
@@ -25,8 +25,8 @@
         "2,1": {"hexId": "2,1", "scoutLevel": 0, "knownEnemyUnits": []}
       },
       "units": [
-        {"id": "obs_recon", "owner": 1, "unit_type": "recon", "size": "platoon", "hex": [1, 1]},
-        {"id": "enemy_1", "owner": 2, "unit_type": "infantry", "size": "company", "hex": [2, 1]}
+        {"id": "obs_recon", "owner": 1, "type": "recon", "size": "platoon", "hex": [1, 1]},
+        {"id": "enemy_1", "owner": 2, "type": "infantry", "size": "company", "hex": [2, 1]}
       ],
       "expected": {
         "hexLevelMin": {"2,1": 3},
@@ -40,10 +40,10 @@
         "2,1": {"hexId": "2,1", "scoutLevel": 4, "knownEnemyUnits": []}
       },
       "units": [
-        {"id": "obs_recon_a", "owner": 1, "unit_type": "recon", "size": "platoon", "hex": [1, 1]},
-        {"id": "obs_recon_b", "owner": 1, "unit_type": "recon", "size": "platoon", "hex": [1, 2]},
-        {"id": "obs_inf", "owner": 1, "unit_type": "infantry", "size": "company", "hex": [2, 2]},
-        {"id": "enemy_1", "owner": 2, "unit_type": "tank", "size": "battalion", "hex": [2, 1]}
+        {"id": "obs_recon_a", "owner": 1, "type": "recon", "size": "platoon", "hex": [1, 1]},
+        {"id": "obs_recon_b", "owner": 1, "type": "recon", "size": "platoon", "hex": [1, 2]},
+        {"id": "obs_inf", "owner": 1, "type": "infantry", "size": "company", "hex": [2, 2]},
+        {"id": "enemy_1", "owner": 2, "type": "tank", "size": "battalion", "hex": [2, 1]}
       ],
       "expected": {
         "hexLevels": {"2,1": 4}
@@ -55,14 +55,14 @@
       "seed": 404,
       "minGain": 2,
       "adjacentFriendlies": [
-        {"id": "r1", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
-        {"id": "r2", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
-        {"id": "r3", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
-        {"id": "r4", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
-        {"id": "r5", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
-        {"id": "r6", "owner": 1, "unit_type": "recon", "hex": [1, 1]},
-        {"id": "c1", "owner": 1, "unit_type": "infantry", "hex": [1, 1]},
-        {"id": "c2", "owner": 1, "unit_type": "tank", "hex": [1, 1]}
+        {"id": "r1", "owner": 1, "type": "recon", "hex": [1, 1]},
+        {"id": "r2", "owner": 1, "type": "recon", "hex": [1, 1]},
+        {"id": "r3", "owner": 1, "type": "recon", "hex": [1, 1]},
+        {"id": "r4", "owner": 1, "type": "recon", "hex": [1, 1]},
+        {"id": "r5", "owner": 1, "type": "recon", "hex": [1, 1]},
+        {"id": "r6", "owner": 1, "type": "recon", "hex": [1, 1]},
+        {"id": "c1", "owner": 1, "type": "infantry", "hex": [1, 1]},
+        {"id": "c2", "owner": 1, "type": "tank", "hex": [1, 1]}
       ]
     }
   ],
@@ -75,9 +75,9 @@
         "2,1": {"hexId": "2,1", "scoutLevel": 0, "knownEnemyUnits": []}
       },
       "units": [
-        {"id": "obs_recon", "owner": 1, "unit_type": "recon", "size": "platoon", "hex": [1, 1]},
-        {"id": "obs_inf", "owner": 1, "unit_type": "infantry", "size": "company", "hex": [1, 2]},
-        {"id": "enemy_1", "owner": 2, "unit_type": "tank", "size": "company", "hex": [2, 1]}
+        {"id": "obs_recon", "owner": 1, "type": "recon", "size": "platoon", "hex": [1, 1]},
+        {"id": "obs_inf", "owner": 1, "type": "infantry", "size": "company", "hex": [1, 2]},
+        {"id": "enemy_1", "owner": 2, "type": "tank", "size": "company", "hex": [2, 1]}
       ]
     }
   ]

@@ -1,6 +1,8 @@
 extends RefCounted
 class_name DeploymentSanity
 
+const HexGrid = preload("res://scripts/domain/map/HexGrid.gd")
+
 const MAX_COMBAT_CAPACITY := 9
 const MAX_SUPPORT_CAPACITY := 3
 const ARTILLERY_RANGE := 6
@@ -67,7 +69,7 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 	var latest_order_idx := {}
 	for i in range(orders.size()):
 		var order: Dictionary = orders[i]
-		var unit_id: String = String(order.get("unitId", order.get("elementId", "")))
+		var unit_id: String = String(order.get("unitId", ""))
 		if unit_id.is_empty():
 			continue
 		latest_order_idx[unit_id] = i
@@ -81,7 +83,7 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 		if hex_id.is_empty():
 			continue
 		hex_ids.append(hex_id)
-		terrain_by_hex[hex_id] = String(hex.get("terrain", DeploymentTypes.TERRAIN_OPEN))
+		terrain_by_hex[hex_id] = String(hex.get("terrain", DeploymentTypes.TERRAIN_LIGHT))
 		coords[hex_id] = Vector2i(int(hex.get("q", 0)), int(hex.get("r", 0)))
 		var neighbor_ids: Array[String] = []
 		for n in (hex.get("neighborIds", []) as Array):
@@ -106,14 +108,14 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 	for unit_id in unit_ids:
 		var idx: int = int(latest_order_idx.get(unit_id, -1))
 		if idx >= 0:
-			placements[unit_id] = String(orders[idx].get("toHexId", orders[idx].get("hexId", "")))
+			placements[unit_id] = String(orders[idx].get("toHexId", ""))
 		else:
 			placements[unit_id] = String((units_by_id[unit_id] as Dictionary).get("hexId", ""))
 
 	var attack_stacks := {}
 	for order in orders:
 		var as_order: Dictionary = order as Dictionary
-		var unit_id: String = String(as_order.get("unitId", as_order.get("elementId", "")))
+		var unit_id: String = String(as_order.get("unitId", ""))
 		if unit_id.is_empty():
 			continue
 		var unit: Dictionary = units_by_id.get(unit_id, {}) as Dictionary
@@ -121,7 +123,7 @@ static func _build_state(plan: Dictionary, hexes: Array[Dictionary], sector_mode
 			continue
 		if String(as_order.get("stance", "")).to_lower() != "attack":
 			continue
-		var to_hex: String = String(as_order.get("toHexId", as_order.get("hexId", "")))
+		var to_hex: String = String(as_order.get("toHexId", ""))
 		if to_hex.is_empty():
 			continue
 		attack_stacks[to_hex] = true
@@ -219,6 +221,8 @@ static func _repair_over_split_screens(state: Dictionary, warnings: Array[String
 	var weak_ids := _weak_screen_unit_ids(state)
 	for unit_id in weak_ids:
 		var from_hex: String = String(state["placements"].get(unit_id, ""))
+		if _would_leave_frontline_empty(unit_id, from_hex, state):
+			continue
 		var target: String = _best_adjacent_weak_merge_target(unit_id, state)
 		if target.is_empty():
 			continue
@@ -238,8 +242,11 @@ static func _repair_tank_misuse(state: Dictionary, warnings: Array[String]) -> b
 		if String(unit.get("role", "")) != DeploymentTypes.ROLE_ARMOR:
 			continue
 		var from_hex: String = String(state["placements"].get(unit_id, ""))
-		var terrain: String = String(state["terrainByHex"].get(from_hex, DeploymentTypes.TERRAIN_OPEN))
-		if terrain not in [DeploymentTypes.TERRAIN_ROUGH, DeploymentTypes.TERRAIN_URBAN]:
+		var terrain: String = String(state["terrainByHex"].get(from_hex, DeploymentTypes.TERRAIN_LIGHT))
+		if terrain not in [DeploymentTypes.TERRAIN_MEDIUM, DeploymentTypes.TERRAIN_HEAVY, DeploymentTypes.TERRAIN_WOODS, DeploymentTypes.TERRAIN_URBAN]:
+			continue
+		if _would_leave_frontline_empty(unit_id, from_hex, state):
+			warnings.append("accepted: armor %s remains on %s terrain to preserve frontline coverage" % [unit_id, terrain])
 			continue
 		var to_hex := _best_non_restrictive_hex(unit_id, state)
 		if to_hex.is_empty():
@@ -262,8 +269,8 @@ static func _append_unresolved_warnings(state: Dictionary, warnings: Array[Strin
 		if role == DeploymentTypes.ROLE_RECON and _is_support_isolated(unit_id, at_hex, state):
 			warnings.append("unresolved: recon %s remains isolated at %s" % [unit_id, at_hex])
 		if role == DeploymentTypes.ROLE_ARMOR:
-			var terrain: String = String(state["terrainByHex"].get(at_hex, DeploymentTypes.TERRAIN_OPEN))
-			if terrain in [DeploymentTypes.TERRAIN_ROUGH, DeploymentTypes.TERRAIN_URBAN] and not _has_non_restrictive_hex_option(unit_id, state):
+			var terrain: String = String(state["terrainByHex"].get(at_hex, DeploymentTypes.TERRAIN_LIGHT))
+			if terrain in [DeploymentTypes.TERRAIN_MEDIUM, DeploymentTypes.TERRAIN_HEAVY, DeploymentTypes.TERRAIN_WOODS, DeploymentTypes.TERRAIN_URBAN] and not _has_non_restrictive_hex_option(unit_id, state):
 				warnings.append("accepted: armor %s in %s terrain is unavoidable" % [unit_id, terrain])
 
 	for hex_id in state["hexIds"]:
@@ -281,7 +288,6 @@ static func _move_unit(unit_id: String, to_hex: String, state: Dictionary, stage
 	if idx >= 0:
 		var order: Dictionary = state["orders"][idx] as Dictionary
 		order["toHexId"] = to_hex
-		order["hexId"] = to_hex
 		order["stage"] = stage
 		order["reason"] = reason
 		state["orders"][idx] = order
@@ -291,11 +297,9 @@ static func _move_unit(unit_id: String, to_hex: String, state: Dictionary, stage
 	var order := {
 		"id": "",
 		"unitId": unit_id,
-		"elementId": unit_id,
 		"type": "deploy",
 		"fromHexId": String(unit.get("hexId", "")),
 		"toHexId": to_hex,
-		"hexId": to_hex,
 		"objectiveId": "",
 		"stage": stage,
 		"role": "sanity",
@@ -472,8 +476,8 @@ static func _best_non_restrictive_hex(unit_id: String, state: Dictionary) -> Str
 	var from_hex: String = String(state["placements"].get(unit_id, ""))
 	var candidates: Array[Dictionary] = []
 	for hex_id in state["hexIds"]:
-		var terrain: String = String(state["terrainByHex"].get(hex_id, DeploymentTypes.TERRAIN_OPEN))
-		if terrain in [DeploymentTypes.TERRAIN_ROUGH, DeploymentTypes.TERRAIN_URBAN]:
+		var terrain: String = String(state["terrainByHex"].get(hex_id, DeploymentTypes.TERRAIN_LIGHT))
+		if terrain in [DeploymentTypes.TERRAIN_MEDIUM, DeploymentTypes.TERRAIN_HEAVY, DeploymentTypes.TERRAIN_WOODS, DeploymentTypes.TERRAIN_URBAN]:
 			continue
 		if not _can_place_combat(hex_id, cost, state):
 			continue
@@ -562,6 +566,12 @@ static func _has_weak_screen_on_hex(hex_id: String, state: Dictionary) -> bool:
 			return true
 	return false
 
+static func _would_leave_frontline_empty(unit_id: String, hex_id: String, state: Dictionary) -> bool:
+	if not (state["frontline"] as Dictionary).has(hex_id):
+		return false
+	var unit: Dictionary = state["unitsById"].get(unit_id, {}) as Dictionary
+	return _combat_load(hex_id, state) - _combat_cost(unit) <= 0
+
 static func _reserve_neighbors(hex_id: String, state: Dictionary) -> int:
 	var count := 0
 	for unit_id in _reserve_combat_ids(state):
@@ -637,7 +647,7 @@ static func _hex_distance(a_id: String, b_id: String, state: Dictionary) -> int:
 		return 99
 	var a: Vector2i = coords[a_id]
 	var b: Vector2i = coords[b_id]
-	return int((abs(a.x - b.x) + abs(a.x + a.y - b.x - b.y) + abs(a.y - b.y)) / 2)
+	return HexGrid.distance(a, b)
 
 static func _set_from_array(values: Array) -> Dictionary:
 	var mapped := {}
@@ -652,8 +662,8 @@ static func _sorted_orders(orders: Array[Dictionary]) -> Array[Dictionary]:
 		var stage_b: String = String(b.get("stage", ""))
 		if stage_a != stage_b:
 			return stage_a < stage_b
-		var unit_a: String = String(a.get("unitId", a.get("elementId", "")))
-		var unit_b: String = String(b.get("unitId", b.get("elementId", "")))
+		var unit_a: String = String(a.get("unitId", ""))
+		var unit_b: String = String(b.get("unitId", ""))
 		if unit_a != unit_b:
 			return unit_a < unit_b
 		return String(a.get("toHexId", "")) < String(b.get("toHexId", ""))

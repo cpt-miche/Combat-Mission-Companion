@@ -24,7 +24,7 @@
         {
           "id": "obs_art_1",
           "owner": 1,
-          "unit_type": "artillery",
+          "type": "artillery",
           "size": "company",
           "hex": [
             1,
@@ -34,7 +34,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             2,
@@ -44,7 +44,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             2,
@@ -82,7 +82,7 @@
         {
           "id": "obs_art_1",
           "owner": 1,
-          "unit_type": "artillery",
+          "type": "artillery",
           "size": "company",
           "hex": [
             1,
@@ -92,7 +92,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             2,
@@ -102,7 +102,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             2,
@@ -117,7 +117,7 @@
         "knownByUnit": {
           "enemy_combat": {
             "typeKnown": true,
-            "reportedUnitType": "infantry",
+            "reportedType": "infantry",
             "sizeKnown": false
           },
           "enemy_support": {
@@ -140,7 +140,7 @@
         {
           "id": "obs_art_1",
           "owner": 1,
-          "unit_type": "artillery",
+          "type": "artillery",
           "size": "company",
           "hex": [
             1,
@@ -150,7 +150,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             2,
@@ -160,7 +160,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             2,
@@ -187,7 +187,7 @@
         {
           "id": "obs_recon",
           "owner": 1,
-          "unit_type": "recon",
+          "type": "recon",
           "size": "platoon",
           "hex": [
             1,
@@ -197,7 +197,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             2,
@@ -207,7 +207,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             2,
@@ -240,7 +240,7 @@
         {
           "id": "obs_recon",
           "owner": 1,
-          "unit_type": "recon",
+          "type": "recon",
           "size": "platoon",
           "hex": [
             1,
@@ -250,7 +250,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             2,
@@ -260,7 +260,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             2,
@@ -289,7 +289,7 @@
         {
           "id": "obs_recon",
           "owner": 1,
-          "unit_type": "recon",
+          "type": "recon",
           "size": "platoon",
           "hex": [
             1,
@@ -299,7 +299,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             2,
@@ -309,7 +309,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             2,
@@ -338,7 +338,7 @@
         {
           "id": "obs_recon",
           "owner": 1,
-          "unit_type": "recon",
+          "type": "recon",
           "size": "platoon",
           "hex": [
             1,
@@ -348,7 +348,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             8,
@@ -358,7 +358,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             8,
@@ -383,7 +383,7 @@
         {
           "id": "obs_inf_floor",
           "owner": 1,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "company",
           "hex": [
             1,
@@ -393,7 +393,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             2,
@@ -403,7 +403,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             2,
@@ -442,7 +442,7 @@
         {
           "id": "obs_recon",
           "owner": 1,
-          "unit_type": "recon",
+          "type": "recon",
           "size": "platoon",
           "hex": [
             1,
@@ -452,7 +452,7 @@
         {
           "id": "enemy_combat",
           "owner": 2,
-          "unit_type": "infantry",
+          "type": "infantry",
           "size": "battalion",
           "hex": [
             2,
@@ -462,7 +462,7 @@
         {
           "id": "enemy_support",
           "owner": 2,
-          "unit_type": "antiTank",
+          "type": "antiTank",
           "size": "company",
           "hex": [
             2,

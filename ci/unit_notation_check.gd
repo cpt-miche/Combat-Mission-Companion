@@ -43,18 +43,81 @@ func _run() -> void:
 		"regiment_number": 2
 	}), "?/1-2")
 
-	_check("invalid_hq", UnitNotationFormatter.format_unit({
+	_check("local_battalion", UnitNotationFormatter.format_unit({
+		"id": "bn_direct",
+		"type": "infantry",
+		"size": "battalion",
+		"battalion_number": 1
+	}), "1st Infantry Battalion")
+
+	_check("local_hq", UnitNotationFormatter.format_unit({
 		"id": "hq_bad",
 		"type": "headquarters",
 		"size": "battalion"
-	}), "HQ/?")
+	}), "Battalion HQ")
 
-	_check("invalid_platoon", UnitNotationFormatter.format_unit({
+	_check("local_company", UnitNotationFormatter.format_unit({
+		"id": "co_direct",
+		"type": "infantry",
+		"size": "company",
+		"company_letter": "A",
+		"battalion_number": 1
+	}), "A Company")
+
+	_check("local_platoon", UnitNotationFormatter.format_unit({
 		"id": "plt_bad",
 		"type": "infantry",
 		"size": "platoon",
-		"company_letter": "A"
-	}), "?/A/?")
+		"company_letter": "A",
+		"platoon_number": 1,
+		"battalion_number": 1
+	}), "1st Platoon")
+
+	_check("attached_company", UnitNotationFormatter.format_unit({
+		"id": "attached_tank_company",
+		"type": "tank",
+		"size": "company",
+		"is_attached": true,
+		"display_name": "1st Medium Tank Company (Attached)",
+		"designation": {
+			"battalion_number": 1,
+			"regiment_number": 1,
+			"attached_company_index": 1
+		}
+	}), "1st Medium Tank Company (Attached)")
+
+	_check("attached_company_platoon", UnitNotationFormatter.format_unit({
+		"id": "attached_tank_platoon",
+		"type": "tank",
+		"size": "platoon",
+		"display_name": "1st Medium Tank Platoon",
+		"designation": {
+			"battalion_number": 1,
+			"regiment_number": 1,
+			"platoon_number": 1,
+			"attached_company_index": 1
+		}
+	}), "1st Medium Tank Platoon")
+
+	_check("counter_platoon_caps_at_battalion", UnitNotationFormatter.format_counter_unit({
+		"size": "platoon",
+		"designation": {
+			"platoon_number": 1,
+			"company_letter": "A",
+			"battalion_number": 2,
+			"regiment_number": 9,
+			"division_number": 4
+		}
+	}), "1/A/2")
+
+	_check("counter_company_caps_at_battalion", UnitNotationFormatter.format_counter_unit({
+		"size": "company",
+		"designation": {"company_letter": "B", "battalion_number": 3, "regiment_number": 7}
+	}), "B/3")
+
+	_check("counter_strips_saved_regiment_suffix", UnitNotationFormatter.format_counter_unit({
+		"short_name": "2/C/1-8"
+	}), "2/C/1")
 
 	if _failures > 0:
 		push_error("Unit notation check failed with %d assertion(s)." % _failures)

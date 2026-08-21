@@ -2,6 +2,11 @@ extends Control
 
 const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValidator.gd")
 const DeploymentAIService = preload("res://scripts/systems/deployment_ai/DeploymentAIService.gd")
+const TerrainCatalog = preload("res://scripts/core/TerrainCatalog.gd")
+const UnitNotationFormatter = preload("res://scripts/domain/units/UnitNotationFormatter.gd")
+const NatoUnitSymbolRenderer = preload("res://scripts/ui/shared/NatoUnitSymbolRenderer.gd")
+const FormationHierarchyModel = preload("res://scripts/domain/units/FormationHierarchy.gd")
+const UNDEPLOYED_WARNING_COLOR := Color(1.0, 0.35, 0.35)
 
 @onready var phase_label: Label = %PhaseLabel
 # Maintainer note: this is intentionally a Tree (not an ItemList) because deployment units are hierarchical,
@@ -14,7 +19,18 @@ const DeploymentAIService = preload("res://scripts/systems/deployment_ai/Deploym
 @onready var hex_map_view: DeploymentHexMapView = %HexMapView
 @onready var p2_structure_label: Label = %P2StructureLabel
 @onready var p2_structure_picker: OptionButton = %P2StructurePicker
+@onready var save_scenario_button: Button = %SaveScenarioButton
 @onready var finish_button: Button = %FinishDeploymentButton
+@onready var scenario_save_dialog: ConfirmationDialog = %ScenarioSaveDialog
+@onready var scenario_name_input: LineEdit = %ScenarioNameInput
+@onready var overwrite_scenario_dialog: ConfirmationDialog = %OverwriteScenarioDialog
+@onready var selected_hex_title_label: Label = %SelectedHexTitleLabel
+@onready var selected_hex_ownership_label: Label = %SelectedHexOwnershipLabel
+@onready var selected_hex_terrain_label: Label = %SelectedHexTerrainLabel
+@onready var selected_hex_count_label: Label = %SelectedHexCountLabel
+@onready var selected_hex_unit_cards: VBoxContainer = %SelectedHexUnitCards
+@onready var root_margin: MarginContainer = $RootMargin
+@onready var scenario_editor_chrome: Control = %ScenarioEditorChrome
 
 var _player_index := 0
 var _deployable_units: Array[Dictionary] = []
@@ -22,6 +38,12 @@ var _unplaced_deployable_unit_ids: Dictionary = {}
 # Maintainer note: selected unit UI state lives in these two fields and is refreshed from TreeItem metadata.
 var _selected_unit_id := ""
 var _selected_unit_metadata: Dictionary = {}
+var _selected_unit_ids: Array[String] = []
+var _selected_unit_metadata_by_id: Dictionary = {}
+var _inspected_deployment_unit_id := ""
+var _setting_group_tree_selection := false
+var _selected_hex := Vector2i(-1, -1)
+var _pending_scenario_name := ""
 
 func _ready() -> void:
 	_player_index = 0 if GameState.current_phase == GameState.Phase.DEPLOYMENT_P1 else 1
@@ -33,19 +55,49 @@ func _ready() -> void:
 	_refresh_phase_ui("Select a unit, then click a hex in your territory.")
 
 	hex_map_view.hex_selected.connect(_on_hex_selected)
+	hex_map_view.hex_stack_selected.connect(_on_hex_stack_selected)
 	hex_map_view.hex_undeploy_requested.connect(_on_hex_undeploy_requested)
+	hex_map_view.deployment_cancel_requested.connect(_on_deployment_cancel_requested)
 	unit_list.item_selected.connect(_on_unit_item_selected)
 	unit_list.item_activated.connect(_on_unit_item_activated)
 	p2_structure_picker.item_selected.connect(_on_p2_structure_selected)
+	save_scenario_button.pressed.connect(_on_save_scenario_pressed)
 	finish_button.pressed.connect(_on_finish_deployment_pressed)
+	scenario_save_dialog.confirmed.connect(_on_scenario_save_confirmed)
+	overwrite_scenario_dialog.confirmed.connect(_on_overwrite_scenario_confirmed)
+	save_scenario_button.visible = false
+	_refresh_selected_hex_panel()
+	_configure_scenario_editor_mode()
+
+func _configure_scenario_editor_mode() -> void:
+	if not ScenarioEditorState.active:
+		return
+	root_margin.offset_top = 56.0
+	ScenarioEditorState.set_step(
+		ScenarioEditorState.Step.PLAYER_1_DEPLOYMENT if _player_index == 0 else ScenarioEditorState.Step.PLAYER_2_DEPLOYMENT,
+		_player_index
+	)
+	scenario_editor_chrome.configure()
+	scenario_editor_chrome.back_requested.connect(_on_scenario_editor_back)
+	scenario_editor_chrome.before_draft_save.connect(_on_scenario_editor_before_draft_save)
+	p2_structure_label.visible = false
+	p2_structure_picker.visible = false
+	save_scenario_button.visible = false
+	finish_button.text = "Continue to Player 2 Deployment" if _player_index == 0 else "Review Scenario"
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and not _selected_deployment_unit_ids().is_empty():
+		_on_deployment_cancel_requested()
+		get_viewport().set_input_as_handled()
 
 func _ensure_players_initialized() -> void:
 	while GameState.players.size() < 2:
+		var player_index := GameState.players.size()
 		GameState.players.append({
-			"name": "Player %d" % (GameState.players.size() + 1),
+			"name": "Player %d" % (player_index + 1),
 			"division_tree": {},
 			"deployments": {},
-			"controller": "human"
+			"controller": "ai" if player_index == 1 else "human"
 		})
 
 	for i in range(2):
@@ -56,6 +108,8 @@ func _ensure_players_initialized() -> void:
 			player["division_tree"] = _best_default_structure_for_player(i)
 		if not GameState.players[i].has("deployments"):
 			GameState.players[i]["deployments"] = {}
+		if not player.has("controller"):
+			player["controller"] = "ai" if i == 1 else "human"
 		GameState.players[i] = player
 
 func _populate_p2_structure_picker() -> void:
@@ -180,9 +234,13 @@ func _division_tree_from_catalog_template(template_data: Dictionary, variant_ind
 
 	var tree := {
 		"id": tree_id,
+		"template_id": local_tree_id,
 		"name": tree_name,
 		"type": String(template_data.get("type", "INFANTRY")).to_lower(),
+		"role": UnitRole.normalize(template_data.get("role", ""), template_data.get("type", "INFANTRY")),
+		"equipment_weight": NatoUnitSymbolRenderer.equipment_weight_for_unit(template_data),
 		"size": String(template_data.get("size", "COMPANY")).to_lower(),
+		"is_attached": false,
 		"status": String(template_data.get("status", "alive")).to_lower(),
 		"children": []
 	}
@@ -238,28 +296,12 @@ func _default_division_tree(player_index: int) -> Dictionary:
 				"status": "alive",
 				"children": [
 					{
-						"id": "%s_bn_hq" % side_label,
-						"name": "%s Battalion Headquarters" % side_label,
-						"type": "headquarters",
-						"size": "section",
-						"status": "alive",
-						"children": []
-					},
-					{
 						"id": "%s_hq_company" % side_label,
 						"name": "%s Headquarters Company" % side_label,
 						"type": "headquarters",
 						"size": "company",
 						"status": "alive",
 						"children": [
-							{
-								"id": "%s_hq_company_hq" % side_label,
-								"name": "%s Company HQ" % side_label,
-								"type": "headquarters",
-								"size": "section",
-								"status": "alive",
-								"children": []
-							},
 							{
 								"id": "%s_bn_hq_section" % side_label,
 								"name": "%s Battalion HQ Section" % side_label,
@@ -485,6 +527,9 @@ func _build_deployable_unit_list(preserve_ui_state: bool = true) -> void:
 	if not preserve_ui_state:
 		_selected_unit_id = ""
 		_selected_unit_metadata = {}
+		_selected_unit_ids.clear()
+		_selected_unit_metadata_by_id.clear()
+		_inspected_deployment_unit_id = ""
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
 	var coordinates_by_unit_id := _deployment_coordinates_by_unit_id(deployments)
 
@@ -494,38 +539,40 @@ func _build_deployable_unit_list(preserve_ui_state: bool = true) -> void:
 	var root_item := unit_list.create_item()
 	_build_deployable_unit_tree_items(root_item, division_tree, coordinates_by_unit_id, collapsed_by_unit_id, covered_unit_ids, subordinate_covered_unit_ids)
 	_unplaced_deployable_unit_ids = _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id)
+	_apply_incomplete_deployment_colors()
 	if preserve_ui_state and not previously_selected_unit_id.is_empty():
 		_restore_selected_unit(previously_selected_unit_id)
 
-func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}, collapsed_by_unit_id: Dictionary = {}, covered_unit_ids: Dictionary = {}, subordinate_covered_unit_ids: Dictionary = {}) -> void:
+func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coordinates_by_unit_id: Dictionary = {}, collapsed_by_unit_id: Dictionary = {}, _covered_unit_ids: Dictionary = {}, subordinate_covered_unit_ids: Dictionary = {}) -> void:
 	if typeof(node) != TYPE_DICTIONARY:
 		return
 
 	var unit_data := node as Dictionary
 	if unit_data.is_empty():
 		return
+	if _string_for_size(unit_data.get("size", "")) == "squad":
+		return
 
 	var item := unit_list.create_item(parent_item)
-	var block_reason := _deployability_block_reason(unit_data)
 	var display_label := _unit_label(unit_data)
 	var unit_id := String(unit_data.get("id", ""))
 	# Maintainer note: "Placed: x,y" annotation is derived from deployments keyed by unit id.
 	# `_deployment_coordinates_by_unit_id` builds that lookup from `GameState.players[*]["deployments"]`.
 	var deployed_coordinate := String(coordinates_by_unit_id.get(unit_id, ""))
 	var is_placed := not deployed_coordinate.is_empty()
+	var is_covered_by_lower_echelon := subordinate_covered_unit_ids.has(unit_id)
+	var block_reason := _deployability_block_reason(unit_data)
+	if is_covered_by_lower_echelon and not is_placed:
+		block_reason = "All deployable subordinate branches are already deployed."
 	if is_placed:
 		display_label += " (Placed: %s)" % deployed_coordinate
 	if not block_reason.is_empty():
 		display_label += "  [Not deployable: %s]" % block_reason
 	item.set_text(0, display_label)
 	item.set_selectable(0, block_reason.is_empty() or is_placed)
-	var is_covered_by_higher_echelon := covered_unit_ids.has(unit_id)
-	var is_covered_by_lower_echelon := subordinate_covered_unit_ids.has(unit_id)
 	if is_covered_by_lower_echelon and not is_placed:
 		display_label += " (Covered by subordinates)"
 		item.set_text(0, display_label)
-	if block_reason.is_empty() and not is_placed and not is_covered_by_higher_echelon and not is_covered_by_lower_echelon:
-		item.set_custom_color(0, Color(1.0, 0.35, 0.35))
 	item.set_metadata(0, {
 		"unit": unit_data,
 		"base_block_reason": block_reason,
@@ -538,39 +585,44 @@ func _build_deployable_unit_tree_items(parent_item: TreeItem, node: Variant, coo
 		return
 
 	for child in children_variant:
-		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id, collapsed_by_unit_id, covered_unit_ids, subordinate_covered_unit_ids)
+		_build_deployable_unit_tree_items(item, child, coordinates_by_unit_id, collapsed_by_unit_id, _covered_unit_ids, subordinate_covered_unit_ids)
 
 	if item.get_child_count() > 0:
 		var was_collapsed := bool(collapsed_by_unit_id.get(unit_id, true))
 		item.set_collapsed(was_collapsed)
 
 func _on_unit_item_selected() -> void:
+	if _setting_group_tree_selection:
+		return
 	var selected_item := unit_list.get_selected()
 	if selected_item == null:
-		_selected_unit_id = ""
-		_selected_unit_metadata = {}
+		_clear_deployment_selection_state()
 		return
 
 	var selected_metadata_variant: Variant = selected_item.get_metadata(0)
 	if typeof(selected_metadata_variant) != TYPE_DICTIONARY:
-		_selected_unit_id = ""
-		_selected_unit_metadata = {}
+		_clear_deployment_selection_state()
 		return
 
 	_selected_unit_metadata = (selected_metadata_variant as Dictionary).duplicate(true)
 	_selected_unit_id = String(_selected_unit_metadata.get("unit_id", ""))
+	_selected_unit_ids.clear()
+	_selected_unit_metadata_by_id.clear()
+	if not _selected_unit_id.is_empty():
+		_selected_unit_ids.append(_selected_unit_id)
+		_selected_unit_metadata_by_id[_selected_unit_id] = _selected_unit_metadata.duplicate(true)
+	if not _inspected_deployment_unit_id.is_empty() and _inspected_deployment_unit_id != _selected_unit_id:
+		_inspected_deployment_unit_id = ""
+	_sync_map_selection()
+	_refresh_selected_hex_panel()
 
 func _on_unit_item_activated() -> void:
 	_on_unit_item_selected()
 
 func _string_for_type(raw_type: Variant) -> String:
-	if typeof(raw_type) == TYPE_INT:
-		return UnitType.display_name(int(raw_type)).to_lower()
 	return String(raw_type).to_lower()
 
 func _string_for_size(raw_size: Variant) -> String:
-	if typeof(raw_size) == TYPE_INT:
-		return UnitSize.display_name(int(raw_size)).to_lower()
 	return String(raw_size).to_lower()
 
 func _is_deployable(unit: Dictionary) -> bool:
@@ -585,11 +637,27 @@ func _deployability_block_reason(unit: Dictionary) -> String:
 
 func _unit_label(unit: Dictionary) -> String:
 	var size := _string_for_size(unit.get("size", "Unknown"))
-	var type := _string_for_type(unit.get("type", "Unit"))
+	var role := _role_display_name(unit)
 	var name := _preferred_unit_name(unit)
-	return "%s - %s %s" % [name, size.capitalize(), type.capitalize()]
+	return "%s — %s — %s" % [name, size.capitalize(), role]
+
+func _role_display_name(unit: Dictionary) -> String:
+	var role := UnitRole.normalize(unit.get("role", ""), unit.get("type", ""))
+	return UnitRole.display_name(role, unit.get("type", ""))
 
 func _on_hex_selected(column: int, row: int) -> void:
+	var selected_unit_ids := _selected_deployment_unit_ids()
+	if selected_unit_ids.is_empty():
+		_inspected_deployment_unit_id = ""
+	_selected_hex = Vector2i(column, row)
+	_sync_map_selection()
+	_refresh_selected_hex_panel()
+	if selected_unit_ids.is_empty():
+		_refresh_phase_ui("Selected hex %d,%d." % [column, row])
+		return
+	if selected_unit_ids.size() > 1:
+		_move_selected_deployment_group(column, row, selected_unit_ids)
+		return
 	if _selected_unit_id.is_empty() or _selected_unit_metadata.is_empty():
 		_refresh_phase_ui("Select a unit first.")
 		return
@@ -616,13 +684,20 @@ func _on_hex_selected(column: int, row: int) -> void:
 
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
 	var target_key := "%d,%d" % [column, row]
+	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
+	if existing_key == target_key:
+		_refresh_phase_ui("%s is already at %s." % [_unit_label(unit_data), target_key])
+		return
 	var same_hex_related_unit_id := _deployed_related_formation_id_at_key_for_unit_id(deployments, unit_id, target_key)
 	if not same_hex_related_unit_id.is_empty():
 		_refresh_phase_ui("%s is already covered by a related formation at %s." % [_unit_label(unit_data), target_key])
 		return
 
-	var existing_key := _deployment_key_for_unit_id(deployments, unit_id)
 	if existing_key.is_empty():
+		var hierarchy_block_reason := _hierarchy_placement_block_reason(unit_id, deployments)
+		if not hierarchy_block_reason.is_empty():
+			_refresh_phase_ui(hierarchy_block_reason)
+			return
 		var deployed_company_block_reason := _battalion_with_deployed_companies_block_reason(unit_snapshot, deployments, unit_id)
 		if not deployed_company_block_reason.is_empty():
 			_refresh_phase_ui(deployed_company_block_reason)
@@ -645,12 +720,110 @@ func _on_hex_selected(column: int, row: int) -> void:
 		return
 
 	_add_deployment_unit_at_key(next_deployments, target_key, unit_snapshot)
+	var removed_parent_names := _remove_redundant_deployed_ancestors(next_deployments, [unit_id])
 	GameState.players[_player_index]["deployments"] = next_deployments
+	var action_message := "Placed %s at %d,%d." % [_unit_label(unit_data), column, row] if existing_key.is_empty() else "Moved %s from %s to %d,%d." % [_unit_label(unit_data), existing_key, column, row]
+	if not removed_parent_names.is_empty():
+		action_message += " Removed redundant %s." % ", ".join(removed_parent_names)
+	_clear_armed_unit()
 	_build_deployable_unit_list()
-	if existing_key.is_empty():
-		_refresh_phase_ui("Placed %s at %d,%d." % [_unit_label(unit_data), column, row])
-	else:
-		_refresh_phase_ui("Moved %s from %s to %d,%d." % [_unit_label(unit_data), existing_key, column, row])
+	_refresh_selected_hex_panel()
+	_refresh_phase_ui(action_message)
+
+func _on_hex_stack_selected(column: int, row: int) -> void:
+	_selected_hex = Vector2i(column, row)
+	var key := "%d,%d" % [column, row]
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var units := _deployed_unit_snapshots_at_key(deployments, key)
+	_clear_deployment_selection_state()
+	unit_list.deselect_all()
+	if units.is_empty():
+		_sync_map_selection()
+		_refresh_selected_hex_panel()
+		_refresh_phase_ui("Selected hex %s; no deployed units to select." % key)
+		return
+
+	for unit in units:
+		var unit_id := String(unit.get("id", ""))
+		if unit_id.is_empty() or _selected_unit_ids.has(unit_id):
+			continue
+		var metadata := _selection_metadata_for_unit_id(unit_id)
+		if metadata.is_empty():
+			continue
+		_selected_unit_ids.append(unit_id)
+		_selected_unit_metadata_by_id[unit_id] = metadata
+	if _selected_unit_ids.is_empty():
+		_sync_map_selection()
+		_refresh_selected_hex_panel()
+		_refresh_phase_ui("Selected hex %s; no movable deployed units found." % key)
+		return
+
+	_selected_unit_id = _selected_unit_ids[_selected_unit_ids.size() - 1]
+	_selected_unit_metadata = (_selected_unit_metadata_by_id[_selected_unit_id] as Dictionary).duplicate(true)
+	_inspected_deployment_unit_id = _selected_unit_id
+	var primary_item := _find_tree_item_by_unit_id(unit_list.get_root(), _selected_unit_id)
+	if primary_item != null:
+		_setting_group_tree_selection = true
+		primary_item.select(0)
+		_setting_group_tree_selection = false
+	_sync_map_selection()
+	_refresh_selected_hex_panel()
+	_refresh_phase_ui("Selected %d deployed units at %s. Click a destination hex to move the complete stack." % [_selected_unit_ids.size(), key])
+
+func _move_selected_deployment_group(column: int, row: int, unit_ids: Array[String]) -> void:
+	var target_key := "%d,%d" % [column, row]
+	var territory_owner := int(GameState.territory_map.get(target_key, GameState.TerritoryOwnership.NEUTRAL))
+	if not DeploymentValidator.can_deploy_in_territory(territory_owner, _player_index):
+		_refresh_phase_ui("Deployment must be inside your territory. No selected units moved.")
+		return
+
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var source_key := ""
+	for unit_id in unit_ids:
+		var unit_key := _deployment_key_for_unit_id(deployments, unit_id)
+		if unit_key.is_empty():
+			_refresh_phase_ui("The selected stack changed; %s is no longer independently deployed. No units moved." % _preferred_unit_name(_division_unit_by_id(unit_id)))
+			return
+		if source_key.is_empty():
+			source_key = unit_key
+		elif unit_key != source_key:
+			_refresh_phase_ui("Selected units are no longer on the same source hex. No units moved.")
+			return
+	if source_key == target_key:
+		_refresh_phase_ui("The selected stack is already at %s." % target_key)
+		return
+
+	var next_deployments := deployments.duplicate(true)
+	for unit_id in unit_ids:
+		_remove_deployment_unit_at_key(next_deployments, source_key, unit_id)
+
+	var projected_units := _deployed_unit_snapshots_at_key(next_deployments, target_key)
+	for unit_id in unit_ids:
+		var unit_data := _division_unit_by_id(unit_id)
+		if unit_data.is_empty():
+			_refresh_phase_ui("A selected unit is missing from the formation hierarchy. No units moved.")
+			return
+		var related_unit_id := _deployed_related_formation_id_at_key_for_unit_id(next_deployments, unit_id, target_key)
+		if not related_unit_id.is_empty():
+			_refresh_phase_ui("%s is already covered by a related formation at %s. No selected units moved." % [_preferred_unit_name(unit_data), target_key])
+			return
+		var unit_snapshot := _unit_snapshot(unit_data)
+		var placement_block_reason := DeploymentValidator.placement_block_reason(unit_snapshot, projected_units)
+		if not placement_block_reason.is_empty():
+			_refresh_phase_ui("%s No selected units moved." % placement_block_reason)
+			return
+		_add_deployment_unit_at_key(next_deployments, target_key, unit_snapshot)
+		projected_units.append(unit_snapshot)
+
+	var removed_parent_names := _remove_redundant_deployed_ancestors(next_deployments, unit_ids)
+	GameState.players[_player_index]["deployments"] = next_deployments
+	var action_message := "Moved %d units from %s to %s." % [unit_ids.size(), source_key, target_key]
+	if not removed_parent_names.is_empty():
+		action_message += " Removed redundant %s." % ", ".join(removed_parent_names)
+	_clear_armed_unit()
+	_build_deployable_unit_list()
+	_refresh_selected_hex_panel()
+	_refresh_phase_ui(action_message)
 
 func _on_hex_undeploy_requested(column: int, row: int) -> void:
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
@@ -663,14 +836,329 @@ func _on_hex_undeploy_requested(column: int, row: int) -> void:
 	var next_deployments := deployments.duplicate(true)
 	next_deployments.erase(target_key)
 	GameState.players[_player_index]["deployments"] = next_deployments
+	for selected_unit_id in _selected_deployment_unit_ids():
+		if _deployed_units_include_id(deployed_units, selected_unit_id):
+			_clear_deployment_selection_state()
+			break
 	_build_deployable_unit_list()
+	_refresh_selected_hex_panel()
 	_refresh_phase_ui("Undeployed %s from %s." % [_unit_summary(deployed_units), target_key])
+
+func _on_deployment_cancel_requested() -> void:
+	if _selected_deployment_unit_ids().is_empty():
+		return
+	_clear_armed_unit()
+	_refresh_phase_ui("Unit selection cancelled.")
+
+func _refresh_selected_hex_panel() -> void:
+	_clear_selected_hex_unit_cards()
+	if _selected_hex.x < 0 or _selected_hex.y < 0:
+		selected_hex_title_label.text = "Selected Hex: -, -"
+		selected_hex_ownership_label.text = "Owner: None"
+		selected_hex_terrain_label.text = "Terrain: %s" % TerrainCatalog.display_name(TerrainCatalog.default_terrain_id())
+		selected_hex_count_label.text = "Unit Count: 0"
+		_add_selected_hex_empty_state("No hex selected.")
+		return
+
+	var key := "%d,%d" % [_selected_hex.x, _selected_hex.y]
+	selected_hex_title_label.text = "Selected Hex: %s" % key
+	selected_hex_ownership_label.text = "Owner: %s" % _territory_owner_name(int(GameState.territory_map.get(key, GameState.TerritoryOwnership.NEUTRAL)))
+	var terrain_id := TerrainCatalog.normalize_terrain_id(String(GameState.terrain_map.get(key, TerrainCatalog.default_terrain_id())))
+	selected_hex_terrain_label.text = "Terrain: %s" % TerrainCatalog.display_name(terrain_id)
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var units := _deployed_unit_snapshots_at_key(deployments, key)
+	selected_hex_count_label.text = "Unit Count: %d" % units.size()
+	for unit in units:
+		_add_selected_hex_unit_card(unit)
+	if units.is_empty():
+		_add_selected_hex_empty_state("No friendly units deployed here.")
+	if not _inspected_deployment_unit_id.is_empty():
+		_add_deployment_subunit_inspector(_inspected_deployment_unit_id)
+
+func _clear_selected_hex_unit_cards() -> void:
+	for child in selected_hex_unit_cards.get_children():
+		selected_hex_unit_cards.remove_child(child)
+		child.queue_free()
+
+func _add_selected_hex_empty_state(message: String) -> void:
+	var label := Label.new()
+	label.text = message
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	selected_hex_unit_cards.add_child(label)
+
+func _add_selected_hex_unit_card(unit: Dictionary) -> void:
+	var unit_id := String(unit.get("id", ""))
+	var card := Button.new()
+	card.text = _selected_hex_unit_card_text(unit)
+	card.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card.custom_minimum_size = Vector2(0.0, 76.0)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	card.set_meta("unit_id", unit_id)
+	_apply_selected_hex_card_theme(card, _is_deployment_unit_selected(unit_id))
+	card.pressed.connect(_on_selected_hex_unit_card_pressed.bind(unit_id))
+	selected_hex_unit_cards.add_child(card)
+
+func _selected_hex_unit_card_text(unit: Dictionary) -> String:
+	var identity := UnitNotationFormatter.format_counter_unit(unit)
+	var display_name := String(unit.get("display_name", unit.get("short_name", "Unit")))
+	var capped_display_name := UnitNotationFormatter.format_counter_unit({"short_name": display_name})
+	var name_line := identity
+	if display_name == capped_display_name and display_name != identity:
+		name_line += " — %s" % display_name
+	var summary := "%s\n%s — %s" % [name_line, String(unit.get("size", "unit")).capitalize(), _role_display_name(unit)]
+	if unit.has("max_sub_units"):
+		summary += "\nVehicles: %d/%d" % [int(unit.get("live_sub_units", 0)), int(unit.get("max_sub_units", 0))]
+	if _is_deployment_unit_selected(String(unit.get("id", ""))):
+		var armed_label := "ARMED AS GROUP" if _selected_deployment_unit_ids().size() > 1 else "ARMED TO MOVE"
+		summary = "%s\n%s" % [armed_label, summary]
+	return summary
+
+func _apply_selected_hex_card_theme(card: Button, selected: bool) -> void:
+	var background := Color(0.10, 0.13, 0.17, 0.98) if not selected else Color(0.24, 0.20, 0.07, 0.98)
+	var border := Color(0.34, 0.40, 0.48, 0.9) if not selected else Color(1.0, 0.86, 0.28, 1.0)
+	for state in ["normal", "disabled"]:
+		card.add_theme_stylebox_override(state, _selected_hex_card_style(background, border, 2 if selected else 1))
+	card.add_theme_stylebox_override("hover", _selected_hex_card_style(background.lightened(0.08), border, 2 if selected else 1))
+	card.add_theme_stylebox_override("pressed", _selected_hex_card_style(background.darkened(0.05), border, 2 if selected else 1))
+	card.add_theme_color_override("font_color", Color(0.94, 0.96, 1.0))
+	card.add_theme_color_override("font_hover_color", Color.WHITE)
+	card.add_theme_color_override("font_pressed_color", Color.WHITE)
+
+func _selected_hex_card_style(background: Color, border: Color, border_width: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 8.0
+	style.content_margin_top = 6.0
+	style.content_margin_right = 8.0
+	style.content_margin_bottom = 6.0
+	return style
+
+func _on_selected_hex_unit_card_pressed(unit_id: String) -> void:
+	if unit_id.is_empty():
+		return
+	_focus_deployment_unit(unit_id, true)
+
+func _on_deployment_subunit_pressed(unit_id: String) -> void:
+	if unit_id.is_empty():
+		return
+	_focus_deployment_unit(unit_id, true)
+
+func _focus_deployment_unit(unit_id: String, jump_to_independent_marker: bool) -> void:
+	var item := _find_tree_item_by_unit_id(unit_list.get_root(), unit_id)
+	if item != null:
+		var parent := item.get_parent()
+		while parent != null:
+			parent.set_collapsed(false)
+			parent = parent.get_parent()
+	_restore_selected_unit(unit_id)
+	if _selected_unit_id != unit_id:
+		var canonical_unit := _division_unit_by_id(unit_id)
+		var block_reason := _deployability_block_reason(canonical_unit) if not canonical_unit.is_empty() else "Unit not found."
+		if canonical_unit.is_empty() or not block_reason.is_empty():
+			return
+		_selected_unit_id = unit_id
+		_selected_unit_metadata = {
+			"unit": canonical_unit.duplicate(true),
+			"base_block_reason": "",
+			"unit_id": unit_id
+		}
+	_selected_unit_ids.clear()
+	_selected_unit_ids.append(unit_id)
+	_selected_unit_metadata_by_id.clear()
+	_selected_unit_metadata_by_id[unit_id] = _selected_unit_metadata.duplicate(true)
+	_inspected_deployment_unit_id = unit_id
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var deployment_key := _deployment_key_for_unit_id(deployments, unit_id)
+	if jump_to_independent_marker and not deployment_key.is_empty():
+		var marker_coordinate := _coordinate_from_key(deployment_key)
+		if marker_coordinate.x >= 0 and marker_coordinate.y >= 0:
+			_selected_hex = marker_coordinate
+	_sync_map_selection()
+	_refresh_selected_hex_panel()
+	_refresh_phase_ui("%s armed. Click a destination hex to move it." % _preferred_unit_name((_selected_unit_metadata.get("unit", {}) as Dictionary)))
+
+func _clear_armed_unit() -> void:
+	_clear_deployment_selection_state()
+	unit_list.deselect_all()
+	_sync_map_selection()
+	_refresh_selected_hex_panel()
+
+func _sync_map_selection() -> void:
+	hex_map_view.set_selected_hex(_selected_hex)
+	var visible_marker_ids: Array[String] = []
+	for unit_id in _selected_deployment_unit_ids():
+		var marker_id := _visible_deployment_marker_id_for_unit(unit_id)
+		if not marker_id.is_empty() and not visible_marker_ids.has(marker_id):
+			visible_marker_ids.append(marker_id)
+	hex_map_view.set_armed_units(visible_marker_ids, _visible_deployment_marker_id_for_unit(_selected_unit_id))
+
+func _selected_deployment_unit_ids() -> Array[String]:
+	var selected: Array[String] = []
+	for unit_id in _selected_unit_ids:
+		if not unit_id.is_empty() and not selected.has(unit_id):
+			selected.append(unit_id)
+	if selected.is_empty() and not _selected_unit_id.is_empty():
+		selected.append(_selected_unit_id)
+	return selected
+
+func _is_deployment_unit_selected(unit_id: String) -> bool:
+	return not unit_id.is_empty() and _selected_deployment_unit_ids().has(unit_id)
+
+func _clear_deployment_selection_state() -> void:
+	_selected_unit_id = ""
+	_selected_unit_metadata = {}
+	_selected_unit_ids.clear()
+	_selected_unit_metadata_by_id.clear()
+	_inspected_deployment_unit_id = ""
+
+func _selection_metadata_for_unit_id(unit_id: String) -> Dictionary:
+	var item := _find_tree_item_by_unit_id(unit_list.get_root(), unit_id)
+	if item != null:
+		var metadata_variant: Variant = item.get_metadata(0)
+		if typeof(metadata_variant) == TYPE_DICTIONARY:
+			return (metadata_variant as Dictionary).duplicate(true)
+	var unit := _division_unit_by_id(unit_id)
+	if unit.is_empty():
+		return {}
+	return {
+		"unit": unit.duplicate(true),
+		"base_block_reason": _deployability_block_reason(unit),
+		"unit_id": unit_id
+	}
+
+func _add_deployment_subunit_inspector(unit_id: String) -> void:
+	var inspected_unit := _division_unit_by_id(unit_id)
+	if inspected_unit.is_empty():
+		_inspected_deployment_unit_id = ""
+		return
+
+	selected_hex_unit_cards.add_child(HSeparator.new())
+	var header := Label.new()
+	header.text = "Subunits of %s" % _preferred_unit_name(inspected_unit)
+	header.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_theme_color_override("font_color", Color(1.0, 0.86, 0.28))
+	header.add_theme_font_size_override("font_size", 16)
+	selected_hex_unit_cards.add_child(header)
+
+	var children_variant: Variant = inspected_unit.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY or (children_variant as Array).is_empty():
+		_add_selected_hex_empty_state("No subunits.")
+		return
+
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var coordinates_by_unit_id := _deployment_coordinates_by_unit_id(deployments)
+	for child_variant in (children_variant as Array):
+		if typeof(child_variant) != TYPE_DICTIONARY:
+			continue
+		_add_deployment_subunit_card(child_variant as Dictionary, coordinates_by_unit_id)
+
+func _add_deployment_subunit_card(unit: Dictionary, coordinates_by_unit_id: Dictionary) -> void:
+	var unit_id := String(unit.get("id", ""))
+	var block_reason := _deployability_block_reason(unit)
+	var relationship := _deployment_relationship_for_branch(unit, coordinates_by_unit_id)
+	var card := Button.new()
+	card.text = _deployment_subunit_card_text(unit, relationship, block_reason)
+	card.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card.custom_minimum_size = Vector2(0.0, 68.0 if block_reason.is_empty() else 86.0)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.disabled = not block_reason.is_empty()
+	card.mouse_default_cursor_shape = Control.CURSOR_ARROW if card.disabled else Control.CURSOR_POINTING_HAND
+	card.set_meta("subunit_id", unit_id)
+	card.set_meta("attachment_status", String(relationship.get("status", "Attached")))
+	_apply_selected_hex_card_theme(card, _is_deployment_unit_selected(unit_id))
+	if not card.disabled:
+		card.pressed.connect(_on_deployment_subunit_pressed.bind(unit_id))
+	selected_hex_unit_cards.add_child(card)
+
+func _deployment_subunit_card_text(unit: Dictionary, relationship: Dictionary, block_reason: String) -> String:
+	var name := _preferred_unit_name(unit)
+	var size := _string_for_size(unit.get("size", "unit")).capitalize()
+	var type_name := _role_display_name(unit)
+	var text := "%s — %s — %s\n%s | Health: —" % [name, size, type_name, String(relationship.get("summary", "Attached"))]
+	if not block_reason.is_empty():
+		text += "\nInternal element — not independently deployable"
+	return text
+
+func _deployment_relationship_for_branch(unit: Dictionary, coordinates_by_unit_id: Dictionary) -> Dictionary:
+	var unit_id := String(unit.get("id", ""))
+	if coordinates_by_unit_id.has(unit_id):
+		var coordinate := String(coordinates_by_unit_id[unit_id])
+		return {"status": "Detached", "summary": "Detached — Hex %s" % coordinate, "coordinates": [coordinate]}
+
+	var descendant_coordinates: Array[String] = []
+	_collect_independent_descendant_coordinates(unit, coordinates_by_unit_id, descendant_coordinates, true)
+	descendant_coordinates.sort()
+	if not descendant_coordinates.is_empty():
+		var marker_word := "marker" if descendant_coordinates.size() == 1 else "markers"
+		return {
+			"status": "Partially detached",
+			"summary": "Partially detached — %d %s at %s" % [descendant_coordinates.size(), marker_word, "; ".join(descendant_coordinates)],
+			"coordinates": descendant_coordinates
+		}
+	return {"status": "Attached", "summary": "Attached", "coordinates": []}
+
+func _collect_independent_descendant_coordinates(node: Dictionary, coordinates_by_unit_id: Dictionary, output: Array[String], skip_current: bool = false) -> void:
+	var unit_id := String(node.get("id", ""))
+	if not skip_current and coordinates_by_unit_id.has(unit_id):
+		var coordinate := String(coordinates_by_unit_id[unit_id])
+		if not output.has(coordinate):
+			output.append(coordinate)
+	var children_variant: Variant = node.get("children", [])
+	if typeof(children_variant) != TYPE_ARRAY:
+		return
+	for child_variant in (children_variant as Array):
+		if typeof(child_variant) == TYPE_DICTIONARY:
+			_collect_independent_descendant_coordinates(child_variant as Dictionary, coordinates_by_unit_id, output)
+
+func _division_unit_by_id(unit_id: String) -> Dictionary:
+	if unit_id.is_empty():
+		return {}
+	var division_tree: Dictionary = GameState.players[_player_index].get("division_tree", {})
+	return FormationHierarchyModel.find_node(division_tree, unit_id)
+
+func _visible_deployment_marker_id_for_unit(unit_id: String) -> String:
+	if unit_id.is_empty():
+		return ""
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var coordinates_by_unit_id := _deployment_coordinates_by_unit_id(deployments)
+	if coordinates_by_unit_id.has(unit_id):
+		return unit_id
+	var division_tree: Dictionary = GameState.players[_player_index].get("division_tree", {})
+	var path: Array[Dictionary] = FormationHierarchyModel.path_to(division_tree, unit_id)
+	for index in range(path.size() - 2, -1, -1):
+		var ancestor_id := String(path[index].get("id", ""))
+		if coordinates_by_unit_id.has(ancestor_id):
+			return ancestor_id
+	return unit_id
+
+func _coordinate_from_key(coordinate_key: String) -> Vector2i:
+	var parts := coordinate_key.split(",")
+	if parts.size() != 2 or not parts[0].is_valid_int() or not parts[1].is_valid_int():
+		return Vector2i(-1, -1)
+	return Vector2i(int(parts[0]), int(parts[1]))
+
+func _territory_owner_name(owner: int) -> String:
+	match owner:
+		GameState.TerritoryOwnership.PLAYER_1:
+			return "Player 1%s" % (" (Friendly)" if _player_index == 0 else " (Enemy)")
+		GameState.TerritoryOwnership.PLAYER_2:
+			return "Player 2%s" % (" (Friendly)" if _player_index == 1 else " (Enemy)")
+		_:
+			return "Neutral"
 
 func _unit_summary(units: Array[Dictionary]) -> String:
 	if units.is_empty():
 		return "units"
 	if units.size() == 1:
-		return String(units[0].get("name", units[0].get("label", "unit")))
+		return String(units[0].get("display_name", "unit"))
 	return "%d units" % units.size()
 
 func _deployed_unit_snapshots(deployments: Dictionary) -> Array[Dictionary]:
@@ -678,6 +1166,14 @@ func _deployed_unit_snapshots(deployments: Dictionary) -> Array[Dictionary]:
 	for key in deployments.keys():
 		units.append_array(_deployment_units_from_variant(deployments[key]))
 	return units
+
+func _deployed_units_include_id(units: Array[Dictionary], unit_id: String) -> bool:
+	if unit_id.is_empty():
+		return false
+	for unit in units:
+		if String(unit.get("id", "")) == unit_id:
+			return true
+	return false
 
 func _deployed_unit_snapshots_at_key(deployments: Dictionary, key: String) -> Array[Dictionary]:
 	if not deployments.has(key):
@@ -695,12 +1191,12 @@ func _deployment_units_from_variant(deployment_variant: Variant) -> Array[Dictio
 	return units
 
 func _battalion_with_deployed_companies_block_reason(unit_snapshot: Dictionary, deployments: Dictionary, unit_id: String) -> String:
-	if not bool(unit_snapshot.get("is_battalion", String(unit_snapshot.get("size", "")).to_lower() == "battalion")):
+	if String(unit_snapshot.get("size", "")).to_lower() != "battalion":
 		return ""
 	for deployed_unit in _deployed_unit_snapshots(deployments):
 		if String(deployed_unit.get("id", "")) == unit_id:
 			continue
-		if bool(deployed_unit.get("is_company", String(deployed_unit.get("size", "")).to_lower() == "company")):
+		if String(deployed_unit.get("size", "")).to_lower() == "company":
 			return "Cannot place a battalion after companies are deployed."
 	return ""
 
@@ -897,6 +1393,18 @@ func _unplaced_deployable_unit_ids_from_coordinates(coordinates_by_unit_id: Dict
 		unplaced_by_id[unit_id] = true
 	return unplaced_by_id
 
+func _apply_incomplete_deployment_colors() -> void:
+	var warning_unit_ids := _unplaced_deployable_unit_ids.duplicate()
+	for unit_id_variant in _unplaced_deployable_unit_ids.keys():
+		var unit_id := String(unit_id_variant)
+		for ancestor_id_variant in _ancestor_unit_ids_for_unit_id(unit_id).keys():
+			warning_unit_ids[String(ancestor_id_variant)] = true
+
+	for warning_unit_id_variant in warning_unit_ids.keys():
+		var warning_item := _find_tree_item_by_unit_id(unit_list.get_root(), String(warning_unit_id_variant))
+		if warning_item != null:
+			warning_item.set_custom_color(0, UNDEPLOYED_WARNING_COLOR)
+
 func _unit_ids_covered_by_higher_echelon_deployments() -> Dictionary:
 	var covered_unit_ids := {}
 	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
@@ -940,9 +1448,9 @@ func _collect_covered_descendant_ids(node: Variant, ancestor_deployed: bool, dep
 	for child in (children_variant as Array):
 		_collect_covered_descendant_ids(child, descendant_is_covered, deployed_unit_ids, covered_unit_ids)
 
-func _unit_ids_covered_by_lower_echelon_deployments() -> Dictionary:
+func _unit_ids_covered_by_lower_echelon_deployments(deployments_override: Variant = null) -> Dictionary:
 	var covered_unit_ids := {}
-	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {})
+	var deployments: Dictionary = GameState.players[_player_index].get("deployments", {}) if deployments_override == null else deployments_override as Dictionary
 	if deployments.is_empty():
 		return covered_unit_ids
 
@@ -987,7 +1495,7 @@ func _collect_lower_echelon_covered_ids(node: Variant, deployed_unit_ids: Dictio
 	var satisfied := false
 	if is_deployable:
 		satisfied = is_deployed or (has_deployable_descendant and descendants_satisfied)
-		if not is_deployed and has_deployable_descendant and descendants_satisfied and not unit_id.is_empty():
+		if has_deployable_descendant and descendants_satisfied and not unit_id.is_empty():
 			covered_unit_ids[unit_id] = true
 	else:
 		satisfied = descendants_satisfied
@@ -997,35 +1505,77 @@ func _collect_lower_echelon_covered_ids(node: Variant, deployed_unit_ids: Dictio
 		"satisfied": satisfied
 	}
 
+func _hierarchy_placement_block_reason(unit_id: String, deployments: Dictionary) -> String:
+	if unit_id.is_empty():
+		return ""
+	if _unit_ids_covered_by_lower_echelon_deployments(deployments).has(unit_id):
+		return "%s is already represented by all of its deployed subordinate branches." % _preferred_unit_name(_division_unit_by_id(unit_id))
+	return ""
+
+func _remove_redundant_deployed_ancestors(deployments: Dictionary, affected_unit_ids: Array[String]) -> Array[String]:
+	var represented_by_subordinates := _unit_ids_covered_by_lower_echelon_deployments(deployments)
+	var candidate_ancestor_ids := {}
+	for unit_id in affected_unit_ids:
+		for ancestor_id_variant in _ancestor_unit_ids_for_unit_id(unit_id).keys():
+			candidate_ancestor_ids[String(ancestor_id_variant)] = true
+	var removed_names: Array[String] = []
+	for ancestor_id_variant in candidate_ancestor_ids.keys():
+		var ancestor_id := String(ancestor_id_variant)
+		if not represented_by_subordinates.has(ancestor_id):
+			continue
+		var deployment_key := _deployment_key_for_unit_id(deployments, ancestor_id)
+		if deployment_key.is_empty():
+			continue
+		_remove_deployment_unit_at_key(deployments, deployment_key, ancestor_id)
+		var ancestor_unit := _division_unit_by_id(ancestor_id)
+		removed_names.append(_preferred_unit_name(ancestor_unit) if not ancestor_unit.is_empty() else ancestor_id)
+	removed_names.sort()
+	return removed_names
+
 func _unit_snapshot(unit: Dictionary) -> Dictionary:
-	# Maintainer note: keep `_unit_snapshot`, `_string_for_type`, `_string_for_size`, `_size_rank`,
+	# Maintainer note: keep `_unit_snapshot`, `_string_for_type`, and `_string_for_size`
 	# `_preferred_unit_name`, and `_preferred_short_name` aligned with DeploymentValidator contracts
 	# (`can_deploy_in_territory` / `placement_block_reason`) so UI checks and validator checks stay identical.
 	var unit_type := _string_for_type(unit.get("type", ""))
 	var unit_size := _string_for_size(unit.get("size", ""))
 	var preferred_name := _preferred_unit_name(unit)
 	var preferred_short_name := _preferred_short_name(unit, preferred_name)
-	return {
+	var designation := _designation_payload(unit)
+	var snapshot := {
 		"id": unit.get("id", ""),
-		"name": preferred_name,
+		"template_id": String(unit.get("template_id", "")),
+		"display_name": preferred_name,
+		"short_name": preferred_short_name,
+		"designation": designation,
 		"type": unit_type,
+		"role": UnitRole.normalize(unit.get("role", ""), unit_type),
+		"equipment_weight": NatoUnitSymbolRenderer.equipment_weight_for_unit(unit),
 		"size": unit_size,
-		"status": String(unit.get("status", "alive")).to_lower(),
-		"is_alive": bool(unit.get("is_alive", String(unit.get("status", "alive")).to_lower() != "dead")),
-		"size_rank": _size_rank(unit_size),
-		"label": preferred_short_name.substr(0, 2).to_upper(),
-		"is_tank": unit_type == "tank",
-		"is_headquarters": unit_type == "headquarters",
-		"is_battalion": unit_size == "battalion",
-		"is_company": unit_size == "company",
-		"is_platoon": unit_size == "platoon"
+		"is_attached": bool(unit.get("is_attached", false)),
+		"status": String(unit.get("status", "")).to_lower(),
+		"label": preferred_short_name.substr(0, 2).to_upper()
 	}
+	var vehicles := unit.get("vehicles", []) as Array
+	if not vehicles.is_empty():
+		snapshot["vehicles"] = vehicles.duplicate(true)
+		snapshot["live_sub_units"] = _living_vehicle_count(vehicles)
+		snapshot["max_sub_units"] = vehicles.size()
+	return snapshot
+
+func _living_vehicle_count(vehicles: Array) -> int:
+	var living := 0
+	for vehicle_variant in vehicles:
+		if vehicle_variant is Dictionary and GameState.is_unit_alive(vehicle_variant as Dictionary):
+			living += 1
+	return living
+
+func _designation_payload(unit: Dictionary) -> Dictionary:
+	var designation_variant: Variant = unit.get("designation", {})
+	if typeof(designation_variant) == TYPE_DICTIONARY:
+		return (designation_variant as Dictionary).duplicate(true)
+	return {}
 
 func _preferred_unit_name(unit: Dictionary) -> String:
-	var name := String(unit.get("name", "")).strip_edges()
-	if not name.is_empty():
-		return name
-
 	var display_name := String(unit.get("display_name", "")).strip_edges()
 	if not display_name.is_empty():
 		return display_name
@@ -1045,26 +1595,75 @@ func _preferred_short_name(unit: Dictionary, fallback_name: String) -> String:
 		return short_name
 	return fallback_name
 
-func _size_rank(size_name: String) -> int:
-	match size_name:
-		"squad":
-			return UnitSize.Value.SQUAD
-		"section":
-			return UnitSize.Value.SECTION
-		"platoon":
-			return UnitSize.Value.PLATOON
-		"company":
-			return UnitSize.Value.COMPANY
-		"battalion":
-			return UnitSize.Value.BATTALION
-		"regiment":
-			return UnitSize.Value.REGIMENT
-		"division":
-			return UnitSize.Value.DIVISION
-		"army":
-			return UnitSize.Value.ARMY
-		_:
-			return -1
+func _on_save_scenario_pressed() -> void:
+	if _player_index != 0:
+		return
+	if not GameState.selected_scenario_name.is_empty():
+		scenario_name_input.text = GameState.selected_scenario_name
+	scenario_save_dialog.popup_centered()
+	scenario_name_input.grab_focus()
+	scenario_name_input.select_all()
+
+func _on_scenario_save_confirmed() -> void:
+	if _player_index != 0:
+		return
+	var scenario_name := scenario_name_input.text.strip_edges()
+	if scenario_name.is_empty():
+		_refresh_phase_ui("Enter a scenario name before saving.")
+		return
+	_pending_scenario_name = scenario_name
+	if SaveManager.scenario_exists(scenario_name):
+		overwrite_scenario_dialog.dialog_text = "A scenario named '%s' already exists. Replace it?" % scenario_name
+		overwrite_scenario_dialog.popup_centered()
+		return
+	_save_starting_scenario(scenario_name)
+
+func _on_overwrite_scenario_confirmed() -> void:
+	if _pending_scenario_name.is_empty():
+		return
+	_save_starting_scenario(_pending_scenario_name)
+
+func _save_starting_scenario(scenario_name: String) -> bool:
+	var payload := _build_starting_scenario_payload(scenario_name)
+	if payload.is_empty() or not SaveManager.save_scenario(scenario_name, payload):
+		var error_message := SaveManager.get_last_load_error()
+		_refresh_phase_ui(error_message if not error_message.is_empty() else "Failed to save starting scenario '%s'." % scenario_name)
+		_pending_scenario_name = ""
+		return false
+	GameState.selected_scenario_name = scenario_name.strip_edges()
+	_pending_scenario_name = ""
+	_refresh_phase_ui("Saved starting scenario '%s'." % scenario_name)
+	return true
+
+func _build_starting_scenario_payload(scenario_name: String) -> Dictionary:
+	if GameState.players.size() < 2:
+		return {}
+	var scenario_players: Array[Dictionary] = []
+	for player_index in range(2):
+		var player := (GameState.players[player_index] as Dictionary).duplicate(true)
+		var division_tree := player.get("division_tree", {}) as Dictionary
+		if division_tree.is_empty():
+			return {}
+		player["division_tree"] = division_tree.duplicate(true)
+		player["deployments"] = (player.get("deployments", {}) as Dictionary).duplicate(true) if player_index == 0 else {}
+		player["controller"] = "human" if player_index == 0 else "ai"
+		scenario_players.append(player)
+	return {
+		"scenario_version": SaveManager.SCENARIO_VERSION_CURRENT,
+		"version": GameState.MAP_PAYLOAD_VERSION_CURRENT,
+		"name": scenario_name,
+		"selected_nation_id": String(GameState.selected_nation_id),
+		"grid": {
+			"columns": GameState.map_columns,
+			"rows": GameState.map_rows
+		},
+		"terrain": GameState.terrain_map.duplicate(true),
+		"territory": GameState.territory_map.duplicate(true),
+		"objectives": GameState.key_objectives.duplicate(true),
+		"ai_doctrine": String(GameState.selected_ai_doctrine),
+		"difficulty": String(GameState.selected_difficulty),
+		"players": scenario_players
+	}
 
 func _on_finish_deployment_pressed() -> void:
 	var unplaced_count := _unplaced_deployable_unit_ids.size()
@@ -1072,11 +1671,24 @@ func _on_finish_deployment_pressed() -> void:
 		_build_deployable_unit_list()
 		_refresh_phase_ui("Place all deployable units before submitting (%d remaining)." % unplaced_count)
 		return
+	if ScenarioEditorState.active:
+		ScenarioEditorState.capture_from_game_state()
+		if _player_index == 0:
+			ScenarioEditorState.set_step(ScenarioEditorState.Step.PLAYER_2_DEPLOYMENT, 1)
+			GameState.set_phase(GameState.Phase.DEPLOYMENT_P2)
+			return
+		ScenarioEditorState.set_step(ScenarioEditorState.Step.REVIEW)
+		ScenarioEditorState.capture_from_game_state()
+		GameState.set_phase(GameState.Phase.SCENARIO_REVIEW)
+		return
 
 	if _player_index == 0:
 		var p2_is_ai := _is_ai_controlled(1)
-		_run_ai_deployment_if_needed(1)
 		if p2_is_ai:
+			var ai_result := _run_ai_deployment_if_needed(1)
+			if not _ai_deployment_allows_gameplay(ai_result):
+				_refresh_phase_ui(_ai_deployment_failure_message(ai_result))
+				return
 			GameState.set_phase(GameState.Phase.GAMEPLAY)
 		else:
 			GameState.set_phase(GameState.Phase.DEPLOYMENT_P2)
@@ -1085,12 +1697,33 @@ func _on_finish_deployment_pressed() -> void:
 	_run_ai_deployment_if_needed(0)
 	GameState.set_phase(GameState.Phase.GAMEPLAY)
 
-func _run_ai_deployment_if_needed(player_index: int) -> void:
+func _run_ai_deployment_if_needed(player_index: int) -> Dictionary:
 	if not _is_ai_controlled(player_index):
-		return
+		return {"ok": true, "reason": "skipped", "deployments": {}}
 	var result := DeploymentAIService.run_for_player(player_index)
 	if not bool(result.get("ok", false)):
 		push_warning("AI deployment planning failed for player %d (%s)." % [player_index + 1, String(result.get("reason", "unknown"))])
+	return result
+
+func _ai_deployment_allows_gameplay(result: Dictionary) -> bool:
+	if not bool(result.get("ok", false)):
+		return false
+	var deployments := result.get("deployments", {}) as Dictionary
+	return not deployments.is_empty()
+
+func _ai_deployment_failure_message(result: Dictionary) -> String:
+	var reason := String(result.get("reason", "unknown"))
+	match reason:
+		"no_legal_hexes":
+			return "Player 2 needs at least one owned deployment hex before the AI can deploy."
+		"no_elements":
+			return "Player 2 has no deployable units for the AI to place."
+		"planned_empty":
+			return "AI deployment did not place any units. Check Player 2 structure and deployment territory."
+		"partial_plan":
+			return "AI deployment could not legally place every formation. Add deployment territory or reduce the force."
+		_:
+			return "AI deployment failed (%s)." % reason
 
 func _is_ai_controlled(player_index: int) -> bool:
 	if player_index < 0 or player_index >= GameState.players.size():
@@ -1098,16 +1731,27 @@ func _is_ai_controlled(player_index: int) -> bool:
 	var player := GameState.players[player_index] as Dictionary
 	if player.is_empty():
 		return false
-	if bool(player.get("is_ai", false)):
-		return true
 	var controller := String(player.get("controller", "human")).strip_edges().to_lower()
 	return controller == "ai"
 
 func _refresh_phase_ui(message: String) -> void:
-	phase_label.text = "Deployment: Player %d" % (_player_index + 1)
+	phase_label.text = "%sPlayer %d" % ["Scenario Deployment: " if ScenarioEditorState.active else "Deployment: ", _player_index + 1]
 	status_label.text = message
 	var visible := {
 		0: GameState.players[0].get("deployments", {}),
 		1: GameState.players[1].get("deployments", {})
 	}
-	hex_map_view.configure(GameState.territory_map, visible, _player_index, true)
+	hex_map_view.configure(GameState.terrain_map, GameState.territory_map, visible, _player_index, true, GameState.key_objectives)
+	_sync_map_selection()
+
+func _on_scenario_editor_before_draft_save() -> void:
+	ScenarioEditorState.capture_from_game_state()
+
+func _on_scenario_editor_back() -> void:
+	ScenarioEditorState.capture_from_game_state()
+	if _player_index == 1:
+		ScenarioEditorState.set_step(ScenarioEditorState.Step.PLAYER_1_DEPLOYMENT, 0)
+		GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
+		return
+	ScenarioEditorState.set_step(ScenarioEditorState.Step.PLAYER_2_FORCES, 1)
+	GameState.set_phase(GameState.Phase.DIVISION_BUILDER)

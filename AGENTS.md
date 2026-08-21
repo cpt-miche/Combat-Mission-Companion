@@ -2,9 +2,17 @@
 
 ## Project
 
-This is a personal Godot 4.6.2 game project.
+This is a personal Godot 4.7 game project.
 
 The user is not reviewing code manually. The user will playtest the game and report visible bugs, crashes, logs, and screenshots.
+
+## Development-stage compatibility
+
+- This game is in an early graybox phase. Backward compatibility for persisted data is a non-factor unless the user explicitly requests it.
+- This applies to current-game saves, maps, scenarios, division templates, settings, AI debug traces, and AI debug indexes.
+- Do not spend context or implementation effort on migrations, legacy readers, dual-format writes, compatibility fallbacks, or compatibility-only tests.
+- Prefer the simplest correct current schema. Persisted files from older builds may be deleted and recreated after schema changes.
+- Current-build serialization and round-trip reliability must still be tested.
 
 ## Required workflow
 

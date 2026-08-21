@@ -1,6 +1,8 @@
 extends RefCounted
 class_name OperationalMapAnalyzer
 
+const HexGrid = preload("res://scripts/domain/map/HexGrid.gd")
+
 static func analyze(territory_map: Dictionary, ai_owner: int, player_owner: int) -> Array[Dictionary]:
 	var normalized_territory_map := _canonical_territory_map(territory_map)
 	var known_hexes := _known_hexes(normalized_territory_map)
@@ -134,7 +136,7 @@ static func _build_adjacency_map(known_hexes: Dictionary) -> Dictionary:
 		var parsed_hex: Variant = _parse_hex_id(hex_id)
 		if not (parsed_hex is Vector2i):
 			continue
-		for offset in DeploymentDataConverter.HEX_NEIGHBOR_OFFSETS:
+		for offset in HexGrid.neighbor_offsets((parsed_hex as Vector2i).y):
 			var neighbor_id := _hex_id((parsed_hex as Vector2i) + offset)
 			if not known_hexes.has(neighbor_id):
 				continue

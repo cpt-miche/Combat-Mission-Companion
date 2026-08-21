@@ -32,7 +32,7 @@
       "id": "0,0",
       "q": 0,
       "r": 0,
-      "terrain": "open"
+      "terrain": "light"
     },
     {
       "id": "1,0",
@@ -44,19 +44,19 @@
       "id": "2,0",
       "q": 2,
       "r": 0,
-      "terrain": "open"
+      "terrain": "light"
     },
     {
       "id": "3,0",
       "q": 3,
       "r": 0,
-      "terrain": "open"
+      "terrain": "light"
     },
     {
       "id": "1,1",
       "q": 1,
       "r": 1,
-      "terrain": "rough"
+      "terrain": "medium"
     }
   ],
   "sectorModel": {

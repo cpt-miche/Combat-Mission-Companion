@@ -82,15 +82,16 @@ func _normalize_debug_level(raw_level: int) -> int:
 
 
 func _normalize_event_shape(event_type: String, payload: Dictionary) -> Dictionary:
+	var meta := payload.get("meta", {}) as Dictionary
 	return {
 		"type": event_type,
 		"stage": str(payload.get("stage", "")),
-		"unit_id": int(payload.get("unit_id", -1)),
-		"candidate_id": int(payload.get("candidate_id", -1)),
+		"unit_id": str(payload.get("unit_id", "")),
+		"candidate_id": str(payload.get("candidate_id", "")),
 		"reason_code": str(payload.get("reason_code", "")),
 		"reason_text": str(payload.get("reason_text", "")),
 		"score": float(payload.get("score", 0.0)),
-		"meta": payload.get("meta", {}).duplicate(true)
+		"meta": meta.duplicate(true)
 	}
 
 

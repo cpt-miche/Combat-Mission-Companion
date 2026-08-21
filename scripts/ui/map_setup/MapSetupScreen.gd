@@ -21,6 +21,9 @@ extends Control
 @onready var terrain_mode_button: Button = %TerrainModeButton
 @onready var select_p1_button: Button = %SelectP1TerritoryButton
 @onready var switch_to_p2_button: Button = %SwitchToP2Button
+@onready var primary_objective_button: Button = %PrimaryObjectiveButton
+@onready var secondary_objective_button: Button = %SecondaryObjectiveButton
+@onready var clear_objectives_button: Button = %ClearObjectivesButton
 @onready var confirm_territories_button: Button = %ConfirmTerritoriesButton
 @onready var map_name_input: LineEdit = %MapNameInput
 @onready var map_selector: OptionButton = %MapSelector
@@ -31,6 +34,8 @@ extends Control
 @onready var doctrine_selector: OptionButton = get_node_or_null("%DoctrineSelector")
 @onready var difficulty_selector: OptionButton = get_node_or_null("%DifficultySelector")
 @onready var setup_summary_label: Label = get_node_or_null("%SetupSummaryLabel")
+@onready var root_margin: MarginContainer = $RootMargin
+@onready var scenario_editor_chrome: Control = %ScenarioEditorChrome
 
 var _terrain_group := ButtonGroup.new()
 var _mode_group := ButtonGroup.new()
@@ -50,17 +55,43 @@ func _ready() -> void:
 	terrain_mode_button.pressed.connect(_on_select_terrain_mode_pressed)
 	select_p1_button.pressed.connect(_on_select_p1_territory_pressed)
 	switch_to_p2_button.pressed.connect(_on_switch_to_p2_pressed)
+	primary_objective_button.pressed.connect(_on_primary_objective_pressed)
+	secondary_objective_button.pressed.connect(_on_secondary_objective_pressed)
+	clear_objectives_button.pressed.connect(_on_clear_objectives_pressed)
 	confirm_territories_button.pressed.connect(_on_confirm_territories_pressed)
 	save_map_button.pressed.connect(_on_save_map_pressed)
 	load_map_button.pressed.connect(_on_load_map_pressed)
 	delete_map_button.pressed.connect(_on_delete_map_pressed)
 	hex_map_view.territory_painted.connect(_on_hex_territory_painted)
+	hex_map_view.objective_painted.connect(_on_hex_objective_painted)
 	_load_existing_map_data()
 	_refresh_saved_maps()
 	_configure_mode_buttons()
 	_build_doctrine_selector()
 	_build_difficulty_selector()
 	_refresh_ui()
+	_configure_scenario_editor_mode()
+
+func _configure_scenario_editor_mode() -> void:
+	if not ScenarioEditorState.active:
+		return
+	root_margin.offset_top = 56.0
+	ScenarioEditorState.set_step(ScenarioEditorState.Step.MAP)
+	scenario_editor_chrome.configure()
+	scenario_editor_chrome.back_requested.connect(_on_scenario_editor_back)
+	scenario_editor_chrome.before_draft_save.connect(_sync_scenario_editor_document)
+	for path in [
+		"RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapSaveHeader",
+		"RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapNameInput",
+		"RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapSaveButtons",
+		"RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapSelector",
+		"RootMargin/RootVBox/MainSplit/PalettePanel/PaletteMargin/PaletteScroll/PaletteVBox/MapLoadButtons"
+	]:
+		var node := get_node_or_null(path) as CanvasItem
+		if node != null:
+			node.visible = false
+	confirm_button.text = "Continue to Player 1 Forces"
+	confirm_territories_button.text = "Continue to Player 1 Forces"
 
 func _apply_selected_grid_dimensions() -> void:
 	GRID_COLUMNS = maxi(GameState.map_columns, 1)
@@ -107,13 +138,20 @@ func _on_clear_all_pressed() -> void:
 
 func _on_confirm_pressed() -> void:
 	_sync_game_state_map_data()
+	if not _validate_territory_submission():
+		return
+	if ScenarioEditorState.active:
+		_complete_scenario_editor_map()
+		return
 	map_status_label.text = "Submitted unsaved map. Starting deployment."
 	GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
 
 enum Mode {
 	TERRAIN_EDIT,
 	TERRITORY_P1,
-	TERRITORY_P2
+	TERRITORY_P2,
+	OBJECTIVE_PRIMARY,
+	OBJECTIVE_SECONDARY
 }
 
 var GRID_COLUMNS: int = MapGridConfig.default_columns()
@@ -124,14 +162,19 @@ const HEX_VERTICAL_SPACING := HEX_RADIUS * 1.5
 
 var _mode: Mode = Mode.TERRAIN_EDIT
 var _territory_map: Dictionary = {}
+var _objective_map: Dictionary = {}
 
 func _configure_mode_buttons() -> void:
 	terrain_mode_button.toggle_mode = true
 	select_p1_button.toggle_mode = true
 	switch_to_p2_button.toggle_mode = true
+	primary_objective_button.toggle_mode = true
+	secondary_objective_button.toggle_mode = true
 	terrain_mode_button.button_group = _mode_group
 	select_p1_button.button_group = _mode_group
 	switch_to_p2_button.button_group = _mode_group
+	primary_objective_button.button_group = _mode_group
+	secondary_objective_button.button_group = _mode_group
 
 func _build_terrain_legend() -> void:
 	for child in terrain_legend_list.get_children():
@@ -165,20 +208,69 @@ func _on_switch_to_p2_pressed() -> void:
 	_mode = Mode.TERRITORY_P2
 	_refresh_ui()
 
+func _on_primary_objective_pressed() -> void:
+	_mode = Mode.OBJECTIVE_PRIMARY
+	_refresh_ui()
+
+func _on_secondary_objective_pressed() -> void:
+	_mode = Mode.OBJECTIVE_SECONDARY
+	_refresh_ui()
+
+func _on_clear_objectives_pressed() -> void:
+	_objective_map.clear()
+	GameState.key_objectives.clear()
+	hex_map_view.set_objective_paint_mode(_is_objective_mode(), _objective_priority_for_mode(), _objective_map)
+	map_status_label.text = "Cleared all key objectives."
+
 func _on_confirm_territories_pressed() -> void:
 	_persist_territory_map()
 	_sync_game_state_map_data()
+	if not _validate_territory_submission():
+		return
+	if ScenarioEditorState.active:
+		_complete_scenario_editor_map()
+		return
 	GameState.set_phase(GameState.Phase.DEPLOYMENT_P1)
+
+func _complete_scenario_editor_map() -> void:
+	_sync_scenario_editor_document()
+	ScenarioEditorState.set_step(ScenarioEditorState.Step.PLAYER_1_FORCES, 0)
+	GameState.set_phase(GameState.Phase.DIVISION_BUILDER)
+
+func _sync_scenario_editor_document() -> void:
+	_sync_game_state_map_data()
+	ScenarioEditorState.capture_from_game_state()
+
+func _on_scenario_editor_back() -> void:
+	_sync_scenario_editor_document()
+	ScenarioEditorState.set_step(ScenarioEditorState.Step.DETAILS)
+	GameState.set_phase(GameState.Phase.SCENARIO_EDITOR)
+
+func _validate_territory_submission() -> bool:
+	if _territory_owner_count(GameState.TerritoryOwnership.PLAYER_2) <= 0:
+		map_status_label.text = "Assign at least one hex to Player 2 before starting deployment."
+		return false
+	return true
+
+func _territory_owner_count(owner: int) -> int:
+	var count := 0
+	for territory_owner in _territory_map.values():
+		if int(territory_owner) == owner:
+			count += 1
+	return count
 
 func _refresh_ui() -> void:
 	mode_prompt_label.text = _mode_prompt_text()
 	terrain_mode_button.button_pressed = _mode == Mode.TERRAIN_EDIT
 	select_p1_button.button_pressed = _mode == Mode.TERRITORY_P1
 	switch_to_p2_button.button_pressed = _mode == Mode.TERRITORY_P2
+	primary_objective_button.button_pressed = _mode == Mode.OBJECTIVE_PRIMARY
+	secondary_objective_button.button_pressed = _mode == Mode.OBJECTIVE_SECONDARY
 	switch_to_p2_button.disabled = false
 	confirm_territories_button.disabled = _mode != Mode.TERRITORY_P2
 	hex_map_view.mouse_filter = Control.MOUSE_FILTER_STOP
 	hex_map_view.set_territory_paint_mode(_is_territory_mode(), int(_ownership_for_mode()), _territory_map)
+	hex_map_view.set_objective_paint_mode(_is_objective_mode(), _objective_priority_for_mode(), _objective_map)
 	_refresh_setup_summary()
 
 func _build_doctrine_selector() -> void:
@@ -250,11 +342,21 @@ func _mode_prompt_text() -> String:
 			return "Mode: Assign Player 1 Territory"
 		Mode.TERRITORY_P2:
 			return "Mode: Assign Player 2 Territory"
+		Mode.OBJECTIVE_PRIMARY:
+			return "Mode: Paint Primary Key Objectives"
+		Mode.OBJECTIVE_SECONDARY:
+			return "Mode: Paint Secondary Key Objectives"
 		_:
 			return "Mode: Unknown"
 
 func _is_territory_mode() -> bool:
 	return _mode == Mode.TERRITORY_P1 or _mode == Mode.TERRITORY_P2
+
+func _is_objective_mode() -> bool:
+	return _mode == Mode.OBJECTIVE_PRIMARY or _mode == Mode.OBJECTIVE_SECONDARY
+
+func _objective_priority_for_mode() -> String:
+	return "primary" if _mode == Mode.OBJECTIVE_PRIMARY else "secondary"
 
 func _ownership_for_mode() -> GameState.TerritoryOwnership:
 	if _mode == Mode.TERRITORY_P1:
@@ -266,13 +368,17 @@ func _ownership_for_mode() -> GameState.TerritoryOwnership:
 func _load_existing_map_data() -> void:
 	hex_map_view.import_terrain_map(GameState.terrain_map.duplicate(true))
 	_territory_map = GameState.territory_map.duplicate(true)
+	_objective_map = GameState.key_objectives.duplicate(true)
+	hex_map_view.set_objective_paint_mode(false, "secondary", _objective_map)
 
 func _persist_territory_map() -> void:
 	GameState.territory_map = _territory_map.duplicate(true)
+	GameState.key_objectives = _objective_map.duplicate(true)
 
 func _sync_game_state_map_data() -> void:
 	GameState.terrain_map = hex_map_view.export_terrain_map()
 	GameState.territory_map = _territory_map.duplicate(true)
+	GameState.key_objectives = _objective_map.duplicate(true)
 	GameState.selected_ai_doctrine = _sanitize_doctrine(GameState.selected_ai_doctrine)
 	GameState.selected_difficulty = MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
 
@@ -293,6 +399,7 @@ func _build_map_payload(map_name: String) -> Dictionary:
 		},
 		"terrain": hex_map_view.export_terrain_map(),
 		"territory": _territory_map.duplicate(true),
+		"objectives": _objective_map.duplicate(true),
 		"ai_doctrine": _sanitize_doctrine(GameState.selected_ai_doctrine),
 		"difficulty": MatchSetupTypes.sanitize_difficulty(GameState.selected_difficulty)
 	}
@@ -317,7 +424,7 @@ func _on_load_map_pressed() -> void:
 	var selected_name := map_selector.get_item_text(selected_index)
 	var payload := SaveManager.load_map(selected_name)
 	if payload.is_empty():
-		map_status_label.text = "Could not load map '%s'." % selected_name
+		map_status_label.text = SaveManager.get_last_load_error()
 		return
 	_apply_map_payload(payload)
 	map_name_input.text = String(payload.get("name", selected_name))
@@ -341,7 +448,9 @@ func _apply_map_payload(payload: Dictionary) -> void:
 	hex_map_view.clear_all()
 	hex_map_view.import_terrain_map(GameState.terrain_map.duplicate(true))
 	_territory_map = GameState.territory_map.duplicate(true)
+	_objective_map = GameState.key_objectives.duplicate(true)
 	hex_map_view.set_territory_paint_mode(_is_territory_mode(), int(_ownership_for_mode()), _territory_map)
+	hex_map_view.set_objective_paint_mode(_is_objective_mode(), _objective_priority_for_mode(), _objective_map)
 	_sync_doctrine_selector_from_state()
 	_sync_difficulty_selector_from_state()
 	_refresh_setup_summary()
@@ -376,3 +485,11 @@ func _on_hex_territory_painted(axial: Vector2i, owner: int) -> void:
 	else:
 		_territory_map[key] = owner
 	_persist_territory_map()
+
+func _on_hex_objective_painted(axial: Vector2i, priority: String) -> void:
+	var key := _key_for_coordinate(axial.x, axial.y)
+	if priority.is_empty():
+		_objective_map.erase(key)
+	else:
+		_objective_map[key] = {"priority": priority}
+	GameState.key_objectives = _objective_map.duplicate(true)

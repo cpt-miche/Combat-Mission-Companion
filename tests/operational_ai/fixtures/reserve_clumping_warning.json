@@ -1,4 +1,5 @@
 {
+  "fixtureVersion": 1,
   "id": "reserve_clumping_warning",
   "description": "Adjacent reserve combat units should raise reserve clumping warning.",
   "operationalInput": {

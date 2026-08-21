@@ -79,7 +79,6 @@ func _test_dig_in_modifies_unit_state() -> void:
 	var result: Dictionary = resolver.call("resolve_turn", units, orders, log)
 	var unit := result.get("units", {}).get("dug", {}) as Dictionary
 	_assert_true(bool(unit.get("dug_in", false)), "DIG_IN should set dug_in=true")
-	_assert_true(bool(unit.get("entrenched", false)), "DIG_IN should set entrenched=true")
 	_assert_true(log.entries.any(func(e: Dictionary) -> bool: return String(e.get("summary", "")).contains("dug in")), "DIG_IN should log combat entry")
 
 func _test_attack_declares_engagement_without_calculating_casualties() -> void:

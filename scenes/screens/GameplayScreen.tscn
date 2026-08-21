@@ -53,7 +53,7 @@ layout_mode = 0
 offset_left = 24.0
 offset_top = 104.0
 offset_right = 240.0
-offset_bottom = 212.0
+offset_bottom = 292.0
 
 [node name="OrderActionVBox" type="VBoxContainer" parent="OrderActionPanel"]
 layout_mode = 2
@@ -73,133 +73,178 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Dig In"
 
+[node name="CombineButton" type="Button" parent="OrderActionPanel/OrderActionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Combine"
+
+[node name="SplitButton" type="Button" parent="OrderActionPanel/OrderActionVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Split"
+
 [node name="AnimationTimer" type="Timer" parent="."]
 unique_name_in_owner = true
 wait_time = 0.35
 
-[node name="HoveredTerrainLabel" type="Label" parent="."]
+[node name="RightSidebar" type="PanelContainer" parent="."]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 640.0
-offset_top = 20.0
-offset_right = 1008.0
-offset_bottom = 44.0
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -392.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="RightSidebarMargin" type="MarginContainer" parent="RightSidebar"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="RightSidebarVBox" type="VBoxContainer" parent="RightSidebar/RightSidebarMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SelectedUnitPanel" type="PanelContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SelectedUnitVBox" type="VBoxContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedUnitPanel"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="SelectedUnitTitleLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedUnitPanel/SelectedUnitVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Active Unit"
+autowrap_mode = 3
+
+[node name="SelectedUnitSummaryLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedUnitPanel/SelectedUnitVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "No active unit selected."
+autowrap_mode = 3
+
+[node name="SelectedUnitOrderLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedUnitPanel/SelectedUnitVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Order: None"
+autowrap_mode = 3
+
+[node name="SelectedUnitFormationLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedUnitPanel/SelectedUnitVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Formation: —"
+autowrap_mode = 3
+
+[node name="SubordinatesToggleButton" type="Button" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedUnitPanel/SelectedUnitVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Subordinates (0/0 operational) ▾"
+alignment = 0
+
+[node name="SubordinateScroll" type="ScrollContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedUnitPanel/SelectedUnitVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 82)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="SubordinateList" type="VBoxContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedUnitPanel/SelectedUnitVBox/SubordinateScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="HoveredTerrainLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
 text = "Hovered Terrain: Light Terrain"
 
-[node name="DebugStatusContainer" type="PanelContainer" parent="."]
+[node name="DebugStatusContainer" type="PanelContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 0
-offset_left = 840.0
-offset_top = 16.0
-offset_right = 1008.0
-offset_bottom = 50.0
+layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_debug")
 
-[node name="DebugStatusLabel" type="Label" parent="DebugStatusContainer"]
+[node name="DebugStatusLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/DebugStatusContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 horizontal_alignment = 1
 text = "DEBUG L1"
 
-[node name="CombatLogLabel" type="RichTextLabel" parent="."]
+[node name="EventsPanel" type="PanelContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox"]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 640.0
-offset_top = 58.0
-offset_right = 1008.0
-offset_bottom = 568.0
-scroll_active = false
-bbcode_enabled = false
-
-[node name="SelectedHexPanel" type="PanelContainer" parent="."]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 640.0
-offset_top = 580.0
-offset_right = 1008.0
-offset_bottom = 712.0
-
-[node name="SelectedHexVBox" type="VBoxContainer" parent="SelectedHexPanel"]
 layout_mode = 2
 
-[node name="SelectedHexTitleLabel" type="Label" parent="SelectedHexPanel/SelectedHexVBox"]
+[node name="EventsVBox" type="VBoxContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/EventsPanel"]
+layout_mode = 2
+
+[node name="EventsToggleButton" type="Button" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/EventsPanel/EventsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Events (0) ▸"
+alignment = 0
+
+[node name="EventsScroll" type="ScrollContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/EventsPanel/EventsVBox"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="EventsList" type="VBoxContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/EventsPanel/EventsVBox/EventsScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="SelectedHexPanel" type="PanelContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 190)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SelectedHexVBox" type="VBoxContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedHexPanel"]
+layout_mode = 2
+
+[node name="SelectedHexTitleLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedHexPanel/SelectedHexVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Selected Hex: -, -"
 
-[node name="SelectedHexTerrainLabel" type="Label" parent="SelectedHexPanel/SelectedHexVBox"]
+[node name="SelectedHexOwnershipLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedHexPanel/SelectedHexVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Owner: None"
+
+[node name="SelectedHexTerrainLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedHexPanel/SelectedHexVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Terrain: Unknown"
 
-[node name="SelectedHexUnitsLabel" type="Label" parent="SelectedHexPanel/SelectedHexVBox"]
+[node name="SelectedHexCountLabel" type="Label" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedHexPanel/SelectedHexVBox"]
 unique_name_in_owner = true
 layout_mode = 2
-autowrap_mode = 3
-text = "Units: None"
+text = "Unit Count: 0"
 
-[node name="EngagementDialog" type="AcceptDialog" parent="."]
-unique_name_in_owner = true
-title = "Battle Engagements"
-initial_position = 1
-size = Vector2i(760, 520)
-ok_button_text = "Battle is finished"
-dialog_text = ""
-
-[node name="DialogVBox" type="VBoxContainer" parent="EngagementDialog"]
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 12.0
-offset_top = 12.0
-offset_right = -12.0
-offset_bottom = -56.0
-
-[node name="Instructions" type="Label" parent="EngagementDialog/DialogVBox"]
-layout_mode = 2
-autowrap_mode = 3
-text = "Declared engagements only. Resolve combat outside the game, then press Battle is finished to enter detailed casualties."
-
-[node name="Columns" type="HBoxContainer" parent="EngagementDialog/DialogVBox"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="FriendlyColumn" type="VBoxContainer" parent="EngagementDialog/DialogVBox/Columns"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="FriendlyHeader" type="Label" parent="EngagementDialog/DialogVBox/Columns/FriendlyColumn"]
-layout_mode = 2
-text = "Player units"
-
-[node name="FriendlyScroll" type="ScrollContainer" parent="EngagementDialog/DialogVBox/Columns/FriendlyColumn"]
+[node name="SelectedHexUnitScroll" type="ScrollContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedHexPanel/SelectedHexVBox"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="FriendlyEngagementList" type="VBoxContainer" parent="EngagementDialog/DialogVBox/Columns/FriendlyColumn/FriendlyScroll"]
+[node name="SelectedHexUnitCards" type="VBoxContainer" parent="RightSidebar/RightSidebarMargin/RightSidebarVBox/SelectedHexPanel/SelectedHexVBox/SelectedHexUnitScroll"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="EnemyColumn" type="VBoxContainer" parent="EngagementDialog/DialogVBox/Columns"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="EnemyHeader" type="Label" parent="EngagementDialog/DialogVBox/Columns/EnemyColumn"]
-layout_mode = 2
-text = "Enemy units"
-
-[node name="EnemyScroll" type="ScrollContainer" parent="EngagementDialog/DialogVBox/Columns/EnemyColumn"]
-layout_mode = 2
-size_flags_vertical = 3
-horizontal_scroll_mode = 0
-
-[node name="EnemyEngagementList" type="VBoxContainer" parent="EngagementDialog/DialogVBox/Columns/EnemyColumn/EnemyScroll"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
+theme_override_constants/separation = 6
 
 [node name="DebugLevelModal" parent="." instance=ExtResource("2_debug_modal")]
 unique_name_in_owner = true

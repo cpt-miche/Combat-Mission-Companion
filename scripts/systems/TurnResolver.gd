@@ -25,13 +25,7 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		turn_trace["rng_seed"] = rng_seed
 	var rng := RandomNumberGenerator.new()
 	rng.seed = rng_seed
-	var order_list: Array[Dictionary] = []
-	for order in orders.values():
-		if typeof(order) == TYPE_DICTIONARY:
-			order_list.append(order)
-	order_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return _initiative_score(a, units) > _initiative_score(b, units)
-	)
+	var order_list := _sorted_orders(orders, units)
 	var active_owner := _resolve_active_owner(order_list, units, int(trace_context.get("active_owner", 0)))
 	var prior_scout_intel_by_observer := trace_context.get("scout_intel_by_observer", {}) as Dictionary
 	if prior_scout_intel_by_observer == null:
@@ -39,7 +33,7 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 	var prior_owner_intel := prior_scout_intel_by_observer.get(str(active_owner), {}) as Dictionary
 	if prior_owner_intel == null:
 		prior_owner_intel = {}
-	var updated_owner_intel := ReconSystem.resolve_turn_start_intel(units, active_owner, prior_owner_intel, rng)
+	var updated_owner_intel := ReconSystem.resolve_turn_start_intel(units, active_owner, prior_owner_intel, rng, int(GameState.current_turn))
 	var updated_scout_intel_by_observer := prior_scout_intel_by_observer.duplicate(true)
 	updated_scout_intel_by_observer[str(active_owner)] = updated_owner_intel
 	_add_trace_event(trace_events, turn_trace, "rng_initialized", {
@@ -80,35 +74,34 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 			continue
 
 		if order_type == OrderSystem.OrderType.MOVE and path.size() > 1:
-			for i in range(1, path.size()):
-				var next_hex: Vector2i = path[i]
-				var stack_check := _validate_destination_stack(units, unit_id, unit_state, next_hex)
-				if not bool(stack_check.get("ok", false)):
-					var stack_payload := {
-						"unit_id": unit_id,
-						"step_index": i,
-						"to": _hex_to_dict(next_hex),
-						"reason": String(stack_check.get("reason", "stack violation"))
-					}
-					_add_anomaly(trace_anomalies, turn_trace, "illegal_stack_move", stack_payload)
-					combat_log.add_entry("%s halted: %s at %d,%d." % [unit_id, String(stack_check.get("reason", "stack violation")), next_hex.x, next_hex.y], stack_payload)
-					break
+			var movement := _apply_movement_path(units, unit_id, path)
+			for step_variant in movement.get("steps", []) as Array:
+				var step := step_variant as Dictionary
+				var next_hex := step.get("to", Vector2i.ZERO) as Vector2i
 				execution_queue.append({"type": "move", "unit_id": unit_id, "to": next_hex})
-				unit_state["hex"] = next_hex
 				_add_trace_event(trace_events, turn_trace, "move_step", {
 					"unit_id": unit_id,
-					"step_index": i,
+					"step_index": int(step.get("step_index", 0)),
 					"to": _hex_to_dict(next_hex)
 				})
-				if _is_enemy_adjacent(next_hex, owner, units):
-					var halted_payload := {
-						"unit_id": unit_id,
-						"hex": _hex_to_dict(next_hex)
-					}
+			var halted := movement.get("halted", {}) as Dictionary
+			if not halted.is_empty():
+				var halt_code := String(halted.get("code", ""))
+				var halt_hex := halted.get("hex", unit_state.get("hex", Vector2i.ZERO)) as Vector2i
+				var halted_payload := {
+					"unit_id": unit_id,
+					"step_index": int(halted.get("step_index", 0)),
+					"to": _hex_to_dict(halt_hex),
+					"hex": _hex_to_dict(halt_hex),
+					"reason": String(halted.get("reason", "movement halted"))
+				}
+				if halt_code == "illegal_stack_move":
+					_add_anomaly(trace_anomalies, turn_trace, halt_code, halted_payload)
+					combat_log.add_entry("%s halted: %s at %d,%d." % [unit_id, halted_payload["reason"], halt_hex.x, halt_hex.y], halted_payload)
+				elif halt_code == "enemy_proximity":
 					_add_trace_event(trace_events, turn_trace, "halted_enemy_proximity", halted_payload)
-					combat_log.add_entry("%s halted due to enemy proximity at %d,%d." % [unit_id, next_hex.x, next_hex.y], halted_payload)
-					break
-			units[unit_id] = unit_state
+					combat_log.add_entry("%s halted due to enemy proximity at %d,%d." % [unit_id, halt_hex.x, halt_hex.y], halted_payload)
+			unit_state = units[unit_id] as Dictionary
 
 		if order_type != OrderSystem.OrderType.MOVE and order_type != OrderSystem.OrderType.ATTACK and order_type != OrderSystem.OrderType.DIG_IN:
 			_add_anomaly(trace_anomalies, turn_trace, "invalid_order", {
@@ -121,14 +114,12 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		if order_type == OrderSystem.OrderType.DIG_IN:
 			var was_dug_in := bool(unit_state.get("dug_in", false))
 			unit_state["dug_in"] = true
-			unit_state["entrenched"] = true
 			units[unit_id] = unit_state
 			var dig_in_payload := {
 				"unit_id": unit_id,
 				"hex": _hex_to_dict(unit_state.get("hex", Vector2i.ZERO)),
 				"was_dug_in": was_dug_in,
-				"is_dug_in": true,
-				"is_entrenched": true
+				"is_dug_in": true
 			}
 			_add_trace_event(trace_events, turn_trace, "dig_in_applied", dig_in_payload)
 			combat_log.add_entry("%s dug in at %d,%d." % [unit_id, int(dig_in_payload["hex"]["q"]), int(dig_in_payload["hex"]["r"])], dig_in_payload)
@@ -184,6 +175,99 @@ static func resolve_turn(units: Dictionary, orders: Dictionary, combat_log: Comb
 		"trace_events": trace_events,
 		"trace_anomalies": trace_anomalies
 	}
+
+static func preview_movement(units: Dictionary, orders: Dictionary) -> Dictionary:
+	var projected_units := units.duplicate(true)
+	var execution_queue: Array[Dictionary] = []
+	var halted_units: Array[Dictionary] = []
+	for order in _sorted_orders(orders, projected_units):
+		if int(order.get("type", OrderSystem.OrderType.MOVE)) != OrderSystem.OrderType.MOVE:
+			continue
+		var unit_id := String(order.get("unit_id", ""))
+		if unit_id.is_empty() or not projected_units.has(unit_id):
+			continue
+		var path := _typed_path(order.get("path", []))
+		if path.size() < 2:
+			continue
+		var movement := _apply_movement_path(projected_units, unit_id, path)
+		for step_variant in movement.get("steps", []) as Array:
+			var step := step_variant as Dictionary
+			execution_queue.append({"type": "move", "unit_id": unit_id, "to": step.get("to", Vector2i.ZERO)})
+		var halted := movement.get("halted", {}) as Dictionary
+		if not halted.is_empty():
+			var entry := halted.duplicate(true)
+			entry["unit_id"] = unit_id
+			halted_units.append(entry)
+	return {
+		"units": projected_units,
+		"execution_queue": execution_queue,
+		"halted_units": halted_units,
+		"stack_violations": _stack_violations(projected_units)
+	}
+
+static func _sorted_orders(orders: Dictionary, units: Dictionary) -> Array[Dictionary]:
+	var order_list: Array[Dictionary] = []
+	for order_variant in orders.values():
+		if order_variant is Dictionary:
+			order_list.append(order_variant as Dictionary)
+	order_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_score := _initiative_score(a, units)
+		var b_score := _initiative_score(b, units)
+		if a_score == b_score:
+			return String(a.get("unit_id", "")) < String(b.get("unit_id", ""))
+		return a_score > b_score
+	)
+	return order_list
+
+static func _apply_movement_path(units: Dictionary, unit_id: String, path: Array[Vector2i]) -> Dictionary:
+	var steps: Array[Dictionary] = []
+	if not units.has(unit_id):
+		return {"steps": steps, "halted": {"code": "missing_unit", "reason": "unknown moving unit"}}
+	var unit_state := (units[unit_id] as Dictionary).duplicate(true)
+	var owner := int(unit_state.get("owner", 0))
+	var halted := {}
+	for i in range(1, path.size()):
+		var next_hex := path[i]
+		var stack_check := _validate_destination_stack(units, unit_id, unit_state, next_hex)
+		if not bool(stack_check.get("ok", false)):
+			halted = {
+				"code": "illegal_stack_move",
+				"step_index": i,
+				"hex": next_hex,
+				"reason": String(stack_check.get("reason", "stack violation"))
+			}
+			break
+		steps.append({"step_index": i, "to": next_hex})
+		unit_state["hex"] = next_hex
+		units[unit_id] = unit_state
+		if _is_enemy_adjacent(next_hex, owner, units):
+			halted = {"code": "enemy_proximity", "step_index": i, "hex": next_hex, "reason": "enemy proximity"}
+			break
+	units[unit_id] = unit_state
+	return {"steps": steps, "halted": halted}
+
+static func _stack_violations(units: Dictionary) -> Array[Dictionary]:
+	var stacks := {}
+	for unit_variant in units.values():
+		if not (unit_variant is Dictionary):
+			continue
+		var unit := unit_variant as Dictionary
+		if not GameState.is_unit_alive(unit):
+			continue
+		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
+		var key := "%d:%d,%d" % [int(unit.get("owner", -1)), hex.x, hex.y]
+		if not stacks.has(key):
+			stacks[key] = []
+		(stacks[key] as Array).append(unit)
+	var violations: Array[Dictionary] = []
+	for key_variant in stacks.keys():
+		var stack: Array[Dictionary] = []
+		for unit_variant in stacks[key_variant] as Array:
+			stack.append(unit_variant as Dictionary)
+		var validation := Rules.validate_stack(stack)
+		if not bool(validation.get("ok", false)):
+			violations.append({"stack": String(key_variant), "reason": String(validation.get("reason", "illegal stack"))})
+	return violations
 
 static func _resolve_active_owner(order_list: Array[Dictionary], units: Dictionary, fallback_owner: int = 0) -> int:
 	for order in order_list:

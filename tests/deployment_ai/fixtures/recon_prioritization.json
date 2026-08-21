@@ -22,7 +22,7 @@
       "id": "0,0",
       "q": 0,
       "r": 0,
-      "terrain": "open",
+      "terrain": "light",
       "owner": 0,
       "neighborIds": [
         "1,0",
@@ -33,7 +33,7 @@
       "id": "1,0",
       "q": 1,
       "r": 0,
-      "terrain": "open",
+      "terrain": "light",
       "owner": 0,
       "neighborIds": [
         "0,0",
@@ -44,7 +44,7 @@
       "id": "0,1",
       "q": 0,
       "r": 1,
-      "terrain": "open",
+      "terrain": "light",
       "owner": 0,
       "neighborIds": [
         "0,0",
@@ -55,7 +55,7 @@
       "id": "1,1",
       "q": 1,
       "r": 1,
-      "terrain": "open",
+      "terrain": "light",
       "owner": 0,
       "neighborIds": [
         "1,0",

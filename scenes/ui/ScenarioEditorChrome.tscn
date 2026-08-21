@@ -1,0 +1,55 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/scenario_editor/ScenarioEditorChrome.gd" id="1_chrome"]
+
+[node name="ScenarioEditorChrome" type="PanelContainer"]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = 48.0
+grow_horizontal = 2
+z_index = 100
+script = ExtResource("1_chrome")
+
+[node name="ChromeRow" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="StepLabel" type="Label" parent="ChromeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+text = "Scenario Editor"
+
+[node name="StatusLabel" type="Label" parent="ChromeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+text = ""
+
+[node name="BackButton" type="Button" parent="ChromeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Back"
+
+[node name="SaveDraftButton" type="Button" parent="ChromeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save Draft"
+
+[node name="ExitButton" type="Button" parent="ChromeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Exit Editor"
+
+[node name="ExitDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Leave Scenario Editor"
+ok_button_text = "Save Draft & Exit"
+cancel_button_text = "Cancel"
+dialog_text = "Save the current scenario as a draft before returning to the library?"

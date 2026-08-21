@@ -1,6 +1,10 @@
 extends Control
 class_name DeploymentHexMapView
 
+const NatoUnitSymbolRenderer = preload("res://scripts/ui/shared/NatoUnitSymbolRenderer.gd")
+const DeploymentValidator = preload("res://scripts/domain/units/DeploymentValidator.gd")
+const TerrainCatalog = preload("res://scripts/core/TerrainCatalog.gd")
+
 class BaseCacheLayer extends Control:
 	var owner_view: DeploymentHexMapView
 	var cache_origin := Vector2.ZERO
@@ -11,7 +15,9 @@ class BaseCacheLayer extends Control:
 		owner_view._draw_base_cache_into(self, cache_origin)
 
 signal hex_selected(column: int, row: int)
+signal hex_stack_selected(column: int, row: int)
 signal hex_undeploy_requested(column: int, row: int)
+signal deployment_cancel_requested
 
 const SQRT3 := 1.7320508075688772
 var GRID_COLUMNS: int = MapGridConfig.default_columns()
@@ -20,14 +26,25 @@ const HEX_RADIUS := 30.0
 const HEX_HORIZONTAL_SPACING := HEX_RADIUS * SQRT3
 const HEX_VERTICAL_SPACING := HEX_RADIUS * 1.5
 const HEX_ORIGIN := Vector2(80.0, 120.0)
+const MIN_ZOOM := 0.5
+const MAX_ZOOM := 2.0
+const ZOOM_FACTOR := 1.15
+const NON_DEPLOYABLE_OVERLAY_COLOR := Color(0.32, 0.32, 0.32, 0.42)
 
+var terrain_map: Dictionary = {}
 var territory_map: Dictionary = {}
+var objective_map: Dictionary = {}
 var placements_by_player: Dictionary = {}
 var visible_player_index := 0
 var deploy_mode := true
 var pan_offset := Vector2.ZERO
+var zoom_level := 1.0
+var selected_hex := Vector2i(-1, -1)
+var armed_unit_id := ""
+var armed_unit_ids: Array[String] = []
 var _is_panning := false
 var _drag_distance := 0.0
+var _suppress_left_release := false
 const PAN_DRAG_THRESHOLD := 8.0
 
 var _geometry_dirty := true
@@ -48,8 +65,10 @@ func _ready() -> void:
 	_setup_base_cache_viewport()
 	_mark_geometry_dirty()
 
-func configure(new_territory_map: Dictionary, new_placements: Dictionary, player_index: int, is_deploy_mode: bool = true) -> void:
+func configure(new_terrain_map: Dictionary, new_territory_map: Dictionary, new_placements: Dictionary, player_index: int, is_deploy_mode: bool = true, new_objective_map: Dictionary = {}) -> void:
+	terrain_map = new_terrain_map.duplicate(true)
 	territory_map = new_territory_map.duplicate(true)
+	objective_map = new_objective_map.duplicate(true)
 	placements_by_player = new_placements.duplicate(true)
 	visible_player_index = player_index
 	deploy_mode = is_deploy_mode
@@ -61,23 +80,48 @@ func _draw() -> void:
 	_ensure_geometry_cache()
 	_ensure_base_cache()
 
-	draw_set_transform(pan_offset, 0.0, Vector2.ONE)
+	draw_set_transform(pan_offset, 0.0, Vector2.ONE * zoom_level)
 	if _base_viewport != null and _base_cache_size.x > 0 and _base_cache_size.y > 0:
 		draw_texture(_base_viewport.get_texture(), _base_cache_origin)
 	_draw_visible_placements()
+	_draw_objectives()
+	_draw_selected_hex()
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mouse_button := event as InputEventMouseButton
+		if mouse_button.pressed and mouse_button.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_set_zoom_at(mouse_button.position, zoom_level * ZOOM_FACTOR)
+			accept_event()
+			return
+		if mouse_button.pressed and mouse_button.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_set_zoom_at(mouse_button.position, zoom_level / ZOOM_FACTOR)
+			accept_event()
+			return
 	if not deploy_mode:
 		return
 	if event is InputEventMouseButton:
 		var mouse_button := event as InputEventMouseButton
 		if mouse_button.button_index == MOUSE_BUTTON_LEFT and mouse_button.pressed:
+			if mouse_button.double_click:
+				_is_panning = false
+				_drag_distance = 0.0
+				_suppress_left_release = true
+				var double_clicked_coordinate := _find_hex(_to_world(mouse_button.position))
+				if not double_clicked_coordinate.is_empty():
+					emit_signal("hex_stack_selected", int(double_clicked_coordinate["q"]), int(double_clicked_coordinate["r"]))
+				accept_event()
+				return
 			_is_panning = true
 			_drag_distance = 0.0
 			accept_event()
 			return
 		if mouse_button.button_index == MOUSE_BUTTON_LEFT and not mouse_button.pressed:
+			if _suppress_left_release:
+				_suppress_left_release = false
+				accept_event()
+				return
 			if _is_panning and _drag_distance < PAN_DRAG_THRESHOLD:
 				var coordinate := _find_hex(_to_world(mouse_button.position))
 				if coordinate.is_empty():
@@ -89,6 +133,10 @@ func _gui_input(event: InputEvent) -> void:
 			accept_event()
 			return
 		if mouse_button.button_index == MOUSE_BUTTON_RIGHT and mouse_button.pressed:
+			if not armed_unit_ids.is_empty() or not armed_unit_id.is_empty():
+				emit_signal("deployment_cancel_requested")
+				accept_event()
+				return
 			var coordinate := _find_hex(_to_world(mouse_button.position))
 			if not coordinate.is_empty():
 				emit_signal("hex_undeploy_requested", int(coordinate["q"]), int(coordinate["r"]))
@@ -115,8 +163,85 @@ func _draw_visible_placements() -> void:
 		var placed_units := _placement_units_from_variant(placements[key])
 		if placed_units.is_empty():
 			continue
-		draw_circle(center, 10.0, _placement_color(visible_player_index))
-		draw_string(get_theme_default_font(), center + Vector2(-16.0, 4.0), _placement_label(placed_units), HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12, Color.WHITE)
+		var front_unit := placed_units[placed_units.size() - 1]
+		var stack_has_armed_unit := false
+		for unit in placed_units:
+			var unit_id := String(unit.get("id", ""))
+			if armed_unit_ids.has(unit_id) or unit_id == armed_unit_id:
+				stack_has_armed_unit = true
+			if unit_id == armed_unit_id:
+				front_unit = unit
+		NatoUnitSymbolRenderer.draw_stack(
+			self,
+			center,
+			front_unit,
+			visible_player_index,
+			placed_units.size(),
+			get_theme_default_font(),
+			HEX_RADIUS / NatoUnitSymbolRenderer.REFERENCE_HEX_RADIUS,
+			stack_has_armed_unit,
+			stack_has_armed_unit,
+			1.0,
+			zoom_level * HEX_RADIUS / NatoUnitSymbolRenderer.REFERENCE_HEX_RADIUS
+		)
+
+func set_selected_hex(hex: Vector2i) -> void:
+	selected_hex = hex
+	queue_redraw()
+
+func set_armed_unit(unit_id: String) -> void:
+	armed_unit_id = unit_id
+	armed_unit_ids.clear()
+	if not unit_id.is_empty():
+		armed_unit_ids.append(unit_id)
+	queue_redraw()
+
+func set_armed_units(unit_ids: Array[String], primary_unit_id: String = "") -> void:
+	armed_unit_ids.clear()
+	for unit_id in unit_ids:
+		if not unit_id.is_empty() and not armed_unit_ids.has(unit_id):
+			armed_unit_ids.append(unit_id)
+	armed_unit_id = primary_unit_id if armed_unit_ids.has(primary_unit_id) else (armed_unit_ids[armed_unit_ids.size() - 1] if not armed_unit_ids.is_empty() else "")
+	queue_redraw()
+
+func _draw_objectives() -> void:
+	for key_variant in objective_map.keys():
+		var parts := String(key_variant).split(",")
+		if parts.size() != 2 or not parts[0].is_valid_int() or not parts[1].is_valid_int():
+			continue
+		var axial := Vector2i(int(parts[0]), int(parts[1]))
+		if axial.x < 0 or axial.y < 0 or axial.x >= GRID_COLUMNS or axial.y >= GRID_ROWS:
+			continue
+		var objective_variant: Variant = objective_map[key_variant]
+		if typeof(objective_variant) != TYPE_DICTIONARY:
+			continue
+		var priority := String((objective_variant as Dictionary).get("priority", ""))
+		if priority not in ["primary", "secondary"]:
+			continue
+		var primary := priority == "primary"
+		var center := _center_for_axial(axial)
+		if center == Vector2.INF:
+			center = _hex_center(axial.x, axial.y)
+		var color := Color(1.0, 0.72, 0.12, 0.95) if primary else Color(0.68, 0.82, 1.0, 0.9)
+		var radius := HEX_RADIUS * (0.78 if primary else 0.68)
+		var width := 3.0 if primary else 2.0
+		draw_arc(center, radius, 0.0, TAU, 28, color, width, true)
+		var tick_length := HEX_RADIUS * 0.12
+		var directions: Array[Vector2] = [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]
+		for direction in directions:
+			var start: Vector2 = center + direction * (radius - tick_length)
+			var finish: Vector2 = center + direction * (radius + tick_length)
+			draw_line(start, finish, color, width, true)
+
+func _draw_selected_hex() -> void:
+	if selected_hex.x < 0 or selected_hex.y < 0 or selected_hex.x >= GRID_COLUMNS or selected_hex.y >= GRID_ROWS:
+		return
+	var corners := _corners_for_axial(selected_hex)
+	if corners.is_empty():
+		return
+	var outline := corners.duplicate()
+	outline.append(corners[0])
+	draw_polyline(outline, Color(1.0, 0.86, 0.24, 0.95), 3.0, true)
 
 func _placement_units_from_variant(placement_variant: Variant) -> Array[Dictionary]:
 	var units: Array[Dictionary] = []
@@ -141,12 +266,15 @@ func _placement_color(player_index: int) -> Color:
 func _owner_for(column: int, row: int) -> int:
 	return int(territory_map.get("%d,%d" % [column, row], GameState.TerritoryOwnership.NEUTRAL))
 
-func _color_for_owner(owner: int) -> Color:
-	if owner == GameState.TerritoryOwnership.PLAYER_1:
-		return Color(0.24, 0.43, 0.92, 0.45)
-	if owner == GameState.TerritoryOwnership.PLAYER_2:
-		return Color(0.89, 0.29, 0.27, 0.45)
-	return Color(0.58, 0.58, 0.58, 0.35)
+func _fill_color_for_hex(column: int, row: int) -> Color:
+	var key := "%d,%d" % [column, row]
+	var terrain_id := TerrainCatalog.normalize_terrain_id(String(terrain_map.get(key, TerrainCatalog.default_terrain_id())))
+	return TerrainCatalog.editor_color(terrain_id, 1.0)
+
+func _restriction_overlay_for_hex(column: int, row: int) -> Color:
+	if deploy_mode and not DeploymentValidator.can_deploy_in_territory(_owner_for(column, row), visible_player_index):
+		return NON_DEPLOYABLE_OVERLAY_COLOR
+	return Color.TRANSPARENT
 
 func _hex_center(column: int, row: int) -> Vector2:
 	var x := HEX_ORIGIN.x + (float(column) * HEX_HORIZONTAL_SPACING) + (HEX_HORIZONTAL_SPACING * 0.5 if row % 2 == 1 else 0.0)
@@ -182,7 +310,19 @@ func _find_hex(position: Vector2) -> Dictionary:
 	return {}
 
 func _to_world(screen_position: Vector2) -> Vector2:
-	return screen_position - pan_offset
+	return (screen_position - pan_offset) / zoom_level
+
+func _to_screen(world_position: Vector2) -> Vector2:
+	return world_position * zoom_level + pan_offset
+
+func _set_zoom_at(screen_position: Vector2, requested_zoom: float) -> void:
+	var next_zoom := clampf(requested_zoom, MIN_ZOOM, MAX_ZOOM)
+	if is_equal_approx(next_zoom, zoom_level):
+		return
+	var anchored_world_position := _to_world(screen_position)
+	zoom_level = next_zoom
+	pan_offset = screen_position - anchored_world_position * zoom_level
+	queue_redraw()
 
 func _setup_base_cache_viewport() -> void:
 	_base_viewport = SubViewport.new()
@@ -265,8 +405,10 @@ func _draw_base_cache_into(canvas: Control, cache_origin: Vector2) -> void:
 		local.resize(corners.size())
 		for i in range(corners.size()):
 			local[i] = corners[i] - cache_origin
-		var owner := _owner_for(axial.x, axial.y)
-		canvas.draw_colored_polygon(local, _color_for_owner(owner))
+		canvas.draw_colored_polygon(local, _fill_color_for_hex(axial.x, axial.y))
+		var restriction_overlay := _restriction_overlay_for_hex(axial.x, axial.y)
+		if restriction_overlay.a > 0.0:
+			canvas.draw_colored_polygon(local, restriction_overlay)
 		var border := local
 		if not border.is_empty():
 			border.append(border[0])

@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/deployment/DeploymentScreen.gd" id="1_dep"]
 [ext_resource type="Script" path="res://scripts/ui/deployment/HexMapView.gd" id="2_hex"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ScenarioEditorChrome.tscn" id="3_chrome"]
 
 [node name="DeploymentScreen" type="Control"]
 layout_mode = 3
@@ -11,6 +12,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_dep")
+
+[node name="ScenarioEditorChrome" parent="." instance=ExtResource("3_chrome")]
+unique_name_in_owner = true
 
 [node name="RootMargin" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -30,51 +34,60 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="LeftPanel" type="PanelContainer" parent="RootMargin/MainHBox"]
+[node name="WorkspaceSplit" type="HSplitContainer" parent="RootMargin/MainHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="LeftPanel" type="PanelContainer" parent="RootMargin/MainHBox/WorkspaceSplit"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 
-[node name="LeftMargin" type="MarginContainer" parent="RootMargin/MainHBox/LeftPanel"]
+[node name="LeftMargin" type="MarginContainer" parent="RootMargin/MainHBox/WorkspaceSplit/LeftPanel"]
 layout_mode = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="LeftVBox" type="VBoxContainer" parent="RootMargin/MainHBox/LeftPanel/LeftMargin"]
+[node name="LeftVBox" type="VBoxContainer" parent="RootMargin/MainHBox/WorkspaceSplit/LeftPanel/LeftMargin"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="PhaseLabel" type="Label" parent="RootMargin/MainHBox/LeftPanel/LeftMargin/LeftVBox"]
+[node name="PhaseLabel" type="Label" parent="RootMargin/MainHBox/WorkspaceSplit/LeftPanel/LeftMargin/LeftVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Deployment"
 
-[node name="UnitList" type="Tree" parent="RootMargin/MainHBox/LeftPanel/LeftMargin/LeftVBox"]
+[node name="UnitList" type="Tree" parent="RootMargin/MainHBox/WorkspaceSplit/LeftPanel/LeftMargin/LeftVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="StatusLabel" type="Label" parent="RootMargin/MainHBox/LeftPanel/LeftMargin/LeftVBox"]
+[node name="StatusLabel" type="Label" parent="RootMargin/MainHBox/WorkspaceSplit/LeftPanel/LeftMargin/LeftVBox"]
 unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 2
 text = "Status"
 
-[node name="CenterPanel" type="PanelContainer" parent="RootMargin/MainHBox"]
+[node name="CenterPanel" type="PanelContainer" parent="RootMargin/MainHBox/WorkspaceSplit"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="CenterMargin" type="MarginContainer" parent="RootMargin/MainHBox/CenterPanel"]
+[node name="CenterMargin" type="MarginContainer" parent="RootMargin/MainHBox/WorkspaceSplit/CenterPanel"]
 layout_mode = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="HexMapView" type="Control" parent="RootMargin/MainHBox/CenterPanel/CenterMargin"]
+[node name="HexMapView" type="Control" parent="RootMargin/MainHBox/WorkspaceSplit/CenterPanel/CenterMargin"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -82,11 +95,55 @@ size_flags_vertical = 3
 script = ExtResource("2_hex")
 
 [node name="RightPanel" type="VBoxContainer" parent="RootMargin/MainHBox"]
-custom_minimum_size = Vector2(180, 0)
+custom_minimum_size = Vector2(260, 0)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 8
-alignment = 1
+
+[node name="SelectedHexPanel" type="PanelContainer" parent="RootMargin/MainHBox/RightPanel"]
+custom_minimum_size = Vector2(0, 260)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SelectedHexVBox" type="VBoxContainer" parent="RootMargin/MainHBox/RightPanel/SelectedHexPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SelectedHexTitleLabel" type="Label" parent="RootMargin/MainHBox/RightPanel/SelectedHexPanel/SelectedHexVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Selected Hex: -, -"
+
+[node name="SelectedHexOwnershipLabel" type="Label" parent="RootMargin/MainHBox/RightPanel/SelectedHexPanel/SelectedHexVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Owner: None"
+
+[node name="SelectedHexTerrainLabel" type="Label" parent="RootMargin/MainHBox/RightPanel/SelectedHexPanel/SelectedHexVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Terrain: Unknown"
+
+[node name="SelectedHexCountLabel" type="Label" parent="RootMargin/MainHBox/RightPanel/SelectedHexPanel/SelectedHexVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Unit Count: 0"
+
+[node name="SelectedHexHintLabel" type="Label" parent="RootMargin/MainHBox/RightPanel/SelectedHexPanel/SelectedHexVBox"]
+layout_mode = 2
+text = "Click a unit card to move that unit."
+autowrap_mode = 2
+
+[node name="SelectedHexUnitScroll" type="ScrollContainer" parent="RootMargin/MainHBox/RightPanel/SelectedHexPanel/SelectedHexVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="SelectedHexUnitCards" type="VBoxContainer" parent="RootMargin/MainHBox/RightPanel/SelectedHexPanel/SelectedHexVBox/SelectedHexUnitScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
 
 [node name="P2StructureLabel" type="Label" parent="RootMargin/MainHBox/RightPanel"]
 unique_name_in_owner = true
@@ -99,7 +156,53 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="SaveScenarioButton" type="Button" parent="RootMargin/MainHBox/RightPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save Starting Scenario"
+
 [node name="FinishDeploymentButton" type="Button" parent="RootMargin/MainHBox/RightPanel"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Finish Deployment"
+
+[node name="ScenarioSaveDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Save Starting Scenario"
+initial_position = 1
+size = Vector2i(460, 190)
+ok_button_text = "Save"
+cancel_button_text = "Cancel"
+
+[node name="ScenarioSaveMargin" type="MarginContainer" parent="ScenarioSaveDialog"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScenarioSaveVBox" type="VBoxContainer" parent="ScenarioSaveDialog/ScenarioSaveMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ScenarioNameLabel" type="Label" parent="ScenarioSaveDialog/ScenarioSaveMargin/ScenarioSaveVBox"]
+layout_mode = 2
+text = "Scenario name"
+
+[node name="ScenarioNameInput" type="LineEdit" parent="ScenarioSaveDialog/ScenarioSaveMargin/ScenarioSaveVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Example: Woods assault setup"
+
+[node name="OverwriteScenarioDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Replace Starting Scenario"
+initial_position = 1
+ok_button_text = "Replace"
+cancel_button_text = "Cancel"
+dialog_text = "A scenario with this name already exists. Replace it?"

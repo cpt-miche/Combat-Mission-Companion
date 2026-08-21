@@ -62,7 +62,7 @@ static func _company_equivalent_for_size(size_value: int) -> float:
 static func _unit_size_value(unit: Dictionary) -> int:
 	if unit.has("size_value"):
 		return int(unit.get("size_value", UnitSize.Value.COMPANY))
-	var formation_size := String(unit.get("formation_size", unit.get("size", "company"))).strip_edges().to_lower()
+	var formation_size := String(unit.get("size", "company")).strip_edges().to_lower()
 	match formation_size:
 		"squad":
 			return UnitSize.Value.SQUAD

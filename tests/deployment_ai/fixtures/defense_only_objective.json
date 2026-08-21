@@ -26,7 +26,7 @@
       "id": "0,0",
       "q": 0,
       "r": 0,
-      "terrain": "rough"
+      "terrain": "medium"
     },
     {
       "id": "1,0",
@@ -38,13 +38,13 @@
       "id": "2,0",
       "q": 2,
       "r": 0,
-      "terrain": "open"
+      "terrain": "light"
     },
     {
       "id": "0,1",
       "q": 0,
       "r": 1,
-      "terrain": "rough"
+      "terrain": "medium"
     },
     {
       "id": "1,1",

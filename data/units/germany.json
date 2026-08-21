@@ -1,392 +1,486 @@
 {
   "nation": "germany",
+  "catalog_basis": "Approximate Combat Mission: Final Blitzkrieg base-game and late-1944 German Type-44/KStN organization",
   "templates": [
     {
-      "id": "ger_pionier_platoon",
-      "display_name": "Pionier Platoon",
-      "type": "ENGINEER",
-      "size": "PLATOON",
-      "default_veterancy": "REGULAR"
-    },
-    {
-      "id": "ger_panzer_company",
-      "display_name": "Panzer Company",
-      "type": "TANK",
-      "size": "COMPANY",
-      "default_veterancy": "VETERAN"
-    },
-    {
-      "id": "ger_grenadier_bn",
-      "display_name": "Grenadier Battalion",
-      "type": "INFANTRY",
-      "size": "BATTALION",
-      "default_veterancy": "GREEN",
-      "children": [
-        {
-          "id": "ger_grenadier_bn_hq",
-          "display_name": "Battalion Headquarters",
-          "type": "HEADQUARTERS",
-          "size": "COMPANY"
-        },
-        {
-          "id": "ger_grenadier_rifle_co",
-          "display_name": "Rifle Company",
-          "type": "INFANTRY",
-          "size": "COMPANY",
-          "count": 3,
-          "children": [
-            {
-              "id": "ger_grenadier_rifle_co_hq",
-              "display_name": "Company HQ",
-              "type": "HEADQUARTERS",
-              "size": "PLATOON"
-            },
-            {
-              "id": "ger_grenadier_rifle_platoon",
-              "display_name": "Rifle Platoon",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "count": 3,
-              "children": [
-                {
-                  "id": "ger_grenadier_rifle_platoon_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION"
-                },
-                {
-                  "id": "ger_grenadier_rifle_squad",
-                  "display_name": "Rifle Squad",
-                  "type": "INFANTRY",
-                  "size": "SQUAD",
-                  "count": 3
-                }
-              ]
-            },
-            {
-              "id": "ger_grenadier_rifle_co_weapons_platoon",
-              "display_name": "Weapons Platoon",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "count": 1,
-              "children": [
-                {
-                  "id": "ger_grenadier_rifle_co_mg_group",
-                  "display_name": "MG Group",
-                  "type": "INFANTRY",
-                  "size": "SECTION",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "ger_grenadier_rifle_co_hmg_team",
-                      "display_name": "Heavy MG detachment / gun team",
-                      "type": "INFANTRY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "ger_grenadier_heavy_co",
-          "display_name": "Heavy Company",
-          "type": "INFANTRY",
-          "size": "COMPANY",
-          "children": [
-            {
-              "id": "ger_grenadier_heavy_co_hq",
-              "display_name": "Company HQ",
-              "type": "HEADQUARTERS",
-              "size": "PLATOON"
-            },
-            {
-              "id": "ger_grenadier_hmg_platoon",
-              "display_name": "Heavy MG Platoon",
-              "type": "INFANTRY",
-              "size": "PLATOON",
-              "children": [
-                {
-                  "id": "ger_grenadier_hmg_platoon_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION"
-                },
-                {
-                  "id": "ger_grenadier_hmg_platoon_mg_group",
-                  "display_name": "MG Group",
-                  "type": "INFANTRY",
-                  "size": "SECTION",
-                  "count": 3,
-                  "children": [
-                    {
-                      "id": "ger_grenadier_hmg_platoon_hmg_team",
-                      "display_name": "Heavy MG detachment / gun team",
-                      "type": "INFANTRY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "ger_grenadier_mortar_8cm_platoon",
-              "display_name": "8-cm Mortar Platoon",
-              "type": "ARTILLERY",
-              "size": "PLATOON",
-              "children": [
-                {
-                  "id": "ger_grenadier_mortar_8cm_platoon_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION"
-                },
-                {
-                  "id": "ger_grenadier_mortar_8cm_group",
-                  "display_name": "Mortar Group",
-                  "type": "ARTILLERY",
-                  "size": "SECTION",
-                  "count": 3,
-                  "children": [
-                    {
-                      "id": "ger_grenadier_mortar_8cm_detachment",
-                      "display_name": "Mortar detachment",
-                      "type": "ARTILLERY",
-                      "size": "SQUAD",
-                      "count": 2
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "ger_grenadier_mortar_12cm_platoon",
-              "display_name": "12-cm Mortar Platoon",
-              "type": "ARTILLERY",
-              "size": "PLATOON",
-              "children": [
-                {
-                  "id": "ger_grenadier_mortar_12cm_platoon_hq",
-                  "display_name": "Platoon HQ",
-                  "type": "HEADQUARTERS",
-                  "size": "SECTION"
-                },
-                {
-                  "id": "ger_grenadier_mortar_12cm_detachment",
-                  "display_name": "Mortar detachment",
-                  "type": "ARTILLERY",
-                  "size": "SQUAD",
-                  "count": 4
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "ger_artillery_regiment",
-      "display_name": "Artillery Regiment",
-      "type": "ARTILLERY",
-      "size": "REGIMENT",
-      "default_veterancy": "HARDENED"
-    },
-    {
-      "id": "ger_infantry_division",
-      "display_name": "Infantry Division",
+      "id": "ger_heer_infantry_division_44",
+      "display_name": "Infantry Division (Type 44)",
       "type": "INFANTRY",
       "size": "DIVISION",
+      "role": "grenadier",
       "default_veterancy": "REGULAR",
       "children": [
-        {
-          "id": "ger_division_infantry_regiment",
-          "display_name": "Infantry Regiment",
-          "type": "INFANTRY",
-          "size": "REGIMENT",
-          "count": 3,
-          "children": [
-            {
-              "id": "ger_regiment_infantry_battalion",
-              "display_name": "Infantry Battalion",
-              "type": "INFANTRY",
-              "size": "BATTALION",
-              "count": 3,
-              "children": [
-                {
-                  "id": "ger_battalion_infantry_company",
-                  "display_name": "Infantry Company",
-                  "type": "INFANTRY",
-                  "size": "COMPANY",
-                  "count": 3,
-                  "children": [
-                    {
-                      "id": "ger_company_infantry_platoon",
-                      "display_name": "Infantry Platoon",
-                      "type": "INFANTRY",
-                      "size": "PLATOON",
-                      "count": 3
-                    },
-                    {
-                      "id": "ger_company_hmg_platoon",
-                      "display_name": "Heavy Machine Gun Platoon",
-                      "type": "INFANTRY",
-                      "size": "PLATOON",
-                      "count": 1,
-                      "children": [
-                        {
-                          "id": "ger_company_hmg_section",
-                          "display_name": "Heavy Machine Gun Section",
-                          "type": "INFANTRY",
-                          "size": "SECTION",
-                          "count": 2
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "id": "ger_battalion_weapons_company",
-                  "display_name": "Weapons Company",
-                  "type": "INFANTRY",
-                  "size": "COMPANY",
-                  "count": 1,
-                  "children": [
-                    {
-                      "id": "ger_weapons_company_hmg_platoon",
-                      "display_name": "Heavy Machine Gun Platoon",
-                      "type": "INFANTRY",
-                      "size": "PLATOON",
-                      "count": 1,
-                      "children": [
-                        {
-                          "id": "ger_weapons_company_hmg_section",
-                          "display_name": "Heavy Machine Gun Section",
-                          "type": "INFANTRY",
-                          "size": "SECTION",
-                          "count": 3
-                        }
-                      ]
-                    },
-                    {
-                      "id": "ger_weapons_company_mortar_platoon",
-                      "display_name": "Mortar Platoon",
-                      "type": "ARTILLERY",
-                      "size": "PLATOON",
-                      "count": 1,
-                      "children": [
-                        {
-                          "id": "ger_weapons_company_mortar_8cm_section",
-                          "display_name": "8cm Mortar Section",
-                          "type": "ARTILLERY",
-                          "size": "SECTION",
-                          "count": 3,
-                          "children": [
-                            {
-                              "id": "ger_weapons_company_mortar_8cm_team",
-                              "display_name": "8cm Mortar Team",
-                              "type": "ARTILLERY",
-                              "size": "SQUAD",
-                              "count": 2
-                            }
-                          ]
-                        },
-                        {
-                          "id": "ger_weapons_company_mortar_12cm_section",
-                          "display_name": "12cm Mortar Section",
-                          "type": "ARTILLERY",
-                          "size": "SECTION",
-                          "count": 3,
-                          "children": [
-                            {
-                              "id": "ger_weapons_company_mortar_12cm_team",
-                              "display_name": "12cm Mortar Team",
-                              "type": "ARTILLERY",
-                              "size": "SQUAD",
-                              "count": 2
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "ger_regiment_antitank_company",
-              "display_name": "Anti-Tank Company",
-              "type": "ANTI_TANK",
-              "size": "COMPANY",
-              "count": 1
-            },
-            {
-              "id": "ger_regiment_howitzer_company",
-              "display_name": "Howitzer Company",
-              "type": "ARTILLERY",
-              "size": "COMPANY",
-              "count": 1
-            }
-          ]
-        },
-        {
-          "id": "ger_division_antitank_battalion",
-          "display_name": "Anti-Tank Battalion",
-          "type": "ANTI_TANK",
-          "size": "BATTALION",
-          "count": 1
-        },
-        {
-          "id": "ger_division_recon_battalion",
-          "display_name": "Recon Battalion",
-          "type": "RECON",
-          "size": "BATTALION",
-          "count": 1,
-          "children": [
-            {
-              "id": "ger_recon_company",
-              "display_name": "Recon Company",
-              "type": "RECON",
-              "size": "COMPANY",
-              "count": 3,
-              "children": [
-                {
-                  "id": "ger_recon_platoon",
-                  "display_name": "Recon Platoon",
-                  "type": "RECON",
-                  "size": "PLATOON",
-                  "count": 3
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "ger_division_howitzer_regiment",
-          "display_name": "Howitzer Regiment",
-          "type": "ARTILLERY",
-          "size": "REGIMENT",
-          "count": 1,
-          "children": [
-            {
-              "id": "ger_howitzer_155mm_battalion",
-              "display_name": "155mm Howitzer Battalion",
-              "type": "ARTILLERY",
-              "size": "BATTALION",
-              "count": 1
-            },
-            {
-              "id": "ger_howitzer_105mm_battalion",
-              "display_name": "105mm Howitzer Battalion",
-              "type": "ARTILLERY",
-              "size": "BATTALION",
-              "count": 3
-            }
-          ]
-        }
+        {"template_ref": "ger_heer_grenadier_regiment_44", "count": 3},
+        {"template_ref": "ger_divisional_fusilier_battalion", "count": 1},
+        {"template_ref": "ger_divisional_artillery_regiment_44", "count": 1},
+        {"template_ref": "ger_divisional_panzerjager_battalion", "count": 1},
+        {"template_ref": "ger_pioneer_battalion", "count": 1}
       ]
+    },
+    {
+      "id": "ger_volksgrenadier_division_44",
+      "display_name": "Volksgrenadier Division (1944)",
+      "type": "INFANTRY",
+      "size": "DIVISION",
+      "role": "volksgrenadier",
+      "default_veterancy": "GREEN",
+      "children": [
+        {"template_ref": "ger_volksgrenadier_regiment_44", "count": 3},
+        {"template_ref": "ger_volksgrenadier_fusilier_company", "count": 1},
+        {"template_ref": "ger_divisional_artillery_regiment_44", "count": 1},
+        {"template_ref": "ger_hetzer_panzerjager_battalion", "count": 1},
+        {"template_ref": "ger_pioneer_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_panzer_division_44",
+      "display_name": "Panzer Division (Type 44)",
+      "type": "TANK",
+      "size": "DIVISION",
+      "role": "medium_tank",
+      "default_veterancy": "VETERAN",
+      "children": [
+        {"template_ref": "ger_panzer_regiment_44", "count": 1},
+        {"template_ref": "ger_panzergrenadier_regiment_mixed", "count": 2},
+        {"template_ref": "ger_panzer_artillery_regiment", "count": 1},
+        {"template_ref": "ger_panzer_recon_battalion", "count": 1},
+        {"template_ref": "ger_divisional_panzerjager_battalion", "count": 1},
+        {"template_ref": "ger_panzer_pioneer_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_panzergrenadier_division_44",
+      "display_name": "Panzergrenadier Division (Type 44)",
+      "type": "MOTORIZED",
+      "size": "DIVISION",
+      "role": "panzergrenadier",
+      "default_veterancy": "REGULAR",
+      "children": [
+        {"template_ref": "ger_panzergrenadier_regiment_motorized", "count": 2},
+        {"template_ref": "ger_stug_iii_assault_gun_battalion", "count": 1},
+        {"template_ref": "ger_panzer_artillery_regiment", "count": 1},
+        {"template_ref": "ger_panzer_recon_battalion", "count": 1},
+        {"template_ref": "ger_divisional_panzerjager_battalion", "count": 1},
+        {"template_ref": "ger_panzer_pioneer_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_fallschirmjager_division_44",
+      "display_name": "Luftwaffe Fallschirmjager Division (1944)",
+      "type": "AIRBORNE",
+      "size": "DIVISION",
+      "role": "fallschirmjager",
+      "default_veterancy": "VETERAN",
+      "children": [
+        {"template_ref": "ger_fallschirmjager_regiment", "count": 3},
+        {"template_ref": "ger_fallschirmjager_artillery_regiment", "count": 1},
+        {"template_ref": "ger_fallschirmjager_panzerjager_battalion", "count": 1},
+        {"template_ref": "ger_fallschirmjager_pioneer_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_gebirgsjager_division_44",
+      "display_name": "Gebirgsjager Division (1944)",
+      "type": "INFANTRY",
+      "size": "DIVISION",
+      "role": "gebirgsjager",
+      "default_veterancy": "VETERAN",
+      "children": [
+        {"template_ref": "ger_gebirgsjager_regiment", "count": 2},
+        {"template_ref": "ger_gebirgs_artillery_regiment", "count": 1},
+        {"template_ref": "ger_gebirgs_recon_battalion", "count": 1},
+        {"template_ref": "ger_gebirgs_panzerjager_battalion", "count": 1},
+        {"template_ref": "ger_gebirgs_pioneer_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_waffen_ss_panzer_division_44",
+      "display_name": "Waffen-SS Panzer Division (Type 44)",
+      "type": "TANK",
+      "size": "DIVISION",
+      "role": "medium_tank",
+      "default_veterancy": "VETERAN",
+      "children": [
+        {"template_ref": "ger_waffen_ss_panzer_regiment", "count": 1},
+        {"template_ref": "ger_waffen_ss_panzergrenadier_regiment", "count": 2},
+        {"template_ref": "ger_panzer_artillery_regiment", "count": 1},
+        {"template_ref": "ger_panzer_recon_battalion", "count": 1},
+        {"template_ref": "ger_divisional_panzerjager_battalion", "count": 1},
+        {"template_ref": "ger_panzer_pioneer_battalion", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_fortress_mg_battalion",
+      "display_name": "Fortress Machine-Gun Battalion",
+      "type": "INFANTRY",
+      "size": "BATTALION",
+      "role": "fortress_machine_gun",
+      "default_veterancy": "GREEN",
+      "children": [
+        {"template_ref": "ger_fortress_mg_hq_company", "count": 1},
+        {"template_ref": "ger_fortress_mg_company", "count": 3},
+        {"template_ref": "ger_fortress_mortar_company", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_straggler_group",
+      "display_name": "German Straggler Group",
+      "type": "INFANTRY",
+      "size": "BATTALION",
+      "role": "straggler",
+      "default_veterancy": "GREEN",
+      "children": [{"template_ref": "ger_straggler_company", "count": 3}]
+    },
+    {
+      "id": "ger_panzer_iv_battalion",
+      "display_name": "Panzer IV Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "medium_tank",
+      "children": [{"template_ref": "ger_panzer_battalion_hq_company", "count": 1}, {"template_ref": "ger_panzer_iv_company", "count": 4}]
+    },
+    {
+      "id": "ger_panther_battalion",
+      "display_name": "Panther Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "medium_tank",
+      "equipment_weight": "heavy",
+      "children": [{"template_ref": "ger_panther_battalion_hq_company", "count": 1}, {"template_ref": "ger_panther_company", "count": 4}]
+    },
+    {
+      "id": "ger_tiger_heavy_tank_battalion",
+      "display_name": "Tiger Heavy Tank Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "heavy_tank",
+      "equipment_weight": "heavy",
+      "children": [{"template_ref": "ger_heavy_tank_battalion_hq_company", "count": 1}, {"template_ref": "ger_tiger_heavy_tank_company", "count": 3}]
+    },
+    {
+      "id": "ger_tiger_ii_heavy_tank_battalion",
+      "display_name": "Tiger II Heavy Tank Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "heavy_tank",
+      "equipment_weight": "heavy",
+      "children": [{"template_ref": "ger_tiger_ii_battalion_hq_company", "count": 1}, {"template_ref": "ger_tiger_ii_heavy_tank_company", "count": 3}]
+    },
+    {
+      "id": "ger_stug_iii_assault_gun_battalion",
+      "display_name": "StuG III Assault Gun Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "assault_gun",
+      "children": [{"template_ref": "ger_assault_gun_battalion_hq_company", "count": 1}, {"template_ref": "ger_stug_iii_assault_gun_battery", "count": 3}]
+    },
+    {
+      "id": "ger_stug_iv_assault_gun_battalion",
+      "display_name": "StuG IV Assault Gun Battalion",
+      "type": "TANK",
+      "size": "BATTALION",
+      "role": "assault_gun",
+      "children": [{"template_ref": "ger_assault_gun_battalion_hq_company", "count": 1}, {"template_ref": "ger_stug_iv_assault_gun_battery", "count": 3}]
+    },
+    {
+      "id": "ger_jagdpanzer_iv_battalion",
+      "display_name": "Jagdpanzer IV Panzerjager Battalion",
+      "type": "ANTI_TANK",
+      "size": "BATTALION",
+      "role": "tank_destroyer",
+      "equipment_weight": "heavy",
+      "children": [{"template_ref": "ger_panzerjager_battalion_hq_company", "count": 1}, {"template_ref": "ger_jagdpanzer_iv_company", "count": 3}]
+    },
+    {
+      "id": "ger_hetzer_panzerjager_battalion",
+      "display_name": "Hetzer Panzerjager Battalion",
+      "type": "ANTI_TANK",
+      "size": "BATTALION",
+      "role": "tank_destroyer",
+      "equipment_weight": "medium",
+      "children": [{"template_ref": "ger_panzerjager_battalion_hq_company", "count": 1}, {"template_ref": "ger_hetzer_company", "count": 3}]
     }
+  ],
+  "definitions": [
+    {
+      "id": "ger_heer_grenadier_regiment_44",
+      "display_name": "Grenadier Regiment (Type 44)",
+      "type": "INFANTRY",
+      "size": "REGIMENT",
+      "role": "grenadier",
+      "children": [
+        {"template_ref": "ger_regimental_hq_company", "count": 1},
+        {"template_ref": "ger_heer_grenadier_battalion_44", "count": 2},
+        {"template_ref": "ger_regimental_infantry_gun_company", "count": 1},
+        {"template_ref": "ger_regimental_antitank_company", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_volksgrenadier_regiment_44",
+      "display_name": "Volksgrenadier Regiment (1944)",
+      "type": "INFANTRY",
+      "size": "REGIMENT",
+      "role": "volksgrenadier",
+      "children": [
+        {"template_ref": "ger_regimental_hq_company", "count": 1},
+        {"template_ref": "ger_volksgrenadier_battalion_44", "count": 2},
+        {"template_ref": "ger_regimental_infantry_gun_company", "count": 1},
+        {"template_ref": "ger_regimental_antitank_company", "count": 1}
+      ]
+    },
+    {"id": "ger_regimental_hq_company", "display_name": "Regimental HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {
+      "id": "ger_heer_grenadier_battalion_44",
+      "display_name": "Grenadier Battalion (Type 44)",
+      "type": "INFANTRY",
+      "size": "BATTALION",
+      "role": "grenadier",
+      "children": [
+        {"template_ref": "ger_grenadier_battalion_hq_company", "count": 1},
+        {"template_ref": "ger_grenadier_company", "count": 3},
+        {"template_ref": "ger_grenadier_heavy_company", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_volksgrenadier_battalion_44",
+      "display_name": "Volksgrenadier Battalion (1944)",
+      "type": "INFANTRY",
+      "size": "BATTALION",
+      "role": "volksgrenadier",
+      "children": [
+        {"template_ref": "ger_grenadier_battalion_hq_company", "count": 1},
+        {"template_ref": "ger_volksgrenadier_company", "count": 3},
+        {"template_ref": "ger_volksgrenadier_heavy_company", "count": 1}
+      ]
+    },
+    {"id": "ger_grenadier_battalion_hq_company", "display_name": "Grenadier Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {
+      "id": "ger_grenadier_company",
+      "display_name": "Grenadier Company",
+      "type": "INFANTRY",
+      "size": "COMPANY",
+      "role": "grenadier",
+      "children": [
+        {"template_ref": "ger_grenadier_company_hq_platoon", "count": 1},
+        {"template_ref": "ger_grenadier_platoon", "count": 3},
+        {"template_ref": "ger_grenadier_weapons_platoon", "count": 1}
+      ]
+    },
+    {
+      "id": "ger_volksgrenadier_company",
+      "display_name": "Volksgrenadier Company",
+      "type": "INFANTRY",
+      "size": "COMPANY",
+      "role": "volksgrenadier",
+      "children": [
+        {"template_ref": "ger_grenadier_company_hq_platoon", "count": 1},
+        {"template_ref": "ger_volksgrenadier_platoon", "count": 3},
+        {"template_ref": "ger_grenadier_weapons_platoon", "count": 1}
+      ]
+    },
+    {"id": "ger_grenadier_company_hq_platoon", "display_name": "Grenadier Company HQ Platoon", "type": "HEADQUARTERS", "size": "PLATOON", "role": "headquarters", "children": []},
+    {"id": "ger_grenadier_platoon", "display_name": "Grenadier Platoon", "type": "INFANTRY", "size": "PLATOON", "role": "grenadier", "children": [{"template_ref": "ger_grenadier_platoon_hq_section", "count": 1}, {"template_ref": "ger_grenadier_squad", "count": 3}]},
+    {"id": "ger_volksgrenadier_platoon", "display_name": "Volksgrenadier Platoon", "type": "INFANTRY", "size": "PLATOON", "role": "volksgrenadier", "children": [{"template_ref": "ger_grenadier_platoon_hq_section", "count": 1}, {"template_ref": "ger_volksgrenadier_squad", "count": 3}]},
+    {"id": "ger_grenadier_platoon_hq_section", "display_name": "Grenadier Platoon HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "children": []},
+    {"id": "ger_grenadier_squad", "display_name": "Grenadier Squad", "type": "INFANTRY", "size": "SQUAD", "role": "grenadier", "children": []},
+    {"id": "ger_volksgrenadier_squad", "display_name": "Volksgrenadier Squad", "type": "INFANTRY", "size": "SQUAD", "role": "volksgrenadier", "children": []},
+    {"id": "ger_grenadier_weapons_platoon", "display_name": "Grenadier Weapons Platoon", "type": "INFANTRY", "size": "PLATOON", "role": "weapons", "children": [{"template_ref": "ger_8cm_mortar_section", "count": 1}, {"template_ref": "ger_heavy_machine_gun_section", "count": 1}]},
+    {"id": "ger_grenadier_heavy_company", "display_name": "Grenadier Heavy Company", "type": "INFANTRY", "size": "COMPANY", "role": "heavy_weapons", "children": [{"template_ref": "ger_heavy_machine_gun_platoon", "count": 2}, {"template_ref": "ger_8cm_mortar_platoon", "count": 1}, {"template_ref": "ger_12cm_mortar_platoon", "count": 1}]},
+    {"id": "ger_volksgrenadier_heavy_company", "display_name": "Volksgrenadier Heavy Company", "type": "INFANTRY", "size": "COMPANY", "role": "heavy_weapons", "children": [{"template_ref": "ger_heavy_machine_gun_platoon", "count": 1}, {"template_ref": "ger_8cm_mortar_platoon", "count": 1}, {"template_ref": "ger_12cm_mortar_platoon", "count": 1}, {"template_ref": "ger_panzerschreck_platoon", "count": 1}]},
+    {"id": "ger_heavy_machine_gun_platoon", "display_name": "Heavy Machine-Gun Platoon", "type": "INFANTRY", "size": "PLATOON", "role": "heavy_machine_gun", "children": [{"template_ref": "ger_heavy_machine_gun_section", "count": 2}]},
+    {"id": "ger_heavy_machine_gun_section", "display_name": "Heavy Machine-Gun Section", "type": "INFANTRY", "size": "SECTION", "role": "heavy_machine_gun", "children": []},
+    {"id": "ger_8cm_mortar_platoon", "display_name": "8cm Mortar Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "8cm_mortar", "children": [{"template_ref": "ger_8cm_mortar_section", "count": 2}]},
+    {"id": "ger_8cm_mortar_section", "display_name": "8cm Mortar Section", "type": "ARTILLERY", "size": "SECTION", "role": "8cm_mortar", "children": []},
+    {"id": "ger_12cm_mortar_platoon", "display_name": "12cm Mortar Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "12cm_mortar", "children": []},
+    {"id": "ger_panzerschreck_platoon", "display_name": "Panzerschreck Platoon", "type": "ANTI_TANK", "size": "PLATOON", "role": "anti_tank", "equipment_weight": "light", "children": []},
+    {"id": "ger_regimental_infantry_gun_company", "display_name": "Regimental Infantry Gun Company", "type": "ARTILLERY", "size": "COMPANY", "role": "infantry_gun", "children": [{"template_ref": "ger_75mm_infantry_gun_platoon", "count": 2}, {"template_ref": "ger_150mm_infantry_gun_platoon", "count": 1}]},
+    {"id": "ger_75mm_infantry_gun_platoon", "display_name": "7.5cm Infantry Gun Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "75mm_infantry_gun", "children": []},
+    {"id": "ger_150mm_infantry_gun_platoon", "display_name": "15cm Infantry Gun Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "150mm_infantry_gun", "children": []},
+    {"id": "ger_regimental_antitank_company", "display_name": "Regimental Panzerjager Company", "type": "ANTI_TANK", "size": "COMPANY", "role": "anti_tank_gun", "equipment_weight": "heavy", "children": [{"template_ref": "ger_pak40_antitank_platoon", "count": 3}]},
+    {"id": "ger_pak40_antitank_platoon", "display_name": "7.5cm Pak 40 Platoon", "type": "ANTI_TANK", "size": "PLATOON", "role": "anti_tank_gun", "equipment_weight": "heavy", "children": []},
+    {"id": "ger_divisional_fusilier_battalion", "display_name": "Divisional Fusilier Battalion", "type": "RECON", "size": "BATTALION", "role": "fusilier", "children": [{"template_ref": "ger_fusilier_hq_company", "count": 1}, {"template_ref": "ger_fusilier_company", "count": 3}, {"template_ref": "ger_grenadier_heavy_company", "count": 1}]},
+    {"id": "ger_fusilier_hq_company", "display_name": "Fusilier Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_fusilier_company", "display_name": "Fusilier Company", "type": "RECON", "size": "COMPANY", "role": "fusilier", "children": [{"template_ref": "ger_fusilier_platoon", "count": 3}, {"template_ref": "ger_grenadier_weapons_platoon", "count": 1}]},
+    {"id": "ger_fusilier_platoon", "display_name": "Fusilier Platoon", "type": "RECON", "size": "PLATOON", "role": "fusilier", "children": []},
+    {"id": "ger_volksgrenadier_fusilier_company", "display_name": "Volksgrenadier Fusilier Company", "type": "RECON", "size": "COMPANY", "role": "fusilier", "children": [{"template_ref": "ger_fusilier_platoon", "count": 3}, {"template_ref": "ger_grenadier_weapons_platoon", "count": 1}]},
+    {
+      "id": "ger_divisional_artillery_regiment_44",
+      "display_name": "Divisional Artillery Regiment (1944)",
+      "type": "ARTILLERY",
+      "size": "REGIMENT",
+      "role": "artillery",
+      "children": [{"template_ref": "ger_105mm_artillery_battalion", "count": 3}, {"template_ref": "ger_150mm_artillery_battalion", "count": 1}]
+    },
+    {"id": "ger_105mm_artillery_battalion", "display_name": "10.5cm Howitzer Battalion", "type": "ARTILLERY", "size": "BATTALION", "role": "105mm_howitzer", "children": [{"template_ref": "ger_artillery_hq_company", "count": 1}, {"template_ref": "ger_105mm_artillery_battery", "count": 3}]},
+    {"id": "ger_150mm_artillery_battalion", "display_name": "15cm Howitzer Battalion", "type": "ARTILLERY", "size": "BATTALION", "role": "150mm_howitzer", "children": [{"template_ref": "ger_artillery_hq_company", "count": 1}, {"template_ref": "ger_150mm_artillery_battery", "count": 3}]},
+    {"id": "ger_artillery_hq_company", "display_name": "Artillery Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_105mm_artillery_battery", "display_name": "10.5cm Howitzer Battery", "type": "ARTILLERY", "size": "COMPANY", "role": "105mm_howitzer", "children": [{"template_ref": "ger_105mm_artillery_platoon", "count": 2}]},
+    {"id": "ger_105mm_artillery_platoon", "display_name": "10.5cm Howitzer Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "105mm_howitzer", "children": []},
+    {"id": "ger_150mm_artillery_battery", "display_name": "15cm Howitzer Battery", "type": "ARTILLERY", "size": "COMPANY", "role": "150mm_howitzer", "children": [{"template_ref": "ger_150mm_artillery_platoon", "count": 2}]},
+    {"id": "ger_150mm_artillery_platoon", "display_name": "15cm Howitzer Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "150mm_howitzer", "children": []},
+    {"id": "ger_pioneer_battalion", "display_name": "Pioneer Battalion", "type": "ENGINEER", "size": "BATTALION", "role": "pionier", "children": [{"template_ref": "ger_pioneer_hq_company", "count": 1}, {"template_ref": "ger_pioneer_company", "count": 3}]},
+    {"id": "ger_pioneer_hq_company", "display_name": "Pioneer Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_pioneer_company", "display_name": "Pioneer Company", "type": "ENGINEER", "size": "COMPANY", "role": "pionier", "children": [{"template_ref": "ger_pioneer_platoon", "count": 3}]},
+    {"id": "ger_pioneer_platoon", "display_name": "Pioneer Platoon", "type": "ENGINEER", "size": "PLATOON", "role": "pionier", "children": []},
+    {
+      "id": "ger_divisional_panzerjager_battalion",
+      "display_name": "Divisional Panzerjager Battalion",
+      "type": "ANTI_TANK",
+      "size": "BATTALION",
+      "role": "tank_destroyer",
+      "children": [{"template_ref": "ger_panzerjager_battalion_hq_company", "count": 1}, {"template_ref": "ger_jagdpanzer_iv_company", "count": 2}, {"template_ref": "ger_towed_panzerjager_company", "count": 1}]
+    },
+    {"id": "ger_panzerjager_battalion_hq_company", "display_name": "Panzerjager Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_towed_panzerjager_company", "display_name": "Towed Panzerjager Company", "type": "ANTI_TANK", "size": "COMPANY", "role": "anti_tank_gun", "equipment_weight": "heavy", "children": [{"template_ref": "ger_pak40_antitank_platoon", "count": 3}]},
+    {
+      "id": "ger_panzer_regiment_44",
+      "display_name": "Panzer Regiment (Type 44)",
+      "type": "TANK",
+      "size": "REGIMENT",
+      "role": "medium_tank",
+      "children": [{"template_ref": "ger_panzer_regiment_hq_company", "count": 1}, {"template_ref": "ger_panzer_iv_battalion", "count": 1}, {"template_ref": "ger_panther_battalion", "count": 1}]
+    },
+    {"id": "ger_waffen_ss_panzer_regiment", "display_name": "Waffen-SS Panzer Regiment", "type": "TANK", "size": "REGIMENT", "role": "medium_tank", "children": [{"template_ref": "ger_panzer_regiment_hq_company", "count": 1}, {"template_ref": "ger_panzer_iv_battalion", "count": 1}, {"template_ref": "ger_panther_battalion", "count": 1}]},
+    {"id": "ger_panzer_regiment_hq_company", "display_name": "Panzer Regiment HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {
+      "id": "ger_panzergrenadier_regiment_mixed",
+      "display_name": "Panzergrenadier Regiment (Mixed)",
+      "type": "MECHANIZED",
+      "size": "REGIMENT",
+      "role": "panzergrenadier",
+      "children": [{"template_ref": "ger_panzergrenadier_regimental_hq_company", "count": 1}, {"template_ref": "ger_armored_panzergrenadier_battalion", "count": 1}, {"template_ref": "ger_motorized_panzergrenadier_battalion", "count": 1}, {"template_ref": "ger_panzergrenadier_infantry_gun_company", "count": 1}, {"template_ref": "ger_panzergrenadier_pioneer_company", "count": 1}]
+    },
+    {
+      "id": "ger_panzergrenadier_regiment_motorized",
+      "display_name": "Panzergrenadier Regiment (Motorized)",
+      "type": "MOTORIZED",
+      "size": "REGIMENT",
+      "role": "panzergrenadier",
+      "children": [{"template_ref": "ger_panzergrenadier_regimental_hq_company", "count": 1}, {"template_ref": "ger_motorized_panzergrenadier_battalion", "count": 2}, {"template_ref": "ger_panzergrenadier_infantry_gun_company", "count": 1}, {"template_ref": "ger_panzergrenadier_pioneer_company", "count": 1}]
+    },
+    {
+      "id": "ger_waffen_ss_panzergrenadier_regiment",
+      "display_name": "Waffen-SS Panzergrenadier Regiment",
+      "type": "MECHANIZED",
+      "size": "REGIMENT",
+      "role": "ss_panzergrenadier",
+      "children": [{"template_ref": "ger_panzergrenadier_regimental_hq_company", "count": 1}, {"template_ref": "ger_waffen_ss_armored_panzergrenadier_battalion", "count": 1}, {"template_ref": "ger_waffen_ss_motorized_panzergrenadier_battalion", "count": 1}, {"template_ref": "ger_panzergrenadier_infantry_gun_company", "count": 1}, {"template_ref": "ger_panzergrenadier_pioneer_company", "count": 1}]
+    },
+    {"id": "ger_panzergrenadier_regimental_hq_company", "display_name": "Panzergrenadier Regimental HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_armored_panzergrenadier_battalion", "display_name": "Panzergrenadier Battalion (Armored)", "type": "MECHANIZED", "size": "BATTALION", "role": "panzergrenadier", "children": [{"template_ref": "ger_panzergrenadier_battalion_hq_company", "count": 1}, {"template_ref": "ger_armored_panzergrenadier_company", "count": 3}, {"template_ref": "ger_panzergrenadier_heavy_company", "count": 1}]},
+    {"id": "ger_motorized_panzergrenadier_battalion", "display_name": "Panzergrenadier Battalion (Motorized)", "type": "MOTORIZED", "size": "BATTALION", "role": "panzergrenadier", "children": [{"template_ref": "ger_panzergrenadier_battalion_hq_company", "count": 1}, {"template_ref": "ger_motorized_panzergrenadier_company", "count": 3}, {"template_ref": "ger_panzergrenadier_heavy_company", "count": 1}]},
+    {"id": "ger_waffen_ss_armored_panzergrenadier_battalion", "display_name": "Waffen-SS Panzergrenadier Battalion (Armored)", "type": "MECHANIZED", "size": "BATTALION", "role": "ss_panzergrenadier", "children": [{"template_ref": "ger_panzergrenadier_battalion_hq_company", "count": 1}, {"template_ref": "ger_waffen_ss_armored_panzergrenadier_company", "count": 3}, {"template_ref": "ger_panzergrenadier_heavy_company", "count": 1}]},
+    {"id": "ger_waffen_ss_motorized_panzergrenadier_battalion", "display_name": "Waffen-SS Panzergrenadier Battalion (Motorized)", "type": "MOTORIZED", "size": "BATTALION", "role": "ss_panzergrenadier", "children": [{"template_ref": "ger_panzergrenadier_battalion_hq_company", "count": 1}, {"template_ref": "ger_waffen_ss_motorized_panzergrenadier_company", "count": 3}, {"template_ref": "ger_panzergrenadier_heavy_company", "count": 1}]},
+    {"id": "ger_panzergrenadier_battalion_hq_company", "display_name": "Panzergrenadier Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_armored_panzergrenadier_company", "display_name": "Panzergrenadier Company (Armored)", "type": "MECHANIZED", "size": "COMPANY", "role": "panzergrenadier", "children": [{"template_ref": "ger_armored_panzergrenadier_hq_platoon", "count": 1}, {"template_ref": "ger_armored_panzergrenadier_platoon", "count": 3}, {"template_ref": "ger_panzergrenadier_weapons_platoon", "count": 1}]},
+    {"id": "ger_motorized_panzergrenadier_company", "display_name": "Panzergrenadier Company (Motorized)", "type": "MOTORIZED", "size": "COMPANY", "role": "panzergrenadier", "children": [{"template_ref": "ger_motorized_panzergrenadier_hq_platoon", "count": 1}, {"template_ref": "ger_motorized_panzergrenadier_platoon", "count": 3}, {"template_ref": "ger_panzergrenadier_weapons_platoon", "count": 1}]},
+    {"id": "ger_waffen_ss_armored_panzergrenadier_company", "display_name": "Waffen-SS Panzergrenadier Company (Armored)", "type": "MECHANIZED", "size": "COMPANY", "role": "ss_panzergrenadier", "children": [{"template_ref": "ger_armored_panzergrenadier_hq_platoon", "count": 1}, {"template_ref": "ger_waffen_ss_armored_panzergrenadier_platoon", "count": 3}, {"template_ref": "ger_panzergrenadier_weapons_platoon", "count": 1}]},
+    {"id": "ger_waffen_ss_motorized_panzergrenadier_company", "display_name": "Waffen-SS Panzergrenadier Company (Motorized)", "type": "MOTORIZED", "size": "COMPANY", "role": "ss_panzergrenadier", "children": [{"template_ref": "ger_motorized_panzergrenadier_hq_platoon", "count": 1}, {"template_ref": "ger_waffen_ss_motorized_panzergrenadier_platoon", "count": 3}, {"template_ref": "ger_panzergrenadier_weapons_platoon", "count": 1}]},
+    {"id": "ger_armored_panzergrenadier_hq_platoon", "display_name": "Armored Panzergrenadier Company HQ Platoon", "type": "HEADQUARTERS", "size": "PLATOON", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "Sd.Kfz. 251/3", "count": 1}], "children": []},
+    {"id": "ger_motorized_panzergrenadier_hq_platoon", "display_name": "Motorized Panzergrenadier Company HQ Platoon", "type": "HEADQUARTERS", "size": "PLATOON", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "Opel Blitz", "count": 1}], "children": []},
+    {"id": "ger_armored_panzergrenadier_platoon", "display_name": "Panzergrenadier Platoon (Armored)", "type": "MECHANIZED", "size": "PLATOON", "role": "panzergrenadier", "vehicle_roster": [{"slot": "platoon_commander", "model": "Sd.Kfz. 251/1", "count": 1}, {"slot": "line_vehicle", "model": "Sd.Kfz. 251/1", "count": 3}], "children": [{"template_ref": "ger_panzergrenadier_squad", "count": 3}]},
+    {"id": "ger_motorized_panzergrenadier_platoon", "display_name": "Panzergrenadier Platoon (Motorized)", "type": "MOTORIZED", "size": "PLATOON", "role": "panzergrenadier", "vehicle_roster": [{"slot": "platoon_commander", "model": "Opel Blitz", "count": 1}, {"slot": "line_vehicle", "model": "Opel Blitz", "count": 2}], "children": [{"template_ref": "ger_panzergrenadier_squad", "count": 3}]},
+    {"id": "ger_waffen_ss_armored_panzergrenadier_platoon", "display_name": "Waffen-SS Panzergrenadier Platoon (Armored)", "type": "MECHANIZED", "size": "PLATOON", "role": "ss_panzergrenadier", "vehicle_roster": [{"slot": "platoon_commander", "model": "Sd.Kfz. 251/1", "count": 1}, {"slot": "line_vehicle", "model": "Sd.Kfz. 251/1", "count": 3}], "children": [{"template_ref": "ger_waffen_ss_panzergrenadier_squad", "count": 3}]},
+    {"id": "ger_waffen_ss_motorized_panzergrenadier_platoon", "display_name": "Waffen-SS Panzergrenadier Platoon (Motorized)", "type": "MOTORIZED", "size": "PLATOON", "role": "ss_panzergrenadier", "vehicle_roster": [{"slot": "platoon_commander", "model": "Opel Blitz", "count": 1}, {"slot": "line_vehicle", "model": "Opel Blitz", "count": 2}], "children": [{"template_ref": "ger_waffen_ss_panzergrenadier_squad", "count": 3}]},
+    {"id": "ger_panzergrenadier_squad", "display_name": "Panzergrenadier Squad", "type": "INFANTRY", "size": "SQUAD", "role": "panzergrenadier", "children": []},
+    {"id": "ger_waffen_ss_panzergrenadier_squad", "display_name": "Waffen-SS Panzergrenadier Squad", "type": "INFANTRY", "size": "SQUAD", "role": "ss_panzergrenadier", "children": []},
+    {"id": "ger_panzergrenadier_weapons_platoon", "display_name": "Panzergrenadier Weapons Platoon", "type": "INFANTRY", "size": "PLATOON", "role": "weapons", "children": []},
+    {"id": "ger_panzergrenadier_heavy_company", "display_name": "Panzergrenadier Heavy Company", "type": "INFANTRY", "size": "COMPANY", "role": "heavy_weapons", "children": [{"template_ref": "ger_heavy_machine_gun_platoon", "count": 1}, {"template_ref": "ger_12cm_mortar_platoon", "count": 1}, {"template_ref": "ger_pak40_antitank_platoon", "count": 1}, {"template_ref": "ger_20mm_flak_platoon", "count": 1}]},
+    {"id": "ger_20mm_flak_platoon", "display_name": "2cm Flak Platoon", "type": "AIR_DEFENSE", "size": "PLATOON", "role": "air_defense", "children": []},
+    {"id": "ger_panzergrenadier_infantry_gun_company", "display_name": "Panzergrenadier Infantry Gun Company", "type": "ARTILLERY", "size": "COMPANY", "role": "infantry_gun", "children": [{"template_ref": "ger_75mm_infantry_gun_platoon", "count": 2}, {"template_ref": "ger_150mm_infantry_gun_platoon", "count": 1}]},
+    {"id": "ger_panzergrenadier_pioneer_company", "display_name": "Panzergrenadier Pioneer Company", "type": "ENGINEER", "size": "COMPANY", "role": "pionier", "children": [{"template_ref": "ger_pioneer_platoon", "count": 3}]},
+    {"id": "ger_panzer_artillery_regiment", "display_name": "Panzer Artillery Regiment", "type": "ARTILLERY", "size": "REGIMENT", "role": "artillery", "children": [{"template_ref": "ger_105mm_wespe_artillery_battalion", "count": 1}, {"template_ref": "ger_105mm_artillery_battalion", "count": 1}, {"template_ref": "ger_150mm_artillery_battalion", "count": 1}]},
+    {"id": "ger_105mm_wespe_artillery_battalion", "display_name": "Wespe SP Artillery Battalion", "type": "ARTILLERY", "size": "BATTALION", "role": "105mm_howitzer", "children": [{"template_ref": "ger_artillery_hq_company", "count": 1}, {"template_ref": "ger_wespe_artillery_battery", "count": 3}]},
+    {"id": "ger_wespe_artillery_battery", "display_name": "Wespe Artillery Battery", "type": "ARTILLERY", "size": "COMPANY", "role": "105mm_howitzer", "children": [{"template_ref": "ger_wespe_artillery_platoon", "count": 2}]},
+    {"id": "ger_wespe_artillery_platoon", "display_name": "Wespe Artillery Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "105mm_howitzer", "vehicle_roster": [{"slot": "platoon_commander", "model": "Wespe", "count": 1}, {"slot": "line_vehicle", "model": "Wespe", "count": 2}], "children": []},
+    {"id": "ger_panzer_recon_battalion", "display_name": "Panzer Reconnaissance Battalion", "type": "RECON", "size": "BATTALION", "role": "recon", "children": [{"template_ref": "ger_recon_hq_company", "count": 1}, {"template_ref": "ger_armored_car_company", "count": 2}, {"template_ref": "ger_mechanized_recon_company", "count": 1}, {"template_ref": "ger_recon_heavy_company", "count": 1}]},
+    {"id": "ger_recon_hq_company", "display_name": "Recon Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_armored_car_company", "display_name": "Armored Car Company", "type": "RECON", "size": "COMPANY", "role": "armored_recon", "children": [{"template_ref": "ger_armored_car_platoon", "count": 3}]},
+    {"id": "ger_armored_car_platoon", "display_name": "Armored Car Platoon", "type": "RECON", "size": "PLATOON", "role": "armored_recon", "vehicle_roster": [{"slot": "platoon_commander", "model": "Sd.Kfz. 234/1", "count": 1}, {"slot": "line_vehicle", "model": "Sd.Kfz. 234/1", "count": 2}], "children": []},
+    {"id": "ger_mechanized_recon_company", "display_name": "Mechanized Recon Company", "type": "MECHANIZED", "size": "COMPANY", "role": "recon", "children": [{"template_ref": "ger_mechanized_recon_platoon", "count": 3}]},
+    {"id": "ger_mechanized_recon_platoon", "display_name": "Mechanized Recon Platoon", "type": "MECHANIZED", "size": "PLATOON", "role": "recon", "vehicle_roster": [{"slot": "platoon_commander", "model": "Sd.Kfz. 250/1", "count": 1}, {"slot": "line_vehicle", "model": "Sd.Kfz. 250/1", "count": 3}], "children": []},
+    {"id": "ger_recon_heavy_company", "display_name": "Recon Heavy Company", "type": "RECON", "size": "COMPANY", "role": "heavy_weapons", "children": [{"template_ref": "ger_8cm_mortar_platoon", "count": 1}, {"template_ref": "ger_pak40_antitank_platoon", "count": 1}, {"template_ref": "ger_20mm_flak_platoon", "count": 1}]},
+    {"id": "ger_panzer_pioneer_battalion", "display_name": "Panzer Pioneer Battalion", "type": "ENGINEER", "size": "BATTALION", "role": "pionier", "children": [{"template_ref": "ger_pioneer_hq_company", "count": 1}, {"template_ref": "ger_armored_pioneer_company", "count": 1}, {"template_ref": "ger_pioneer_company", "count": 2}]},
+    {"id": "ger_armored_pioneer_company", "display_name": "Armored Pioneer Company", "type": "ENGINEER", "size": "COMPANY", "role": "pionier", "children": [{"template_ref": "ger_armored_pioneer_platoon", "count": 3}]},
+    {"id": "ger_armored_pioneer_platoon", "display_name": "Armored Pioneer Platoon", "type": "ENGINEER", "size": "PLATOON", "role": "pionier", "vehicle_roster": [{"slot": "platoon_commander", "model": "Sd.Kfz. 251/7", "count": 1}, {"slot": "line_vehicle", "model": "Sd.Kfz. 251/7", "count": 2}], "children": []},
+    {
+      "id": "ger_fallschirmjager_regiment",
+      "display_name": "Luftwaffe Fallschirmjager Regiment",
+      "type": "AIRBORNE",
+      "size": "REGIMENT",
+      "role": "fallschirmjager",
+      "children": [{"template_ref": "ger_fallschirmjager_regimental_hq_company", "count": 1}, {"template_ref": "ger_fallschirmjager_battalion", "count": 3}, {"template_ref": "ger_fallschirmjager_antitank_company", "count": 1}, {"template_ref": "ger_fallschirmjager_pioneer_company", "count": 1}]
+    },
+    {"id": "ger_fallschirmjager_regimental_hq_company", "display_name": "Fallschirmjager Regimental HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_fallschirmjager_battalion", "display_name": "Luftwaffe Fallschirmjager Battalion", "type": "AIRBORNE", "size": "BATTALION", "role": "fallschirmjager", "children": [{"template_ref": "ger_fallschirmjager_battalion_hq_company", "count": 1}, {"template_ref": "ger_fallschirmjager_company", "count": 3}, {"template_ref": "ger_fallschirmjager_heavy_company", "count": 1}]},
+    {"id": "ger_fallschirmjager_battalion_hq_company", "display_name": "Fallschirmjager Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_fallschirmjager_company", "display_name": "Fallschirmjager Company", "type": "AIRBORNE", "size": "COMPANY", "role": "fallschirmjager", "children": [{"template_ref": "ger_fallschirmjager_hq_platoon", "count": 1}, {"template_ref": "ger_fallschirmjager_platoon", "count": 3}, {"template_ref": "ger_fallschirmjager_weapons_platoon", "count": 1}]},
+    {"id": "ger_fallschirmjager_hq_platoon", "display_name": "Fallschirmjager Company HQ Platoon", "type": "HEADQUARTERS", "size": "PLATOON", "role": "headquarters", "children": []},
+    {"id": "ger_fallschirmjager_platoon", "display_name": "Fallschirmjager Platoon", "type": "AIRBORNE", "size": "PLATOON", "role": "fallschirmjager", "children": [{"template_ref": "ger_fallschirmjager_squad", "count": 3}]},
+    {"id": "ger_fallschirmjager_squad", "display_name": "Fallschirmjager Squad", "type": "AIRBORNE", "size": "SQUAD", "role": "fallschirmjager", "children": []},
+    {"id": "ger_fallschirmjager_weapons_platoon", "display_name": "Fallschirmjager Weapons Platoon", "type": "AIRBORNE", "size": "PLATOON", "role": "weapons", "children": []},
+    {"id": "ger_fallschirmjager_heavy_company", "display_name": "Fallschirmjager Heavy Company", "type": "AIRBORNE", "size": "COMPANY", "role": "heavy_weapons", "children": [{"template_ref": "ger_heavy_machine_gun_platoon", "count": 1}, {"template_ref": "ger_8cm_mortar_platoon", "count": 1}, {"template_ref": "ger_12cm_mortar_platoon", "count": 1}]},
+    {"id": "ger_fallschirmjager_antitank_company", "display_name": "Fallschirmjager Panzerjager Company", "type": "ANTI_TANK", "size": "COMPANY", "role": "anti_tank_gun", "children": [{"template_ref": "ger_pak40_antitank_platoon", "count": 3}]},
+    {"id": "ger_fallschirmjager_pioneer_company", "display_name": "Fallschirmjager Pioneer Company", "type": "ENGINEER", "size": "COMPANY", "role": "pionier", "children": [{"template_ref": "ger_fallschirmjager_pioneer_platoon", "count": 3}]},
+    {"id": "ger_fallschirmjager_pioneer_platoon", "display_name": "Fallschirmjager Pioneer Platoon", "type": "ENGINEER", "size": "PLATOON", "role": "pionier", "children": []},
+    {"id": "ger_fallschirmjager_artillery_regiment", "display_name": "Fallschirmjager Artillery Regiment", "type": "ARTILLERY", "size": "REGIMENT", "role": "artillery", "children": [{"template_ref": "ger_105mm_artillery_battalion", "count": 3}, {"template_ref": "ger_150mm_artillery_battalion", "count": 1}]},
+    {"id": "ger_fallschirmjager_panzerjager_battalion", "display_name": "Fallschirmjager Panzerjager Battalion", "type": "ANTI_TANK", "size": "BATTALION", "role": "anti_tank", "children": [{"template_ref": "ger_panzerjager_battalion_hq_company", "count": 1}, {"template_ref": "ger_fallschirmjager_antitank_company", "count": 3}]},
+    {"id": "ger_fallschirmjager_pioneer_battalion", "display_name": "Fallschirmjager Pioneer Battalion", "type": "ENGINEER", "size": "BATTALION", "role": "pionier", "children": [{"template_ref": "ger_pioneer_hq_company", "count": 1}, {"template_ref": "ger_fallschirmjager_pioneer_company", "count": 3}]},
+    {
+      "id": "ger_gebirgsjager_regiment",
+      "display_name": "Gebirgsjager Regiment",
+      "type": "INFANTRY",
+      "size": "REGIMENT",
+      "role": "gebirgsjager",
+      "children": [{"template_ref": "ger_regimental_hq_company", "count": 1}, {"template_ref": "ger_gebirgsjager_battalion", "count": 3}, {"template_ref": "ger_regimental_infantry_gun_company", "count": 1}, {"template_ref": "ger_regimental_antitank_company", "count": 1}]
+    },
+    {"id": "ger_gebirgsjager_battalion", "display_name": "Gebirgsjager Battalion", "type": "INFANTRY", "size": "BATTALION", "role": "gebirgsjager", "children": [{"template_ref": "ger_grenadier_battalion_hq_company", "count": 1}, {"template_ref": "ger_gebirgsjager_company", "count": 3}, {"template_ref": "ger_grenadier_heavy_company", "count": 1}]},
+    {"id": "ger_gebirgsjager_company", "display_name": "Gebirgsjager Company", "type": "INFANTRY", "size": "COMPANY", "role": "gebirgsjager", "children": [{"template_ref": "ger_grenadier_company_hq_platoon", "count": 1}, {"template_ref": "ger_gebirgsjager_platoon", "count": 3}, {"template_ref": "ger_grenadier_weapons_platoon", "count": 1}]},
+    {"id": "ger_gebirgsjager_platoon", "display_name": "Gebirgsjager Platoon", "type": "INFANTRY", "size": "PLATOON", "role": "gebirgsjager", "children": []},
+    {"id": "ger_gebirgs_artillery_regiment", "display_name": "Gebirgs Artillery Regiment", "type": "ARTILLERY", "size": "REGIMENT", "role": "artillery", "children": [{"template_ref": "ger_75mm_mountain_artillery_battalion", "count": 2}, {"template_ref": "ger_105mm_artillery_battalion", "count": 1}]},
+    {"id": "ger_75mm_mountain_artillery_battalion", "display_name": "7.5cm Mountain Artillery Battalion", "type": "ARTILLERY", "size": "BATTALION", "role": "75mm_mountain_gun", "children": [{"template_ref": "ger_artillery_hq_company", "count": 1}, {"template_ref": "ger_75mm_mountain_artillery_battery", "count": 3}]},
+    {"id": "ger_75mm_mountain_artillery_battery", "display_name": "7.5cm Mountain Gun Battery", "type": "ARTILLERY", "size": "COMPANY", "role": "75mm_mountain_gun", "children": [{"template_ref": "ger_75mm_mountain_artillery_platoon", "count": 2}]},
+    {"id": "ger_75mm_mountain_artillery_platoon", "display_name": "7.5cm Mountain Gun Platoon", "type": "ARTILLERY", "size": "PLATOON", "role": "75mm_mountain_gun", "children": []},
+    {"id": "ger_gebirgs_recon_battalion", "display_name": "Gebirgs Reconnaissance Battalion", "type": "RECON", "size": "BATTALION", "role": "recon", "children": [{"template_ref": "ger_recon_hq_company", "count": 1}, {"template_ref": "ger_fusilier_company", "count": 3}]},
+    {"id": "ger_gebirgs_panzerjager_battalion", "display_name": "Gebirgs Panzerjager Battalion", "type": "ANTI_TANK", "size": "BATTALION", "role": "anti_tank", "children": [{"template_ref": "ger_panzerjager_battalion_hq_company", "count": 1}, {"template_ref": "ger_towed_panzerjager_company", "count": 3}]},
+    {"id": "ger_gebirgs_pioneer_battalion", "display_name": "Gebirgs Pioneer Battalion", "type": "ENGINEER", "size": "BATTALION", "role": "pionier", "children": [{"template_ref": "ger_pioneer_hq_company", "count": 1}, {"template_ref": "ger_pioneer_company", "count": 3}]},
+    {"id": "ger_fortress_mg_hq_company", "display_name": "Fortress MG Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_fortress_mg_company", "display_name": "Fortress Machine-Gun Company", "type": "INFANTRY", "size": "COMPANY", "role": "fortress_machine_gun", "children": [{"template_ref": "ger_heavy_machine_gun_platoon", "count": 3}]},
+    {"id": "ger_fortress_mortar_company", "display_name": "Fortress Mortar Company", "type": "ARTILLERY", "size": "COMPANY", "role": "12cm_mortar", "children": [{"template_ref": "ger_12cm_mortar_platoon", "count": 3}]},
+    {"id": "ger_straggler_company", "display_name": "Straggler Company", "type": "INFANTRY", "size": "COMPANY", "role": "straggler", "children": [{"template_ref": "ger_straggler_platoon", "count": 3}]},
+    {"id": "ger_straggler_platoon", "display_name": "Straggler Platoon", "type": "INFANTRY", "size": "PLATOON", "role": "straggler", "children": []},
+    {"id": "ger_panzer_battalion_hq_company", "display_name": "Panzer Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": [{"template_ref": "ger_panzer_iv_battalion_hq_section", "count": 1}]},
+    {"id": "ger_panther_battalion_hq_company", "display_name": "Panther Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": [{"template_ref": "ger_panther_battalion_hq_section", "count": 1}]},
+    {"id": "ger_panzer_iv_battalion_hq_section", "display_name": "Panzer IV Battalion HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "battalion_commander", "model": "Panzer IV Ausf. J", "count": 1}, {"slot": "line_vehicle", "model": "Panzer IV Ausf. J", "count": 2}], "children": []},
+    {"id": "ger_panther_battalion_hq_section", "display_name": "Panther Battalion HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "battalion_commander", "model": "Panther Ausf. G", "count": 1}, {"slot": "line_vehicle", "model": "Panther Ausf. G", "count": 2}], "children": []},
+    {"id": "ger_panzer_iv_company", "display_name": "Panzer IV Company", "type": "TANK", "size": "COMPANY", "role": "medium_tank", "children": [{"template_ref": "ger_panzer_iv_company_hq_section", "count": 1}, {"template_ref": "ger_panzer_iv_platoon", "count": 3}]},
+    {"id": "ger_panzer_iv_company_hq_section", "display_name": "Panzer IV Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "Panzer IV Ausf. J", "count": 1}, {"slot": "executive_officer", "model": "Panzer IV Ausf. J", "count": 1}], "children": []},
+    {"id": "ger_panzer_iv_platoon", "display_name": "Panzer IV Platoon", "type": "TANK", "size": "PLATOON", "role": "medium_tank", "vehicle_roster": [{"slot": "platoon_commander", "model": "Panzer IV Ausf. J", "count": 1}, {"slot": "line_vehicle", "model": "Panzer IV Ausf. J", "count": 4}], "children": []},
+    {"id": "ger_panther_company", "display_name": "Panther Company", "type": "TANK", "size": "COMPANY", "role": "medium_tank", "equipment_weight": "heavy", "children": [{"template_ref": "ger_panther_company_hq_section", "count": 1}, {"template_ref": "ger_panther_platoon", "count": 3}]},
+    {"id": "ger_panther_company_hq_section", "display_name": "Panther Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "Panther Ausf. G", "count": 1}, {"slot": "executive_officer", "model": "Panther Ausf. G", "count": 1}], "children": []},
+    {"id": "ger_panther_platoon", "display_name": "Panther Platoon", "type": "TANK", "size": "PLATOON", "role": "medium_tank", "equipment_weight": "heavy", "vehicle_roster": [{"slot": "platoon_commander", "model": "Panther Ausf. G", "count": 1}, {"slot": "line_vehicle", "model": "Panther Ausf. G", "count": 4}], "children": []},
+    {"id": "ger_heavy_tank_battalion_hq_company", "display_name": "Tiger Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": [{"template_ref": "ger_tiger_battalion_hq_section", "count": 1}]},
+    {"id": "ger_tiger_ii_battalion_hq_company", "display_name": "Tiger II Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": [{"template_ref": "ger_tiger_ii_battalion_hq_section", "count": 1}]},
+    {"id": "ger_tiger_battalion_hq_section", "display_name": "Tiger Battalion HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "battalion_commander", "model": "Tiger I", "count": 1}, {"slot": "line_vehicle", "model": "Tiger I", "count": 2}], "children": []},
+    {"id": "ger_tiger_ii_battalion_hq_section", "display_name": "Tiger II Battalion HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "battalion_commander", "model": "Tiger II", "count": 1}, {"slot": "line_vehicle", "model": "Tiger II", "count": 2}], "children": []},
+    {"id": "ger_tiger_heavy_tank_company", "display_name": "Tiger Heavy Tank Company", "type": "TANK", "size": "COMPANY", "role": "heavy_tank", "equipment_weight": "heavy", "children": [{"template_ref": "ger_tiger_company_hq_section", "count": 1}, {"template_ref": "ger_tiger_heavy_tank_platoon", "count": 3}]},
+    {"id": "ger_tiger_company_hq_section", "display_name": "Tiger Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "Tiger I", "count": 1}, {"slot": "executive_officer", "model": "Tiger I", "count": 1}], "children": []},
+    {"id": "ger_tiger_heavy_tank_platoon", "display_name": "Tiger Heavy Tank Platoon", "type": "TANK", "size": "PLATOON", "role": "heavy_tank", "equipment_weight": "heavy", "vehicle_roster": [{"slot": "platoon_commander", "model": "Tiger I", "count": 1}, {"slot": "line_vehicle", "model": "Tiger I", "count": 3}], "children": []},
+    {"id": "ger_tiger_ii_heavy_tank_company", "display_name": "Tiger II Heavy Tank Company", "type": "TANK", "size": "COMPANY", "role": "heavy_tank", "equipment_weight": "heavy", "children": [{"template_ref": "ger_tiger_ii_company_hq_section", "count": 1}, {"template_ref": "ger_tiger_ii_heavy_tank_platoon", "count": 3}]},
+    {"id": "ger_tiger_ii_company_hq_section", "display_name": "Tiger II Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "Tiger II", "count": 1}, {"slot": "executive_officer", "model": "Tiger II", "count": 1}], "children": []},
+    {"id": "ger_tiger_ii_heavy_tank_platoon", "display_name": "Tiger II Heavy Tank Platoon", "type": "TANK", "size": "PLATOON", "role": "heavy_tank", "equipment_weight": "heavy", "vehicle_roster": [{"slot": "platoon_commander", "model": "Tiger II", "count": 1}, {"slot": "line_vehicle", "model": "Tiger II", "count": 3}], "children": []},
+    {"id": "ger_assault_gun_battalion_hq_company", "display_name": "Assault Gun Battalion HQ Company", "type": "HEADQUARTERS", "size": "COMPANY", "role": "headquarters", "children": []},
+    {"id": "ger_stug_iii_assault_gun_battery", "display_name": "StuG III Assault Gun Battery", "type": "TANK", "size": "COMPANY", "role": "assault_gun", "children": [{"template_ref": "ger_stug_iii_battery_hq_section", "count": 1}, {"template_ref": "ger_stug_iii_assault_gun_platoon", "count": 3}]},
+    {"id": "ger_stug_iii_battery_hq_section", "display_name": "StuG III Battery HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "StuG III Ausf. G", "count": 1}], "children": []},
+    {"id": "ger_stug_iii_assault_gun_platoon", "display_name": "StuG III Assault Gun Platoon", "type": "TANK", "size": "PLATOON", "role": "assault_gun", "vehicle_roster": [{"slot": "platoon_commander", "model": "StuG III Ausf. G", "count": 1}, {"slot": "line_vehicle", "model": "StuG III Ausf. G", "count": 2}], "children": []},
+    {"id": "ger_stug_iv_assault_gun_battery", "display_name": "StuG IV Assault Gun Battery", "type": "TANK", "size": "COMPANY", "role": "assault_gun", "children": [{"template_ref": "ger_stug_iv_battery_hq_section", "count": 1}, {"template_ref": "ger_stug_iv_assault_gun_platoon", "count": 3}]},
+    {"id": "ger_stug_iv_battery_hq_section", "display_name": "StuG IV Battery HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "StuG IV", "count": 1}], "children": []},
+    {"id": "ger_stug_iv_assault_gun_platoon", "display_name": "StuG IV Assault Gun Platoon", "type": "TANK", "size": "PLATOON", "role": "assault_gun", "vehicle_roster": [{"slot": "platoon_commander", "model": "StuG IV", "count": 1}, {"slot": "line_vehicle", "model": "StuG IV", "count": 2}], "children": []},
+    {"id": "ger_jagdpanzer_iv_company", "display_name": "Jagdpanzer IV Company", "type": "ANTI_TANK", "size": "COMPANY", "role": "tank_destroyer", "equipment_weight": "heavy", "children": [{"template_ref": "ger_jagdpanzer_iv_company_hq_section", "count": 1}, {"template_ref": "ger_jagdpanzer_iv_platoon", "count": 3}]},
+    {"id": "ger_jagdpanzer_iv_company_hq_section", "display_name": "Jagdpanzer IV Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "Jagdpanzer IV/70", "count": 1}, {"slot": "executive_officer", "model": "Jagdpanzer IV/70", "count": 1}], "children": []},
+    {"id": "ger_jagdpanzer_iv_platoon", "display_name": "Jagdpanzer IV Platoon", "type": "ANTI_TANK", "size": "PLATOON", "role": "tank_destroyer", "equipment_weight": "heavy", "vehicle_roster": [{"slot": "platoon_commander", "model": "Jagdpanzer IV/70", "count": 1}, {"slot": "line_vehicle", "model": "Jagdpanzer IV/70", "count": 3}], "children": []},
+    {"id": "ger_hetzer_company", "display_name": "Hetzer Panzerjager Company", "type": "ANTI_TANK", "size": "COMPANY", "role": "tank_destroyer", "equipment_weight": "medium", "children": [{"template_ref": "ger_hetzer_company_hq_section", "count": 1}, {"template_ref": "ger_hetzer_platoon", "count": 3}]},
+    {"id": "ger_hetzer_company_hq_section", "display_name": "Hetzer Company HQ Section", "type": "HEADQUARTERS", "size": "SECTION", "role": "headquarters", "vehicle_roster": [{"slot": "company_commander", "model": "Jagdpanzer 38(t) Hetzer", "count": 1}, {"slot": "executive_officer", "model": "Jagdpanzer 38(t) Hetzer", "count": 1}], "children": []},
+    {"id": "ger_hetzer_platoon", "display_name": "Hetzer Panzerjager Platoon", "type": "ANTI_TANK", "size": "PLATOON", "role": "tank_destroyer", "equipment_weight": "medium", "vehicle_roster": [{"slot": "platoon_commander", "model": "Jagdpanzer 38(t) Hetzer", "count": 1}, {"slot": "line_vehicle", "model": "Jagdpanzer 38(t) Hetzer", "count": 3}], "children": []}
   ]
 }

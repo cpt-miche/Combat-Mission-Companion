@@ -7,10 +7,14 @@ extends Resource
 @export var short_name: String = ""
 @export var nation: String = ""
 @export var type: UnitType.Value = UnitType.Value.INFANTRY
+@export var role: String = UnitRole.UNKNOWN
+@export var equipment_weight: String = ""
 @export var size: UnitSize.Value = UnitSize.Value.PLATOON
+@export var is_attached: bool = false
 @export var veterancy: Veterancy.Value = Veterancy.Value.REGULAR
 @export var status: String = "alive"
 @export var children: Array[UnitModel] = []
+var vehicles: Array[Dictionary] = []
 
 func child_count() -> int:
 	return children.size()

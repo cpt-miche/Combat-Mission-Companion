@@ -1,4 +1,5 @@
 {
+  "fixtureVersion": 1,
   "id": "scout_intel_pressure_boost",
   "description": "Higher scout uncertainty should increase enemy pressure score.",
   "scoringComparison": {

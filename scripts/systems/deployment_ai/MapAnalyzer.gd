@@ -31,9 +31,8 @@ static func build_sector_model(
 	terrain_map: Dictionary,
 	ai_owner: int,
 	player_owner: int,
-	capture_hex_id: String = "",
-	defend_hex_id: String = "",
-	context: String = "defense"
+	context: String = "defense",
+	objectives: Array[Dictionary] = []
 ) -> Dictionary:
 	var known_hexes := _known_hexes(territory_map, terrain_map)
 	var adjacency_map := _build_adjacency_map(known_hexes)
@@ -41,13 +40,13 @@ static func build_sector_model(
 	var border_hexes := _compute_border_hexes(territory_map, ai_owner, player_owner, known_hexes, adjacency_map)
 	var contested_area := _compute_contested_area(border_hexes, known_hexes, adjacency_map)
 	var rear_area := _compute_rear_area(territory_map, ai_owner, known_hexes, frontline_hexes, adjacency_map)
-	var objective_targets := _objective_targets(capture_hex_id, defend_hex_id)
+	var normalized_objectives := _normalized_objectives(objectives)
 	var hex_scores := _compute_hex_scores(
 		territory_map,
 		terrain_map,
 		known_hexes,
 		frontline_hexes,
-		objective_targets,
+		normalized_objectives,
 		player_owner,
 		context,
 		adjacency_map
@@ -58,11 +57,11 @@ static func build_sector_model(
 		"contestedArea": _to_sorted_array(contested_area),
 		"rearArea": _to_sorted_array(rear_area),
 		"hexScores": hex_scores,
+		"objectives": normalized_objectives.duplicate(true),
 		"metadata": {
 			"aiOwner": ai_owner,
 			"playerOwner": player_owner,
-			"captureHexId": capture_hex_id,
-			"defendHexId": defend_hex_id,
+			"objectiveCount": normalized_objectives.size(),
 			"context": context,
 			"model": "sectorModel"
 		}
@@ -139,18 +138,19 @@ static func _compute_hex_scores(
 	terrain_map: Dictionary,
 	known_hexes: Dictionary,
 	frontline_hexes: Dictionary,
-	objective_targets: Array[String],
+	objectives: Array[Dictionary],
 	player_owner: int,
 	context: String,
 	adjacency_map: Dictionary
 ) -> Dictionary:
 	var scores := {}
-	var objective_distances := _distance_map_from_targets(objective_targets, known_hexes, adjacency_map)
+	var objective_distance_maps := _objective_distance_maps(objectives, known_hexes, adjacency_map)
 	var frontline_distances := _distance_map_from_targets(_to_sorted_array(frontline_hexes), known_hexes, adjacency_map)
 
 	for hex_id in known_hexes.keys():
 		var adjacent_player_owned := _adjacent_owner_count(hex_id, territory_map, player_owner, adjacency_map)
-		var objective_proximity := _proximity_from_distance(int(objective_distances.get(hex_id, -1)))
+		var objective_influence := _objective_influence_for_hex(hex_id, objectives, objective_distance_maps)
+		var objective_proximity := float(objective_influence.get("weightedProximity", 0.0))
 		var approach_route_value := _approach_route_value(hex_id, terrain_map, adjacency_map)
 		var terrain_value := _terrain_context_value(hex_id, terrain_map, context)
 		var pressure := _compute_pressure(adjacent_player_owned, objective_proximity, approach_route_value)
@@ -161,7 +161,10 @@ static func _compute_hex_scores(
 			"priority": priority,
 			"inputs": {
 				"adjacentPlayerOwnedCount": adjacent_player_owned,
-				"objectiveProximity": objective_proximity,
+					"objectiveProximity": objective_proximity,
+					"objectiveId": String(objective_influence.get("objectiveId", "")),
+					"objectiveType": String(objective_influence.get("objectiveType", "")),
+					"objectiveDistance": int(objective_influence.get("distance", -1)),
 				"approachRouteValue": approach_route_value,
 				"terrainImportance": terrain_value
 			}
@@ -206,13 +209,57 @@ static func _adjacent_owner_count(hex_id: String, territory_map: Dictionary, own
 			count += 1
 	return count
 
-static func _objective_targets(capture_hex_id: String, defend_hex_id: String) -> Array[String]:
-	var targets: Array[String] = []
-	if _is_valid_hex_id(capture_hex_id):
-		targets.append(capture_hex_id)
-	if _is_valid_hex_id(defend_hex_id) and not targets.has(defend_hex_id):
-		targets.append(defend_hex_id)
-	return targets
+static func _normalized_objectives(objectives: Array[Dictionary]) -> Array[Dictionary]:
+	var normalized: Array[Dictionary] = []
+	var seen_targets := {}
+	for objective_variant in objectives:
+		var objective := objective_variant.duplicate(true)
+		var target_hex_id := String(objective.get("targetHexId", ""))
+		if not _is_valid_hex_id(target_hex_id) or seen_targets.has(target_hex_id):
+			continue
+		seen_targets[target_hex_id] = true
+		objective["targetHexId"] = target_hex_id
+		objective["id"] = String(objective.get("id", "objective_%s" % target_hex_id.replace(",", "_")))
+		objective["type"] = String(objective.get("type", "attack"))
+		objective["priority"] = clampi(int(objective.get("priority", 1)), 1, 2)
+		normalized.append(objective)
+	normalized.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_priority := int(a.get("priority", 1))
+		var b_priority := int(b.get("priority", 1))
+		if a_priority != b_priority:
+			return a_priority > b_priority
+		return String(a.get("id", "")) < String(b.get("id", ""))
+	)
+	return normalized
+
+static func _objective_distance_maps(objectives: Array[Dictionary], known_hexes: Dictionary, adjacency_map: Dictionary) -> Dictionary:
+	var distance_maps := {}
+	for objective in objectives:
+		var objective_id := String(objective.get("id", ""))
+		var target_hex_id := String(objective.get("targetHexId", ""))
+		if objective_id.is_empty() or not known_hexes.has(target_hex_id):
+			continue
+		distance_maps[objective_id] = _distance_map_from_targets([target_hex_id], known_hexes, adjacency_map)
+	return distance_maps
+
+static func _objective_influence_for_hex(hex_id: String, objectives: Array[Dictionary], distance_maps: Dictionary) -> Dictionary:
+	var best := {"weightedProximity": 0.0, "distance": -1, "objectiveId": "", "objectiveType": ""}
+	for objective in objectives:
+		var objective_id := String(objective.get("id", ""))
+		if not distance_maps.has(objective_id):
+			continue
+		var distances := distance_maps[objective_id] as Dictionary
+		var distance := int(distances.get(hex_id, -1))
+		var influence := _proximity_from_distance(distance) * float(clampi(int(objective.get("priority", 1)), 1, 2))
+		if influence <= float(best.get("weightedProximity", 0.0)):
+			continue
+		best = {
+			"weightedProximity": influence,
+			"distance": distance,
+			"objectiveId": objective_id,
+			"objectiveType": String(objective.get("type", ""))
+		}
+	return best
 
 static func _distance_map(frontline_hexes: Dictionary, allowed_hexes: Dictionary, adjacency_map: Dictionary) -> Dictionary:
 	var starts := _to_sorted_array(frontline_hexes)
@@ -283,7 +330,8 @@ static func _build_adjacency_map(known_hexes: Dictionary) -> Dictionary:
 		if parsed_hex is Vector2i:
 			var canonical_id := _hex_id(parsed_hex)
 			if not adjacency.has(canonical_id):
-				adjacency[canonical_id] = []
+				var neighbors: Array[String] = []
+				adjacency[canonical_id] = neighbors
 			vectors.append(parsed_hex)
 
 	for i in range(vectors.size()):
@@ -301,11 +349,16 @@ static func _build_adjacency_map(known_hexes: Dictionary) -> Dictionary:
 static func _neighbors_for(hex_id: String, adjacency_map: Dictionary) -> Array[String]:
 	var parsed_hex: Variant = _parse_hex_id(hex_id)
 	if not parsed_hex is Vector2i:
-		return []
+		var empty_invalid: Array[String] = []
+		return empty_invalid
 	var canonical_id := _hex_id(parsed_hex)
 	if not adjacency_map.has(canonical_id):
-		return []
-	return adjacency_map[canonical_id] as Array[String]
+		var empty_missing: Array[String] = []
+		return empty_missing
+	var neighbors: Array[String] = []
+	for neighbor in (adjacency_map[canonical_id] as Array):
+		neighbors.append(String(neighbor))
+	return neighbors
 
 static func _to_sorted_array(hex_set: Dictionary) -> Array[String]:
 	var output: Array[String] = []

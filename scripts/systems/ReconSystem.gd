@@ -18,13 +18,13 @@ const SIZE_ORDER := ["platoon", "company", "battalion", "regiment"]
 
 const TRACE_PREFIX := "[ReconTrace]"
 
-static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, prior_hex_intel: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, prior_hex_intel: Dictionary, rng: RandomNumberGenerator, turn_index: int = 0) -> Dictionary:
 	var prior_unit_intel: Dictionary = _extract_prior_unit_intel(prior_hex_intel)
 	var next_hex_intel: Dictionary = _extract_prior_hex_intel(prior_hex_intel)
 	var enemy_hex_to_units: Dictionary = _collect_enemy_units_by_hex(units, observer_owner)
 	var adjacent_enemy_hexes: Dictionary = _collect_adjacent_enemy_hexes(units, observer_owner, enemy_hex_to_units)
 	var contact_unit_ids: Dictionary = _collect_contact_enemy_unit_ids(adjacent_enemy_hexes, enemy_hex_to_units)
-	var unit_intel_by_id: Dictionary = _reconcile_unit_intel(prior_unit_intel, contact_unit_ids)
+	var unit_intel_by_id: Dictionary = _reconcile_unit_intel(prior_unit_intel, contact_unit_ids, turn_index)
 	var resolved_levels_by_hex: Dictionary = {}
 
 	for enemy_hex_id in adjacent_enemy_hexes.keys():
@@ -57,7 +57,7 @@ static func resolve_turn_start_intel(units: Dictionary, observer_owner: int, pri
 		var enemy_hex_key: String = String(enemy_hex_id)
 		var intel: Dictionary = _ensure_hex_intel(next_hex_intel, enemy_hex_key)
 		var enemy_units: Array = enemy_hex_to_units.get(enemy_hex_key, [])
-		_resolve_visible_intel(intel, enemy_units, unit_intel_by_id, rng)
+		_resolve_visible_intel(intel, enemy_units, unit_intel_by_id, rng, turn_index)
 		next_hex_intel[enemy_hex_key] = intel
 
 	for prior_enemy_hex_id in next_hex_intel.keys():
@@ -174,7 +174,7 @@ static func _collect_contact_enemy_unit_ids(adjacent_enemy_hexes: Dictionary, en
 			contact_unit_ids[unit_id] = true
 	return contact_unit_ids
 
-static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids: Dictionary) -> Dictionary:
+static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids: Dictionary, turn_index: int) -> Dictionary:
 	var unit_intel_by_id: Dictionary = {}
 	for prior_unit_id in prior_unit_intel.keys():
 		var prior_key: String = String(prior_unit_id)
@@ -183,7 +183,15 @@ static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids
 		var stale_known: Variant = prior_unit_intel.get(prior_key, null)
 		if stale_known is Dictionary:
 			_trace("contact_loss_clear unit=%s" % prior_key)
-			_clear_reported_contact(stale_known as Dictionary)
+			var remembered := (stale_known as Dictionary).duplicate(true)
+			var last_seen := int(remembered.get("lastSeenTurn", turn_index - 1))
+			var age := maxi(turn_index - last_seen, 1)
+			var confidence_by_age := {1: 0.7, 2: 0.4, 3: 0.2}
+			if confidence_by_age.has(age):
+				remembered["presenceKnown"] = false
+				remembered["memoryAge"] = age
+				remembered["memoryConfidence"] = float(confidence_by_age[age])
+				unit_intel_by_id[prior_key] = remembered
 	for unit_id in contact_unit_ids.keys():
 		var key: String = String(unit_id)
 		var existing: Variant = prior_unit_intel.get(key, null)
@@ -192,14 +200,6 @@ static func _reconcile_unit_intel(prior_unit_intel: Dictionary, contact_unit_ids
 		else:
 			unit_intel_by_id[key] = _new_known_enemy(key)
 	return unit_intel_by_id
-
-static func _clear_reported_contact(known: Dictionary) -> void:
-	known["reportedUnitType"] = ""
-	known["reportedType"] = ""
-	known["reportedSize"] = ""
-	known["typeKnown"] = false
-	known["sizeKnown"] = false
-	known["sizeReportLocked"] = false
 
 static func _apply_automatic_floor(current_level: int, adjacent_friendlies: Array) -> int:
 	var level: int = current_level
@@ -226,7 +226,7 @@ static func _roll_scout_progression(adjacent_friendlies: Array, rng: RandomNumbe
 			gain += 1
 	return gain
 
-static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, unit_intel_by_id: Dictionary, rng: RandomNumberGenerator) -> void:
+static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, unit_intel_by_id: Dictionary, rng: RandomNumberGenerator, turn_index: int) -> void:
 	var level: int = int(hex_intel.get("scoutLevel", SCOUT_LEVEL_MIN))
 	var next_known: Array[Dictionary] = []
 	for enemy in enemy_units:
@@ -237,6 +237,11 @@ static func _resolve_visible_intel(hex_intel: Dictionary, enemy_units: Array, un
 		if unit_id.is_empty():
 			continue
 		var known: Dictionary = _known_for_unit(unit_id, unit_intel_by_id)
+		known["presenceKnown"] = true
+		known["lastKnownHex"] = String(hex_intel.get("hexId", ""))
+		known["lastSeenTurn"] = turn_index
+		known["memoryAge"] = 0
+		known["memoryConfidence"] = 1.0
 		_apply_level_type_visibility(level, known, enemy_unit, rng)
 		_apply_level_size_visibility(level, known, enemy_unit, rng)
 		_trace("intel_reveal unit=%s hex=%s level=%d type_known=%s reported_type=%s size_known=%s reported_size=%s size_locked=%s" % [
@@ -378,18 +383,13 @@ static func _normalize_hex_intel(intel: Dictionary, hex_id: String) -> Dictionar
 	return intel
 
 static func _set_reported_type(known: Dictionary, unit_type: String) -> void:
-	known["reportedUnitType"] = unit_type
 	known["reportedType"] = unit_type
 
 static func _set_reported_size(known: Dictionary, unit_size: String) -> void:
 	known["reportedSize"] = unit_size
 
 static func _normalized_type(unit: Dictionary) -> String:
-	var direct: String = String(unit.get("unit_type", unit.get("type", ""))).strip_edges()
-	if not direct.is_empty():
-		return _canonical_type(direct)
-	var is_tank: bool = bool(unit.get("is_tank", false))
-	return "tank" if is_tank else "infantry"
+	return _canonical_type(String(unit.get("type", "")))
 
 static func _canonical_type(raw_type: String) -> String:
 	var normalized: String = raw_type.strip_edges().to_lower()
@@ -400,7 +400,7 @@ static func _canonical_type(raw_type: String) -> String:
 			return normalized
 
 static func _normalized_size(unit: Dictionary) -> String:
-	var size: String = String(unit.get("formation_size", unit.get("size", "company"))).strip_edges().to_lower()
+	var size: String = String(unit.get("size", "company")).strip_edges().to_lower()
 	if size in SIZE_ORDER:
 		return size
 	return "company"

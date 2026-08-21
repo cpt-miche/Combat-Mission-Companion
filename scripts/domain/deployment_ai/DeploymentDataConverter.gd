@@ -1,60 +1,27 @@
 class_name DeploymentDataConverter
 extends RefCounted
 
-const HEX_NEIGHBOR_OFFSETS: Array[Vector2i] = [
-	Vector2i(1, 0),
-	Vector2i(1, -1),
-	Vector2i(0, -1),
-	Vector2i(-1, 0),
-	Vector2i(-1, 1),
-	Vector2i(0, 1)
-]
+const HexGrid = preload("res://scripts/domain/map/HexGrid.gd")
 
 static func planner_terrain_for(raw_terrain: Variant) -> String:
 	var normalized := String(raw_terrain).strip_edges().to_lower()
-	if normalized.is_empty():
-		return DeploymentTypes.TERRAIN_OPEN
-	if TerrainCatalog.TERRAIN_IDS.has(normalized):
-		return String(DeploymentTypes.TERRAIN_COMPATIBILITY.get(normalized, DeploymentTypes.TERRAIN_OPEN))
-	return String(DeploymentTypes.TERRAIN_COMPATIBILITY.get(normalized, DeploymentTypes.TERRAIN_OPEN))
+	return normalized if TerrainCatalog.TERRAIN_IDS.has(normalized) else DeploymentTypes.TERRAIN_LIGHT
 
 static func planner_role_for(raw_unit_type: Variant) -> String:
 	var normalized := _normalized_unit_type_key(raw_unit_type)
-	if normalized.is_empty():
-		return DeploymentTypes.ROLE_INFANTRY
-	return String(DeploymentTypes.UNIT_ROLE_COMPATIBILITY.get(normalized, DeploymentTypes.ROLE_INFANTRY))
+	match normalized:
+		"tank": return DeploymentTypes.ROLE_ARMOR
+		"engineer": return DeploymentTypes.ROLE_WEAPONS
+		"artillery": return DeploymentTypes.ROLE_ARTILLERY_SUPPORT
+		"recon": return DeploymentTypes.ROLE_RECON
+		"mechanized", "motorized": return DeploymentTypes.ROLE_MOBILITY
+		"anti_tank": return DeploymentTypes.ROLE_ANTI_TANK_SUPPORT
+		"air_defense": return DeploymentTypes.ROLE_AIR_DEFENSE
+		"headquarters": return DeploymentTypes.ROLE_COMMAND
+		_: return DeploymentTypes.ROLE_INFANTRY
 
 static func _normalized_unit_type_key(raw_unit_type: Variant) -> String:
-	if typeof(raw_unit_type) == TYPE_INT:
-		return _unit_type_name_from_enum_value(int(raw_unit_type))
 	return String(raw_unit_type).strip_edges().to_lower()
-
-static func _unit_type_name_from_enum_value(unit_type_value: int) -> String:
-	match unit_type_value:
-		UnitType.Value.INFANTRY:
-			return "infantry"
-		UnitType.Value.TANK:
-			return "tank"
-		UnitType.Value.ENGINEER:
-			return "engineer"
-		UnitType.Value.ARTILLERY:
-			return "artillery"
-		UnitType.Value.RECON:
-			return "recon"
-		UnitType.Value.AIRBORNE:
-			return "airborne"
-		UnitType.Value.MECHANIZED:
-			return "mechanized"
-		UnitType.Value.MOTORIZED:
-			return "motorized"
-		UnitType.Value.ANTI_TANK:
-			return "anti_tank"
-		UnitType.Value.AIR_DEFENSE:
-			return "air_defense"
-		UnitType.Value.HEADQUARTERS:
-			return "headquarters"
-		_:
-			return str(unit_type_value).strip_edges().to_lower()
 
 static func map_payload_to_hexes(terrain_map: Dictionary, territory_map: Dictionary) -> Array[Dictionary]:
 	var known_hexes := {}
@@ -77,7 +44,7 @@ static func map_payload_to_hexes(terrain_map: Dictionary, territory_map: Diction
 
 		var axial: Vector2i = coords
 		var neighbor_ids: Array[String] = []
-		for offset in HEX_NEIGHBOR_OFFSETS:
+		for offset in HexGrid.neighbor_offsets(axial.y):
 			var neighbor := axial + offset
 			var neighbor_id := _hex_id(neighbor)
 			if known_hexes.has(neighbor_id):
@@ -152,13 +119,12 @@ static func _flatten_formation_tree(node: Variant, output: Array[Dictionary], pa
 
 	output.append(DeploymentTypes.make_formation(
 		formation_id,
-		String(unit.get("name", formation_id)),
+		String(unit.get("display_name", formation_id)),
 		String(unit.get("type", "infantry")),
 		String(unit.get("size", "company")),
 		parent_id,
 		child_ids,
-		String(unit.get("status", "alive")).to_lower(),
-		bool(unit.get("is_alive", String(unit.get("status", "alive")).to_lower() != "dead"))
+		String(unit.get("status", "alive")).to_lower()
 	))
 
 	for child_variant in unit.get("children", []):
@@ -191,13 +157,12 @@ static func _flatten_deployable_elements(
 	output.append(DeploymentTypes.make_deployable_element(
 		unit_id,
 		player_index,
-		String(unit.get("name", unit_id)),
+		String(unit.get("display_name", unit_id)),
 		planner_role_for(unit_type),
 		String(unit.get("size", "company")),
 		parent_id,
 		deployed_hex_id,
-		String(unit.get("status", "alive")).to_lower(),
-		bool(unit.get("is_alive", String(unit.get("status", "alive")).to_lower() != "dead"))
+		String(unit.get("status", "alive")).to_lower()
 	))
 
 	for child_variant in unit.get("children", []):
