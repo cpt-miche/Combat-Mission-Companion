@@ -243,7 +243,13 @@ func _test_starter_scenario_data_and_export() -> void:
 		_assert_equal("usa" if player_index == 0 else "germany", nation, "Starter forces should use the American and German nations")
 		_assert_true(SaveManager.validate_scenario_player_deployment(payload, player_index), "All starter units should be legally deployed and covered by their force tree")
 		var deployments := player.get("deployments", {}) as Dictionary
-		_assert_equal(3, deployments.size(), "Each starter side should deploy three separate platoons")
+		_assert_equal(9, deployments.size(), "Each starter side should deploy nine separate platoons")
+		for row in range(int(grid.get("rows", 0))):
+			var front_column := 1 if player_index == 0 else 5
+			if player_index == 1 and row == 3:
+				front_column = 4
+			_assert_true(deployments.has("%d,%d" % [front_column, row]), "Each starter side should cover every row of its eight-hex front")
+		_assert_true(deployments.has("0,3" if player_index == 0 else "6,3"), "Each starter side should retain one separate platoon behind its front as a reserve")
 		for snapshot_variant in deployments.values():
 			var snapshot := snapshot_variant as Dictionary
 			var template := UnitCatalog.get_nation_template(nation, String(snapshot.get("template_id", "")))
@@ -293,7 +299,7 @@ func _test_starter_scenario_launches_as_either_side() -> void:
 
 		var gameplay := GAMEPLAY_SCREEN.instantiate()
 		get_tree().root.add_child(gameplay)
-		_assert_equal(6, GameState.gameplay_units.size(), "The gameplay screen should initialize all six starter counters")
+		_assert_equal(18, GameState.gameplay_units.size(), "The gameplay screen should initialize all eighteen starter counters")
 		for player_index in range(2):
 			var deployments := (authored_players[player_index] as Dictionary).get("deployments", {}) as Dictionary
 			for coordinate_variant in deployments.keys():
@@ -313,7 +319,8 @@ func _test_starter_scenario_launches_as_either_side() -> void:
 		gameplay._generate_ai_orders_for_active_player()
 		_assert_true(not gameplay._orders.is_empty(), "Either AI opponent should produce orders for the starter mission")
 		var result := TurnResolver.resolve_turn(gameplay._units.duplicate(true), gameplay._orders, CombatLog.new(), {"rng_seed": 1944, "active_owner": GameState.active_player})
-		_assert_true((result.get("trace_anomalies", []) as Array).is_empty(), "Starter AI orders should resolve without illegal stacks, missing units, or invalid orders")
+		var anomalies := result.get("trace_anomalies", []) as Array
+		_assert_true(anomalies.is_empty(), "Starter AI side %d should resolve without anomalies: %s" % [1 - human_side, str(anomalies)])
 		gameplay.free()
 	GameState.reset(false)
 

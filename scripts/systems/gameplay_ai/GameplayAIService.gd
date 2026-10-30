@@ -54,7 +54,7 @@ static func _operational_state_for_player(operational_ai_state: Dictionary, acti
 
 static func _build_move_order(unit_id: String, unit: Dictionary, units: Dictionary, projected_units: Dictionary, active_player: int, enemy_ids: Array[String], terrain_map: Dictionary, operational_ai_state: Dictionary, trace_context: Dictionary) -> Dictionary:
 	var start_hex := unit.get("hex", Vector2i.ZERO) as Vector2i
-	var blocked := _blocked_cells(units, active_player, unit_id)
+	var blocked := _blocked_cells(units, projected_units, active_player, unit_id)
 	var target_candidates := _movement_targets(unit_id, start_hex, units, active_player, enemy_ids, operational_ai_state, trace_context)
 	for target_hex in target_candidates:
 		if target_hex == start_hex:
@@ -215,18 +215,32 @@ static func _is_threatened(unit_hex: Vector2i, enemy_ids: Array[String], units: 
 			return true
 	return false
 
-static func _blocked_cells(units: Dictionary, active_player: int, moving_unit_id: String) -> Dictionary:
+static func _blocked_cells(units: Dictionary, projected_units: Dictionary, active_player: int, moving_unit_id: String) -> Dictionary:
 	var blocked := {}
-	for unit_id_variant in units.keys():
-		if String(unit_id_variant) == moving_unit_id:
-			continue
-		var unit := units[unit_id_variant] as Dictionary
-		if not _is_unit_alive(unit):
-			continue
-		if int(unit.get("owner", -1)) == active_player:
-			continue
-		var hex := unit.get("hex", Vector2i.ZERO) as Vector2i
-		blocked[_hex_key(hex)] = true
+	var moving_unit := units.get(moving_unit_id, {}) as Dictionary
+	# A legal destination can still have an illegal route through a full stack.
+	# Check both current occupancy and destinations reserved by earlier AI orders.
+	for occupancy in [units, projected_units]:
+		var friendly_stacks := {}
+		for unit_id_variant in occupancy.keys():
+			if String(unit_id_variant) == moving_unit_id:
+				continue
+			var unit := occupancy[unit_id_variant] as Dictionary
+			if not _is_unit_alive(unit):
+				continue
+			var key := _hex_key(unit.get("hex", Vector2i.ZERO) as Vector2i)
+			if int(unit.get("owner", -1)) != active_player:
+				blocked[key] = true
+				continue
+			if not friendly_stacks.has(key):
+				friendly_stacks[key] = []
+			(friendly_stacks[key] as Array).append(unit)
+		for key in friendly_stacks.keys():
+			var occupants: Array[Dictionary] = []
+			for unit in friendly_stacks[key] as Array:
+				occupants.append(unit as Dictionary)
+			if not bool(Rules.can_enter_stack(moving_unit, occupants).get("ok", false)):
+				blocked[key] = true
 	return blocked
 
 static func _can_enter_destination(units: Dictionary, moving_unit_id: String, moving_unit: Dictionary, target_hex: Vector2i) -> bool:
