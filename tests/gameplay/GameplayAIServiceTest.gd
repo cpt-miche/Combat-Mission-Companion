@@ -31,6 +31,7 @@ func _run() -> void:
 	_test_reorganization_cooldown_prevents_immediate_reversal()
 	_test_formation_assignment_precedes_generic_movement()
 	_test_projected_destinations_allow_legal_concentration_stack()
+	_test_movement_routes_around_full_friendly_stacks()
 	_test_concentration_fills_objective_then_adjacent_ring()
 	_test_hex_distance_matches_odd_row_grid()
 	_test_ai_hex_adjacency_matches_odd_row_grid_on_both_parities()
@@ -226,6 +227,25 @@ func _test_projected_destinations_allow_legal_concentration_stack() -> void:
 	for unit_id in units.keys():
 		var path := (orders.get(unit_id, {}) as Dictionary).get("path", []) as Array
 		_assert_true(not path.is_empty() and path[path.size() - 1] == Vector2i(3, 1), "Every legally stackable company should retain the shared concentration target")
+
+func _test_movement_routes_around_full_friendly_stacks() -> void:
+	var units := {"mover": _unit("mover", 1, Vector2i(0, 1))}
+	var assignments := {"mover": Vector2i(4, 1)}
+	for index in range(4):
+		var unit_id := "stationary_%d" % index
+		units[unit_id] = _unit(unit_id, 1, Vector2i(2, 1))
+		assignments[unit_id] = Vector2i(2, 1)
+	var terrain := {"1,1": "road", "2,1": "road", "3,1": "road", "4,1": "road"}
+	var orders := GameplayAIService.generate_orders(units, 1, terrain, {}, {"map_dimensions": Vector2i(5, 3), "formation_assignments": assignments})
+	var path := (orders.get("mover", {}) as Dictionary).get("path", []) as Array
+	_assert_true(path.size() >= 2, "AI should find an alternate route around a full friendly stack")
+	if path.size() >= 2:
+		_assert_equal(Vector2i(4, 1), path[path.size() - 1], "Avoiding a full stack should preserve the assigned destination")
+	_assert_true(not path.has(Vector2i(2, 1)), "AI movement should avoid an intermediate hex already at its stacking limit")
+	_assert_true(_path_has_adjacent_steps(path), "The alternate route should contain only adjacent steps")
+	var result := TurnResolver.resolve_turn(units, orders, CombatLog.new(), {"rng_seed": 1944, "active_owner": 1})
+	_assert_equal(Vector2i(4, 1), (result.get("units", {}) as Dictionary).get("mover", {}).get("hex"), "The AI unit should reach its destination without being halted by a full stack")
+	_assert_true((result.get("trace_anomalies", []) as Array).is_empty(), "The alternate route should resolve without stacking anomalies")
 
 func _test_concentration_fills_objective_then_adjacent_ring() -> void:
 	var units := {

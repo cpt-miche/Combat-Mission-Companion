@@ -1,0 +1,2597 @@
+{
+  "scenario_version": 3,
+  "version": 2,
+  "name": "Ardennes Crossroads",
+  "briefing": "Ardennes, December 1944. Fictional starter action: an American infantry detachment approaches a German-held village crossroads from the west. Each side has nine regular infantry platoons in three companies: eight platoons cover the full north-south frontage and one starts behind them as a reserve. Each platoon occupies one hex. The Americans take the first turn.\n\nAMERICANS: seize the primary objective at hex 4,3. GERMANS: hold the crossroads or retake it after a withdrawal. The road is the direct approach; woods and broken ground provide alternate routes.\n\nPlay six full rounds (one American turn and one German turn per round), resolving engagements through the existing battle-result and casualty-entry workflow. After round six, a side wins if it has a living unit on hex 4,3 and no living enemy unit in an adjacent hex; otherwise the result is a draw. Assess this training objective manually; the game does not stop or declare a scenario winner automatically.",
+  "grid": {
+    "columns": 8,
+    "rows": 8
+  },
+  "terrain": {
+    "0,0": "woods",
+    "1,0": "woods",
+    "2,0": "woods",
+    "3,0": "light",
+    "4,0": "road",
+    "5,0": "woods",
+    "6,0": "woods",
+    "7,0": "light",
+    "0,1": "light",
+    "1,1": "woods",
+    "2,1": "woods",
+    "3,1": "light",
+    "4,1": "road",
+    "5,1": "light",
+    "6,1": "woods",
+    "7,1": "light",
+    "0,2": "light",
+    "1,2": "woods",
+    "2,2": "woods",
+    "3,2": "light",
+    "4,2": "road",
+    "5,2": "woods",
+    "6,2": "woods",
+    "7,2": "light",
+    "0,3": "road",
+    "1,3": "road",
+    "2,3": "road",
+    "3,3": "road",
+    "4,3": "urban",
+    "5,3": "road",
+    "6,3": "road",
+    "7,3": "road",
+    "0,4": "light",
+    "1,4": "light",
+    "2,4": "medium",
+    "3,4": "light",
+    "4,4": "urban",
+    "5,4": "medium",
+    "6,4": "medium",
+    "7,4": "light",
+    "0,5": "light",
+    "1,5": "light",
+    "2,5": "medium",
+    "3,5": "medium",
+    "4,5": "road",
+    "5,5": "medium",
+    "6,5": "woods",
+    "7,5": "woods",
+    "0,6": "woods",
+    "1,6": "woods",
+    "2,6": "woods",
+    "3,6": "medium",
+    "4,6": "road",
+    "5,6": "woods",
+    "6,6": "woods",
+    "7,6": "light",
+    "0,7": "light",
+    "1,7": "woods",
+    "2,7": "woods",
+    "3,7": "light",
+    "4,7": "road",
+    "5,7": "light",
+    "6,7": "woods",
+    "7,7": "light"
+  },
+  "territory": {
+    "0,0": 1,
+    "1,0": 1,
+    "2,0": 1,
+    "3,0": 1,
+    "4,0": 2,
+    "5,0": 2,
+    "6,0": 2,
+    "7,0": 2,
+    "0,1": 1,
+    "1,1": 1,
+    "2,1": 1,
+    "3,1": 1,
+    "4,1": 2,
+    "5,1": 2,
+    "6,1": 2,
+    "7,1": 2,
+    "0,2": 1,
+    "1,2": 1,
+    "2,2": 1,
+    "3,2": 1,
+    "4,2": 2,
+    "5,2": 2,
+    "6,2": 2,
+    "7,2": 2,
+    "0,3": 1,
+    "1,3": 1,
+    "2,3": 1,
+    "3,3": 1,
+    "4,3": 2,
+    "5,3": 2,
+    "6,3": 2,
+    "7,3": 2,
+    "0,4": 1,
+    "1,4": 1,
+    "2,4": 1,
+    "3,4": 1,
+    "4,4": 2,
+    "5,4": 2,
+    "6,4": 2,
+    "7,4": 2,
+    "0,5": 1,
+    "1,5": 1,
+    "2,5": 1,
+    "3,5": 1,
+    "4,5": 2,
+    "5,5": 2,
+    "6,5": 2,
+    "7,5": 2,
+    "0,6": 1,
+    "1,6": 1,
+    "2,6": 1,
+    "3,6": 1,
+    "4,6": 2,
+    "5,6": 2,
+    "6,6": 2,
+    "7,6": 2,
+    "0,7": 1,
+    "1,7": 1,
+    "2,7": 1,
+    "3,7": 1,
+    "4,7": 2,
+    "5,7": 2,
+    "6,7": 2,
+    "7,7": 2
+  },
+  "objectives": {
+    "4,3": {
+      "priority": "primary"
+    }
+  },
+  "ai_doctrine": "balanced",
+  "difficulty": "medium",
+  "players": [
+    {
+      "name": "American Rifle Detachment",
+      "nation_id": "usa",
+      "division_tree": {
+        "id": "ac_us_force",
+        "template_id": "army_root",
+        "display_name": "American Rifle Detachment",
+        "short_name": "American Rifle Detachment",
+        "designation": {},
+        "nation": "usa",
+        "type": "headquarters",
+        "role": "headquarters",
+        "equipment_weight": "",
+        "size": "army",
+        "is_attached": false,
+        "veterancy": 2,
+        "status": "alive",
+        "vehicles": [],
+        "children": [
+          {
+            "id": "ac_us_battalion",
+            "template_id": "usa_infantry_battalion",
+            "display_name": "American Rifle Detachment",
+            "short_name": "1 Bn",
+            "designation": {
+              "battalion_number": 1
+            },
+            "nation": "usa",
+            "type": "infantry",
+            "role": "infantry",
+            "equipment_weight": "",
+            "size": "battalion",
+            "is_attached": false,
+            "veterancy": 2,
+            "status": "alive",
+            "vehicles": [],
+            "children": [
+              {
+                "id": "ac_us_company_a",
+                "template_id": "usa_rifle_company",
+                "display_name": "A Rifle Company",
+                "short_name": "A/1",
+                "designation": {
+                  "battalion_number": 1,
+                  "company_letter": "A"
+                },
+                "nation": "usa",
+                "type": "infantry",
+                "role": "rifle",
+                "equipment_weight": "",
+                "size": "company",
+                "is_attached": false,
+                "veterancy": 2,
+                "status": "alive",
+                "vehicles": [],
+                "children": [
+                  {
+                    "id": "ac_us_platoon_1",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "1/A Rifle Platoon",
+                    "short_name": "1/A/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "A",
+                      "platoon_number": 1
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_1__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_1__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_1__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_1__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_us_platoon_2",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "2/A Rifle Platoon",
+                    "short_name": "2/A/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "A",
+                      "platoon_number": 2
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_2__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_2__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_2__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_2__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_us_platoon_3",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "3/A Rifle Platoon",
+                    "short_name": "3/A/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "A",
+                      "platoon_number": 3
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_3__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_3__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_3__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_3__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "ac_us_company_b",
+                "template_id": "usa_rifle_company",
+                "display_name": "B Rifle Company",
+                "short_name": "B/1",
+                "designation": {
+                  "battalion_number": 1,
+                  "company_letter": "B"
+                },
+                "nation": "usa",
+                "type": "infantry",
+                "role": "rifle",
+                "equipment_weight": "",
+                "size": "company",
+                "is_attached": false,
+                "veterancy": 2,
+                "status": "alive",
+                "vehicles": [],
+                "children": [
+                  {
+                    "id": "ac_us_platoon_4",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "1/B Rifle Platoon",
+                    "short_name": "1/B/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "B",
+                      "platoon_number": 1
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_4__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_4__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_4__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_4__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_us_platoon_5",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "2/B Rifle Platoon",
+                    "short_name": "2/B/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "B",
+                      "platoon_number": 2
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_5__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_5__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_5__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_5__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_us_platoon_6",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "3/B Rifle Platoon",
+                    "short_name": "3/B/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "B",
+                      "platoon_number": 3
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_6__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_6__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_6__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_6__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "ac_us_company_c",
+                "template_id": "usa_rifle_company",
+                "display_name": "C Rifle Company",
+                "short_name": "C/1",
+                "designation": {
+                  "battalion_number": 1,
+                  "company_letter": "C"
+                },
+                "nation": "usa",
+                "type": "infantry",
+                "role": "rifle",
+                "equipment_weight": "",
+                "size": "company",
+                "is_attached": false,
+                "veterancy": 2,
+                "status": "alive",
+                "vehicles": [],
+                "children": [
+                  {
+                    "id": "ac_us_platoon_7",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "1/C Rifle Platoon",
+                    "short_name": "1/C/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "C",
+                      "platoon_number": 1
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_7__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_7__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_7__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_7__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 1
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_us_platoon_8",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "2/C Rifle Platoon",
+                    "short_name": "2/C/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "C",
+                      "platoon_number": 2
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_8__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_8__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_8__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_8__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 2
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_us_platoon_9",
+                    "template_id": "usa_rifle_platoon",
+                    "display_name": "3/C Rifle Platoon",
+                    "short_name": "3/C/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "C",
+                      "platoon_number": 3
+                    },
+                    "nation": "usa",
+                    "type": "infantry",
+                    "role": "rifle",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_us_platoon_9__usa_rifle_platoon_hq_section_1",
+                        "template_id": "usa_rifle_platoon_hq_section",
+                        "display_name": "Rifle Platoon HQ Section",
+                        "short_name": "Rifle Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_9__usa_rifle_squad_1",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_9__usa_rifle_squad_2",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_us_platoon_9__usa_rifle_squad_3",
+                        "template_id": "usa_rifle_squad",
+                        "display_name": "Rifle Squad",
+                        "short_name": "Rifle Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 3
+                        },
+                        "nation": "usa",
+                        "type": "infantry",
+                        "role": "rifle",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "deployments": {
+        "1,0": {
+          "id": "ac_us_platoon_1",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "1/A Rifle Platoon",
+          "short_name": "1/A/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "A",
+            "platoon_number": 1
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "1,1": {
+          "id": "ac_us_platoon_2",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "2/A Rifle Platoon",
+          "short_name": "2/A/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "A",
+            "platoon_number": 2
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "1,2": {
+          "id": "ac_us_platoon_3",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "3/A Rifle Platoon",
+          "short_name": "3/A/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "A",
+            "platoon_number": 3
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "1,3": {
+          "id": "ac_us_platoon_4",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "1/B Rifle Platoon",
+          "short_name": "1/B/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "B",
+            "platoon_number": 1
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "1,4": {
+          "id": "ac_us_platoon_5",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "2/B Rifle Platoon",
+          "short_name": "2/B/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "B",
+            "platoon_number": 2
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "1,5": {
+          "id": "ac_us_platoon_6",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "3/B Rifle Platoon",
+          "short_name": "3/B/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "B",
+            "platoon_number": 3
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "1,6": {
+          "id": "ac_us_platoon_7",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "1/C Rifle Platoon",
+          "short_name": "1/C/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "C",
+            "platoon_number": 1
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "1,7": {
+          "id": "ac_us_platoon_8",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "2/C Rifle Platoon",
+          "short_name": "2/C/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "C",
+            "platoon_number": 2
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "0,3": {
+          "id": "ac_us_platoon_9",
+          "template_id": "usa_rifle_platoon",
+          "display_name": "3/C Rifle Platoon",
+          "short_name": "3/C/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "C",
+            "platoon_number": 3
+          },
+          "type": "infantry",
+          "role": "rifle",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        }
+      }
+    },
+    {
+      "name": "German Grenadier Detachment",
+      "nation_id": "germany",
+      "division_tree": {
+        "id": "ac_ger_force",
+        "template_id": "army_root",
+        "display_name": "German Grenadier Detachment",
+        "short_name": "German Grenadier Detachment",
+        "designation": {},
+        "nation": "germany",
+        "type": "headquarters",
+        "role": "headquarters",
+        "equipment_weight": "",
+        "size": "army",
+        "is_attached": false,
+        "veterancy": 2,
+        "status": "alive",
+        "vehicles": [],
+        "children": [
+          {
+            "id": "ac_ger_battalion",
+            "template_id": "ger_heer_grenadier_battalion_44",
+            "display_name": "German Grenadier Detachment",
+            "short_name": "1 Bn",
+            "designation": {
+              "battalion_number": 1
+            },
+            "nation": "germany",
+            "type": "infantry",
+            "role": "grenadier",
+            "equipment_weight": "",
+            "size": "battalion",
+            "is_attached": false,
+            "veterancy": 2,
+            "status": "alive",
+            "vehicles": [],
+            "children": [
+              {
+                "id": "ac_ger_company_a",
+                "template_id": "ger_grenadier_company",
+                "display_name": "A Grenadier Company",
+                "short_name": "A/1",
+                "designation": {
+                  "battalion_number": 1,
+                  "company_letter": "A"
+                },
+                "nation": "germany",
+                "type": "infantry",
+                "role": "grenadier",
+                "equipment_weight": "",
+                "size": "company",
+                "is_attached": false,
+                "veterancy": 2,
+                "status": "alive",
+                "vehicles": [],
+                "children": [
+                  {
+                    "id": "ac_ger_platoon_1",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "1/A Grenadier Platoon",
+                    "short_name": "1/A/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "A",
+                      "platoon_number": 1
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_1__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_1__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_1__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_1__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_ger_platoon_2",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "2/A Grenadier Platoon",
+                    "short_name": "2/A/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "A",
+                      "platoon_number": 2
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_2__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_2__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_2__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_2__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_ger_platoon_3",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "3/A Grenadier Platoon",
+                    "short_name": "3/A/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "A",
+                      "platoon_number": 3
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_3__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_3__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_3__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_3__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "A",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "ac_ger_company_b",
+                "template_id": "ger_grenadier_company",
+                "display_name": "B Grenadier Company",
+                "short_name": "B/1",
+                "designation": {
+                  "battalion_number": 1,
+                  "company_letter": "B"
+                },
+                "nation": "germany",
+                "type": "infantry",
+                "role": "grenadier",
+                "equipment_weight": "",
+                "size": "company",
+                "is_attached": false,
+                "veterancy": 2,
+                "status": "alive",
+                "vehicles": [],
+                "children": [
+                  {
+                    "id": "ac_ger_platoon_4",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "1/B Grenadier Platoon",
+                    "short_name": "1/B/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "B",
+                      "platoon_number": 1
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_4__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_4__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_4__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_4__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_ger_platoon_5",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "2/B Grenadier Platoon",
+                    "short_name": "2/B/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "B",
+                      "platoon_number": 2
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_5__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_5__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_5__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_5__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_ger_platoon_6",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "3/B Grenadier Platoon",
+                    "short_name": "3/B/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "B",
+                      "platoon_number": 3
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_6__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_6__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_6__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_6__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "B",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "ac_ger_company_c",
+                "template_id": "ger_grenadier_company",
+                "display_name": "C Grenadier Company",
+                "short_name": "C/1",
+                "designation": {
+                  "battalion_number": 1,
+                  "company_letter": "C"
+                },
+                "nation": "germany",
+                "type": "infantry",
+                "role": "grenadier",
+                "equipment_weight": "",
+                "size": "company",
+                "is_attached": false,
+                "veterancy": 2,
+                "status": "alive",
+                "vehicles": [],
+                "children": [
+                  {
+                    "id": "ac_ger_platoon_7",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "1/C Grenadier Platoon",
+                    "short_name": "1/C/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "C",
+                      "platoon_number": 1
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_7__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_7__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_7__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_7__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 1
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_ger_platoon_8",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "2/C Grenadier Platoon",
+                    "short_name": "2/C/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "C",
+                      "platoon_number": 2
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_8__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_8__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_8__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_8__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 2
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ac_ger_platoon_9",
+                    "template_id": "ger_grenadier_platoon",
+                    "display_name": "3/C Grenadier Platoon",
+                    "short_name": "3/C/1",
+                    "designation": {
+                      "battalion_number": 1,
+                      "company_letter": "C",
+                      "platoon_number": 3
+                    },
+                    "nation": "germany",
+                    "type": "infantry",
+                    "role": "grenadier",
+                    "equipment_weight": "",
+                    "size": "platoon",
+                    "is_attached": false,
+                    "veterancy": 2,
+                    "status": "alive",
+                    "vehicles": [],
+                    "children": [
+                      {
+                        "id": "ac_ger_platoon_9__ger_grenadier_platoon_hq_section_1",
+                        "template_id": "ger_grenadier_platoon_hq_section",
+                        "display_name": "Grenadier Platoon HQ Section",
+                        "short_name": "Grenadier Platoon HQ Section",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "headquarters",
+                        "role": "headquarters",
+                        "equipment_weight": "",
+                        "size": "section",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_9__ger_grenadier_squad_1",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_9__ger_grenadier_squad_2",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      },
+                      {
+                        "id": "ac_ger_platoon_9__ger_grenadier_squad_3",
+                        "template_id": "ger_grenadier_squad",
+                        "display_name": "Grenadier Squad",
+                        "short_name": "Grenadier Squad",
+                        "designation": {
+                          "battalion_number": 1,
+                          "company_letter": "C",
+                          "platoon_number": 3
+                        },
+                        "nation": "germany",
+                        "type": "infantry",
+                        "role": "grenadier",
+                        "equipment_weight": "",
+                        "size": "squad",
+                        "is_attached": false,
+                        "veterancy": 2,
+                        "status": "alive",
+                        "vehicles": [],
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "deployments": {
+        "5,0": {
+          "id": "ac_ger_platoon_1",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "1/A Grenadier Platoon",
+          "short_name": "1/A/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "A",
+            "platoon_number": 1
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "5,1": {
+          "id": "ac_ger_platoon_2",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "2/A Grenadier Platoon",
+          "short_name": "2/A/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "A",
+            "platoon_number": 2
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "5,2": {
+          "id": "ac_ger_platoon_3",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "3/A Grenadier Platoon",
+          "short_name": "3/A/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "A",
+            "platoon_number": 3
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "4,3": {
+          "id": "ac_ger_platoon_4",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "1/B Grenadier Platoon",
+          "short_name": "1/B/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "B",
+            "platoon_number": 1
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "5,4": {
+          "id": "ac_ger_platoon_5",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "2/B Grenadier Platoon",
+          "short_name": "2/B/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "B",
+            "platoon_number": 2
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "5,5": {
+          "id": "ac_ger_platoon_6",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "3/B Grenadier Platoon",
+          "short_name": "3/B/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "B",
+            "platoon_number": 3
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "5,6": {
+          "id": "ac_ger_platoon_7",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "1/C Grenadier Platoon",
+          "short_name": "1/C/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "C",
+            "platoon_number": 1
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "5,7": {
+          "id": "ac_ger_platoon_8",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "2/C Grenadier Platoon",
+          "short_name": "2/C/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "C",
+            "platoon_number": 2
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        },
+        "6,3": {
+          "id": "ac_ger_platoon_9",
+          "template_id": "ger_grenadier_platoon",
+          "display_name": "3/C Grenadier Platoon",
+          "short_name": "3/C/1",
+          "designation": {
+            "battalion_number": 1,
+            "company_letter": "C",
+            "platoon_number": 3
+          },
+          "type": "infantry",
+          "role": "grenadier",
+          "equipment_weight": "",
+          "size": "platoon",
+          "is_attached": false,
+          "status": "alive",
+          "vehicles": []
+        }
+      }
+    }
+  ]
+}

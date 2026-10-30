@@ -3,10 +3,12 @@ extends Node
 const SCENARIO_SCREEN := preload("res://scenes/scenario_editor/ScenarioEditorScreen.tscn")
 const MAP_SCREEN := preload("res://scenes/map_setup/MapSetupScreen.tscn")
 const DEPLOYMENT_SCREEN := preload("res://scenes/deployment/DeploymentScreen.tscn")
+const GAMEPLAY_SCREEN := preload("res://scenes/screens/GameplayScreen.tscn")
 
 const SCENARIO_NAME := "CI Scenario Editor Roundtrip"
 const SCENARIO_ID := "CI_Scenario_Editor_Roundtrip"
 const EXPORT_PATH := "/tmp/cmc_scenario_editor_roundtrip.json"
+const STARTER_SCENARIO_ID := "Ardennes_Crossroads"
 
 var _failures: Array[String] = []
 
@@ -25,6 +27,8 @@ func _run() -> void:
 	_test_guided_map_step_and_manual_deployments()
 	_test_launch_as_either_side_keeps_positions()
 	_test_export_import_round_trip()
+	_test_starter_scenario_data_and_export()
+	_test_starter_scenario_launches_as_either_side()
 	_cleanup_storage()
 	ScenarioEditorState.clear()
 	if _failures.is_empty():
@@ -220,6 +224,105 @@ func _test_export_import_round_trip() -> void:
 	_assert_true(not imported.is_empty(), "Exported scenario should import on another installation")
 	_assert_true(SaveManager.validate_scenario_payload(SaveManager.load_scenario_ref(imported)), "Imported JSON should pass the same completed-scenario validator")
 	DirAccess.remove_absolute(EXPORT_PATH)
+
+func _test_starter_scenario_data_and_export() -> void:
+	var payload := SaveManager.load_scenario(STARTER_SCENARIO_ID)
+	_assert_true(not payload.is_empty(), "The checked-in starter scenario should load on a fresh checkout")
+	if payload.is_empty():
+		return
+	var errors := SaveManager.scenario_validation_errors(payload)
+	_assert_true(errors.is_empty(), "Starter scenario should pass the completed-scenario validator: %s" % "; ".join(errors))
+	var grid := payload.get("grid", {}) as Dictionary
+	_assert_equal(8, int(grid.get("columns", 0)), "Starter scenario should use a small supported map width")
+	_assert_equal(8, int(grid.get("rows", 0)), "Starter scenario should use a small supported map height")
+	_assert_equal({"4,3": {"priority": "primary"}}, payload.get("objectives", {}), "Starter scenario should have one clear crossroads objective")
+	var players := payload.get("players", []) as Array
+	for player_index in range(players.size()):
+		var player := players[player_index] as Dictionary
+		var nation := String(player.get("nation_id", ""))
+		_assert_equal("usa" if player_index == 0 else "germany", nation, "Starter forces should use the American and German nations")
+		_assert_true(SaveManager.validate_scenario_player_deployment(payload, player_index), "All starter units should be legally deployed and covered by their force tree")
+		var deployments := player.get("deployments", {}) as Dictionary
+		_assert_equal(9, deployments.size(), "Each starter side should deploy nine separate platoons")
+		for row in range(int(grid.get("rows", 0))):
+			var front_column := 1 if player_index == 0 else 5
+			if player_index == 1 and row == 3:
+				front_column = 4
+			_assert_true(deployments.has("%d,%d" % [front_column, row]), "Each starter side should cover every row of its eight-hex front")
+		_assert_true(deployments.has("0,3" if player_index == 0 else "6,3"), "Each starter side should retain one separate platoon behind its front as a reserve")
+		for snapshot_variant in deployments.values():
+			var snapshot := snapshot_variant as Dictionary
+			var template := UnitCatalog.get_nation_template(nation, String(snapshot.get("template_id", "")))
+			_assert_true(not template.is_empty(), "Starter platoons should reference existing catalog templates")
+			_assert_equal("platoon", String(snapshot.get("size", "")), "Starter combat counters should be platoons")
+	var exported := SaveManager.export_scenario({"id": STARTER_SCENARIO_ID}, EXPORT_PATH)
+	_assert_true(exported, "The checked-in starter should export through the existing scenario workflow")
+	if exported:
+		_assert_equal(payload, SaveManager.load_external_scenario(EXPORT_PATH), "Starter export should round-trip all map, force, briefing, and deployment data")
+	DirAccess.remove_absolute(EXPORT_PATH)
+
+func _test_starter_scenario_launches_as_either_side() -> void:
+	var payload := SaveManager.load_scenario(STARTER_SCENARIO_ID)
+	if payload.is_empty():
+		return
+	var authored_players := payload.get("players", []) as Array
+	for human_side in [0, 1]:
+		ScenarioEditorState.clear()
+		GameState.reset(false)
+		GameState.current_phase = GameState.Phase.SCENARIO_EDITOR
+		var screen := SCENARIO_SCREEN.instantiate()
+		get_tree().root.add_child(screen)
+		var dialog_opened := _open_play_dialog_for_scenario(screen, STARTER_SCENARIO_ID)
+		_assert_true(dialog_opened, "The starter should be selectable and playable from the real Scenario Library")
+		if not dialog_opened:
+			screen.free()
+			continue
+		_assert_true(screen.scenario_description_label.text.contains("AMERICANS:") and screen.scenario_description_label.text.contains("GERMANS:"), "The library should show both sides' mission briefing")
+		if human_side == 0:
+			screen.play_side_1_button.pressed.emit()
+		else:
+			screen.play_side_2_button.pressed.emit()
+		_assert_equal(GameState.Phase.GAMEPLAY, GameState.current_phase, "Both starter side buttons should enter gameplay directly")
+		_assert_equal(0, GameState.active_player, "Americans should act first even when the human chooses Germany")
+		_assert_equal(1, GameState.current_turn, "Each starter launch should begin a fresh first turn")
+		_assert_equal(String((authored_players[human_side] as Dictionary).get("nation_id", "")), GameState.selected_nation_id, "The selected nation should match the chosen starter side")
+		_assert_equal(payload.get("terrain", {}), GameState.terrain_map, "Starter terrain should survive launch")
+		_assert_equal(payload.get("territory", {}), GameState.territory_map, "Starter territory should survive launch")
+		_assert_equal(payload.get("objectives", {}), GameState.key_objectives, "The primary objective should survive launch")
+		for player_index in range(2):
+			var runtime_player := GameState.players[player_index] as Dictionary
+			var authored_player := authored_players[player_index] as Dictionary
+			_assert_equal("human" if player_index == human_side else "ai", String(runtime_player.get("controller", "")), "Starter launch should assign the chosen controller to each side")
+			_assert_equal(authored_player.get("division_tree", {}), runtime_player.get("division_tree", {}), "Starter launch should preserve each authored force")
+			_assert_equal(authored_player.get("deployments", {}), runtime_player.get("deployments", {}), "Starter launch should preserve every authored position")
+		screen.free()
+
+		var gameplay := GAMEPLAY_SCREEN.instantiate()
+		get_tree().root.add_child(gameplay)
+		_assert_equal(18, GameState.gameplay_units.size(), "The gameplay screen should initialize all eighteen starter counters")
+		for player_index in range(2):
+			var deployments := (authored_players[player_index] as Dictionary).get("deployments", {}) as Dictionary
+			for coordinate_variant in deployments.keys():
+				var parts := String(coordinate_variant).split(",")
+				var start := Vector2i(int(parts[0]), int(parts[1]))
+				var snapshot := deployments[coordinate_variant] as Dictionary
+				var unit_id := String(snapshot.get("id", ""))
+				var runtime_unit := GameState.gameplay_units.get(unit_id, {}) as Dictionary
+				_assert_equal(start, runtime_unit.get("hex", null), "Gameplay should use the starter counter's authored hex")
+				_assert_equal(player_index, int(runtime_unit.get("owner", -1)), "Gameplay should retain each starter counter's owner")
+				_assert_true(not Pathfinding.find_path(start, Vector2i(4, 3), GameState.terrain_map).is_empty(), "Each starter platoon should have a terrain route to the objective")
+
+		# Exercise the same AI planning and turn resolver used during play, for the
+		# opposing side in each launch. Free the screen before its deferred AI turn.
+		GameState.active_player = 1 - human_side
+		gameplay._active_player = GameState.active_player
+		gameplay._generate_ai_orders_for_active_player()
+		_assert_true(not gameplay._orders.is_empty(), "Either AI opponent should produce orders for the starter mission")
+		var result := TurnResolver.resolve_turn(gameplay._units.duplicate(true), gameplay._orders, CombatLog.new(), {"rng_seed": 1944, "active_owner": GameState.active_player})
+		var anomalies := result.get("trace_anomalies", []) as Array
+		_assert_true(anomalies.is_empty(), "Starter AI side %d should resolve without anomalies: %s" % [1 - human_side, str(anomalies)])
+		gameplay.free()
+	GameState.reset(false)
 
 func _complete_payload() -> Dictionary:
 	var p1_tree := _tree("p1_root", "US Force", "army", "headquarters", "headquarters", [
